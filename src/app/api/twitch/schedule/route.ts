@@ -47,13 +47,19 @@ export async function GET() {
     );
     const scheduleData = await scheduleRes.json();
     
-    const scheduleSegments = scheduleData.data?.segments || [];
+    // the Twitch API returns an array of schedule segments; we'll treat
+    // them as `any` for now since we don't have a strict type definition
+    // and the response shape can vary.  TypeScript was complaining about
+    // the parameter `segment` implicitly having an `any` type when we
+    // filtered below, so we give the array an explicit `any[]` annotation.
+    const scheduleSegments: any[] = scheduleData.data?.segments || [];
     const vacation = scheduleData.data?.vacation || null;
 
     // Get category information for each segment
-    const categoryIds = [...new Set(scheduleSegments
-      .filter(segment => segment.category)
-      .map(segment => segment.category)
+    const categoryIds = [...new Set(
+      scheduleSegments
+        .filter((segment: any) => segment.category)
+        .map((segment: any) => segment.category)
     )];
 
     let categories: Record<string, string> = {};
