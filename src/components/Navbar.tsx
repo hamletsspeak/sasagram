@@ -6,7 +6,7 @@ const navLinks = [
   { label: "Главная", href: "#home" },
   { label: "О стримере", href: "#about" },
   { label: "Контент", href: "#content" },
-  { label: "Клипы", href: "#clips" },
+  { label: "Записи", href: "#vods" },
   { label: "Контакты", href: "#contact" },
 ];
 

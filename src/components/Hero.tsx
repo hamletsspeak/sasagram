@@ -1,4 +1,32 @@
+"use client";
+
+import { useEffect, useState } from "react";
+
+interface StreamInfo {
+  isLive: boolean;
+  stream: {
+    title: string;
+    game_name: string;
+    viewer_count: number;
+  } | null;
+}
+
 export default function Hero() {
+  const [streamInfo, setStreamInfo] = useState<StreamInfo | null>(null);
+
+  useEffect(() => {
+    fetch("/api/twitch")
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => {
+        if (data) {
+          setStreamInfo({ isLive: data.isLive, stream: data.stream });
+        }
+      })
+      .catch(() => {/* silently fail */});
+  }, []);
+
+  const isLive = streamInfo?.isLive ?? false;
+
   return (
     <section
       id="home"
@@ -18,19 +46,51 @@ export default function Hero() {
             <div className="w-36 h-36 rounded-full bg-gradient-to-br from-purple-500 to-violet-700 flex items-center justify-center text-5xl font-black text-white shadow-2xl ring-4 ring-purple-500/40">
               S
             </div>
-            {/* Live indicator */}
-            <div className="absolute -bottom-1 -right-1 flex items-center gap-1 bg-red-600 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow-lg">
-              <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-              LIVE
-            </div>
+            {/* Live indicator — dynamic */}
+            {isLive ? (
+              <a
+                href="https://www.twitch.tv/sasavot"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="absolute -bottom-1 -right-1 flex items-center gap-1 bg-red-600 hover:bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow-lg transition-colors"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                LIVE
+              </a>
+            ) : (
+              <div className="absolute -bottom-1 -right-1 flex items-center gap-1 bg-gray-700 text-gray-400 text-xs font-bold px-2 py-0.5 rounded-full shadow-lg">
+                <span className="w-1.5 h-1.5 rounded-full bg-gray-500" />
+                OFFLINE
+              </div>
+            )}
           </div>
         </div>
 
+        {/* Live stream info banner */}
+        {isLive && streamInfo?.stream && (
+          <a
+            href="https://www.twitch.tv/sasavot"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-3 bg-red-600/10 border border-red-500/30 rounded-full px-5 py-2 mb-6 hover:bg-red-600/20 transition-colors"
+          >
+            <span className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />
+            <span className="text-red-300 text-sm font-medium">
+              Сейчас в эфире: {streamInfo.stream.game_name}
+            </span>
+            <span className="text-gray-500 text-sm">
+              👁 {streamInfo.stream.viewer_count.toLocaleString("ru-RU")}
+            </span>
+          </a>
+        )}
+
         {/* Badge */}
-        <div className="inline-flex items-center gap-2 bg-purple-500/10 border border-purple-500/30 rounded-full px-4 py-1.5 mb-6">
-          <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-          <span className="text-purple-300 text-sm font-medium">Стример • Контент-мейкер</span>
-        </div>
+        {!isLive && (
+          <div className="inline-flex items-center gap-2 bg-purple-500/10 border border-purple-500/30 rounded-full px-4 py-1.5 mb-6">
+            <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+            <span className="text-purple-300 text-sm font-medium">Стример • Контент-мейкер</span>
+          </div>
+        )}
 
         <h1 className="text-5xl md:text-7xl font-extrabold text-white mb-4 leading-tight tracking-tight">
           Привет, я{" "}
@@ -53,13 +113,17 @@ export default function Hero() {
             href="https://www.twitch.tv/sasavot"
             target="_blank"
             rel="noopener noreferrer"
-            className="px-8 py-3.5 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg shadow-purple-600/30 hover:shadow-purple-500/40 hover:-translate-y-0.5 flex items-center justify-center gap-2"
+            className={`px-8 py-3.5 font-semibold rounded-xl transition-all duration-200 shadow-lg hover:-translate-y-0.5 flex items-center justify-center gap-2 ${
+              isLive
+                ? "bg-red-600 hover:bg-red-500 text-white shadow-red-600/30 hover:shadow-red-500/40"
+                : "bg-purple-600 hover:bg-purple-500 text-white shadow-purple-600/30 hover:shadow-purple-500/40"
+            }`}
           >
             {/* Twitch icon */}
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
               <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z" />
             </svg>
-            Смотреть на Twitch
+            {isLive ? "Смотреть стрим" : "Смотреть на Twitch"}
           </a>
           <a
             href="#contact"

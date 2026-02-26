@@ -15,6 +15,12 @@ The template is now a fully functional personal business card website for the st
 - [x] Memory bank documentation
 - [x] Recipe system for common features
 - [x] Business card website template with 6 sections + Navbar + Footer
+- [x] Twitch API integration: `/api/twitch` route fetches live status, VODs, followers
+- [x] TwitchVods component: replaces Portfolio with real Twitch VODs grid
+- [x] Hero: dynamic LIVE/OFFLINE badge from Twitch API
+- [x] Contact: removed form, kept contact cards (Telegram, Email, Twitch, YouTube)
+- [x] Navbar: "Клипы" → "Записи" (links to #vods)
+- [x] next.config.ts: added `static-cdn.jtvnw.net` to image remotePatterns
 
 ## Current Structure
 
