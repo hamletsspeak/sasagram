@@ -13,14 +13,14 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Alex Johnson — Full-Stack Developer",
+  title: "SASAVOT — Стример & Контент-мейкер",
   description:
-    "Full-Stack Developer & UI/UX Designer based in San Francisco. Building beautiful, performant web experiences with React, Next.js, and Node.js.",
-  keywords: ["developer", "portfolio", "full-stack", "react", "nextjs", "typescript"],
-  authors: [{ name: "Alex Johnson" }],
+    "Официальный сайт стримера SASAVOT. Прямые эфиры на Twitch и YouTube, игровой контент, коллаборации и многое другое.",
+  keywords: ["SASAVOT", "стример", "twitch", "youtube", "стрим", "игры", "контент"],
+  authors: [{ name: "SASAVOT" }],
   openGraph: {
-    title: "Alex Johnson — Full-Stack Developer",
-    description: "Full-Stack Developer & UI/UX Designer. Building beautiful web experiences.",
+    title: "SASAVOT — Стример & Контент-мейкер",
+    description: "Официальный сайт стримера SASAVOT. Прямые эфиры, игровой контент и коллаборации.",
     type: "website",
   },
 };
@@ -31,7 +31,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="scroll-smooth">
+    <html lang="ru" className="scroll-smooth">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >

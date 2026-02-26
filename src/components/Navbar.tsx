@@ -3,11 +3,11 @@
 import { useState, useEffect } from "react";
 
 const navLinks = [
-  { label: "Home", href: "#home" },
-  { label: "About", href: "#about" },
-  { label: "Skills", href: "#skills" },
-  { label: "Portfolio", href: "#portfolio" },
-  { label: "Contact", href: "#contact" },
+  { label: "Главная", href: "#home" },
+  { label: "О стримере", href: "#about" },
+  { label: "Контент", href: "#content" },
+  { label: "Клипы", href: "#clips" },
+  { label: "Контакты", href: "#contact" },
 ];
 
 export default function Navbar() {
@@ -27,8 +27,9 @@ export default function Navbar() {
       }`}
     >
       <nav className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-        <a href="#home" className="text-xl font-bold text-white tracking-tight">
-          Alex<span className="text-indigo-400">.</span>Dev
+        <a href="#home" className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
+          <span className="text-purple-400">▶</span>
+          SASA<span className="text-purple-400">VOT</span>
         </a>
 
         {/* Desktop nav */}
@@ -44,6 +45,17 @@ export default function Navbar() {
             </li>
           ))}
         </ul>
+
+        {/* Live badge */}
+        <a
+          href="https://www.twitch.tv/sasavot"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hidden md:flex items-center gap-2 px-4 py-1.5 bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold rounded-full transition-colors duration-200"
+        >
+          <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+          Смотреть
+        </a>
 
         {/* Mobile burger */}
         <button
@@ -77,6 +89,15 @@ export default function Navbar() {
               </li>
             ))}
           </ul>
+          <a
+            href="https://www.twitch.tv/sasavot"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-4 flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold rounded-full transition-colors w-fit"
+          >
+            <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+            Смотреть на Twitch
+          </a>
         </div>
       )}
     </header>
