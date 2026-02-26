@@ -15,6 +15,14 @@ interface Vod {
 }
 
 interface TwitchData {
+  user: {
+    id: string;
+    login: string;
+    display_name: string;
+    profile_image_url: string;
+    description: string;
+    view_count: number;
+  };
   isLive: boolean;
   stream: {
     title: string;
@@ -97,40 +105,93 @@ export default function TwitchVods() {
           </p>
         </div>
 
-        {/* Live banner */}
+        {/* Live stream player */}
         {data?.isLive && data.stream && (
-          <a
-            href="https://www.twitch.tv/sasavot"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block mb-10 rounded-2xl overflow-hidden border border-red-500/40 hover:border-red-500/70 transition-colors group"
-          >
+          <div className="mb-10 rounded-2xl overflow-hidden border border-red-500/40">
             <div className="relative">
-              <Image
-                src={getThumbnailUrl(data.stream.thumbnail_url, 1280, 720)}
-                alt={data.stream.title}
-                width={1280}
-                height={720}
-                className="w-full object-cover max-h-72 group-hover:scale-[1.01] transition-transform duration-300"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-gray-950/90 via-transparent to-transparent" />
+              <iframe
+                src="https://player.twitch.tv/?channel=sasavot&parent=localhost&parent=sasagram.vercel.app&autoplay=true&muted=true"
+                height="480"
+                className="w-full"
+                frameBorder="0"
+                scrolling="no"
+                allowFullScreen>
+              </iframe>
               <div className="absolute top-4 left-4 flex items-center gap-2 bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">
                 <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
                 LIVE
               </div>
-              <div className="absolute bottom-4 left-4 right-4">
-                <p className="text-white font-bold text-lg md:text-xl line-clamp-1">
-                  {data.stream.title}
-                </p>
-                <div className="flex items-center gap-3 mt-1">
-                  <span className="text-purple-300 text-sm">{data.stream.game_name}</span>
-                  <span className="text-gray-400 text-sm">
-                    👁 {formatViewCount(data.stream.viewer_count)} зрителей
-                  </span>
+            </div>
+            <div className="p-4 bg-gradient-to-r from-gray-800 via-gray-800 to-gray-900 rounded-b-2xl border-t border-red-500/20">
+              <div className="flex items-start gap-3">
+                <Image
+                  src={data.user.profile_image_url}
+                  alt={data.user.display_name}
+                  width={48}
+                  height={48}
+                  className="rounded-full border-2 border-red-500/40"
+                />
+                <div className="flex-1">
+                  <p className="text-white font-bold text-lg md:text-xl line-clamp-1 mb-2">
+                    {data.stream.title}
+                  </p>
+                  <div className="flex items-center gap-3">
+                    <span className="text-purple-300 text-sm">{data.stream.game_name}</span>
+                    <span className="text-gray-400 text-sm">
+                      👁 {formatViewCount(data.stream.viewer_count)} зрителей
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
-          </a>
+          </div>
+        )}
+
+        {/* Offline banner */}
+        {!loading && !error && data && !data.isLive && (
+          <div className="mb-10 rounded-2xl overflow-hidden border border-gray-700/40">
+            <div className="p-6 bg-gradient-to-r from-gray-800 via-gray-800 to-gray-900">
+              <div className="flex items-center gap-4">
+                <Image
+                  src={data.user.profile_image_url}
+                  alt={data.user.display_name}
+                  width={64}
+                  height={64}
+                  className="rounded-full border-2 border-gray-600"
+                />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="flex items-center gap-2 bg-gray-700 text-gray-400 text-xs font-bold px-3 py-1 rounded-full">
+                      <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+                      OFFLINE
+                    </div>
+                    <span className="text-gray-400 text-sm">
+                      👁 {formatViewCount(data.user.view_count)} просмотров канала
+                    </span>
+                  </div>
+                  <p className="text-white font-bold text-lg mb-1">
+                    {data.user.display_name}
+                  </p>
+                  <p className="text-gray-400 text-sm line-clamp-2">
+                    {data.user.description || "Стример. Следите за анонсами следующих трансляций!"}
+                  </p>
+                  <div className="flex items-center gap-4 mt-3">
+                    <span className="text-purple-300 text-sm">
+                      👥 {formatViewCount(data.followersCount)} подписчиков
+                    </span>
+                    <a
+                      href="https://www.twitch.tv/sasavot"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-purple-400 hover:text-purple-300 text-sm underline"
+                    >
+                      Открыть канал Twitch
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Loading state */}

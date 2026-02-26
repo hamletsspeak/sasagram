@@ -1,8 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 
 interface StreamInfo {
+  user: {
+    id: string;
+    login: string;
+    display_name: string;
+    profile_image_url: string;
+    description: string;
+    view_count: number;
+  };
   isLive: boolean;
   stream: {
     title: string;
@@ -19,7 +28,11 @@ export default function Hero() {
       .then((res) => res.ok ? res.json() : null)
       .then((data) => {
         if (data) {
-          setStreamInfo({ isLive: data.isLive, stream: data.stream });
+          setStreamInfo({ 
+            user: data.user,
+            isLive: data.isLive, 
+            stream: data.stream 
+          });
         }
       })
       .catch(() => {/* silently fail */});
@@ -43,9 +56,19 @@ export default function Hero() {
         {/* Avatar */}
         <div className="mb-8 flex justify-center">
           <div className="relative">
-            <div className="w-36 h-36 rounded-full bg-gradient-to-br from-purple-500 to-violet-700 flex items-center justify-center text-5xl font-black text-white shadow-2xl ring-4 ring-purple-500/40">
-              S
-            </div>
+            {streamInfo?.user?.profile_image_url ? (
+              <Image
+                src={streamInfo.user.profile_image_url}
+                alt={streamInfo.user.display_name}
+                width={144}
+                height={144}
+                className="w-36 h-36 rounded-full shadow-2xl ring-4 ring-purple-500/40"
+              />
+            ) : (
+              <div className="w-36 h-36 rounded-full bg-gradient-to-br from-purple-500 to-violet-700 flex items-center justify-center text-5xl font-black text-white shadow-2xl ring-4 ring-purple-500/40">
+                S
+              </div>
+            )}
             {/* Live indicator — dynamic */}
             {isLive ? (
               <a

@@ -1,3 +1,30 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Image from "next/image";
+
+interface ScheduleSegment {
+  id: string;
+  title: string;
+  category: string;
+  category_id: string | null;
+  start_time: string;
+  end_time: string;
+  is_recurring: boolean;
+  timezone: string;
+  canceled_until: string | null;
+}
+
+interface ScheduleData {
+  segments: ScheduleSegment[];
+  vacation: any;
+  user: {
+    id: string;
+    login: string;
+    display_name: string;
+  };
+}
+
 const stats = [
   { value: "500K+", label: "Подписчиков" },
   { value: "1000+", label: "Стримов" },
@@ -5,46 +32,274 @@ const stats = [
   { value: "∞", label: "Хорошего настроения" },
 ];
 
-const schedule = [
-  { day: "Пн", time: "20:00", active: true },
-  { day: "Вт", time: "—", active: false },
-  { day: "Ср", time: "20:00", active: true },
-  { day: "Чт", time: "20:00", active: true },
-  { day: "Пт", time: "21:00", active: true },
-  { day: "Сб", time: "18:00", active: true },
-  { day: "Вс", time: "18:00", active: true },
-];
+const weekDays = ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
+
+interface ScheduleItem {
+  day: string;
+  time: string;
+  active: boolean;
+  title: string;
+  category: string;
+  isToday: boolean;
+  isVacation?: boolean;
+  isCanceled?: boolean;
+  isRecurring?: boolean;
+}
+
+function formatScheduleTime(startTime: string): string {
+  const date = new Date(startTime);
+  return date.toLocaleTimeString("ru-RU", { 
+    hour: "2-digit", 
+    minute: "2-digit",
+    hour12: false 
+  });
+}
+
+function getDayOfWeek(startTime: string): string {
+  const date = new Date(startTime);
+  return weekDays[date.getDay()];
+}
+
+function isToday(dayOfWeek: string): boolean {
+  const today = new Date();
+  const currentDayIndex = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+  const dayIndex = weekDays.indexOf(dayOfWeek);
+  return currentDayIndex === dayIndex;
+}
 
 export default function About() {
+  const [scheduleData, setScheduleData] = useState<ScheduleData | null>(null);
+  const [streamData, setStreamData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    // Fetch both schedule and current stream info
+    Promise.all([
+      fetch("/api/twitch/schedule"),
+      fetch("/api/twitch")
+    ])
+      .then(([scheduleRes, streamRes]) => {
+        if (!scheduleRes.ok || !streamRes.ok) throw new Error("API error");
+        return Promise.all([
+          scheduleRes.json(),
+          streamRes.json()
+        ]);
+      })
+      .then(([schedule, stream]) => {
+        setScheduleData(schedule);
+        setStreamData(stream);
+        setLoading(false);
+      })
+      .catch(() => {
+        setError(true);
+        setLoading(false);
+      });
+  }, []);
+
+  // Generate schedule array for the current week
+  const generateWeekSchedule = () => {
+    // If no schedule data from API, use fallback schedule
+    if (!scheduleData?.segments.length) {
+      const today = new Date();
+      const currentDay = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+      
+      // If stream is live, calculate actual start time
+      let actualStartTime = null;
+      if (streamData?.isLive && streamData?.stream?.started_at) {
+        const startedAt = new Date(streamData.stream.started_at);
+        actualStartTime = startedAt.toLocaleTimeString("ru-RU", { 
+          hour: "2-digit", 
+          minute: "2-digit",
+          hour12: false 
+        });
+      }
+      
+      return [
+        { 
+          day: "Вс", 
+          time: currentDay === 0 && actualStartTime ? actualStartTime : "18:00", 
+          active: true, 
+          title: "Вечерний стрим", 
+          category: "Стрим", 
+          isToday: currentDay === 0, 
+          isRecurring: true,
+          actualStartTime: currentDay === 0 && actualStartTime ? actualStartTime : null
+        },
+        { 
+          day: "Пн", 
+          time: currentDay === 1 && actualStartTime ? actualStartTime : "20:00", 
+          active: true, 
+          title: "Вечерний стрим", 
+          category: "Стрим", 
+          isToday: currentDay === 1, 
+          isRecurring: true,
+          actualStartTime: currentDay === 1 && actualStartTime ? actualStartTime : null
+        },
+        { day: "Вт", time: "—", active: false, title: "", category: "", isToday: currentDay === 2 },
+        { 
+          day: "Ср", 
+          time: currentDay === 3 && actualStartTime ? actualStartTime : "20:00", 
+          active: true, 
+          title: "Вечерний стрим", 
+          category: "Стрим", 
+          isToday: currentDay === 3, 
+          isRecurring: true,
+          actualStartTime: currentDay === 3 && actualStartTime ? actualStartTime : null
+        },
+        { 
+          day: "Чт", 
+          time: currentDay === 4 && actualStartTime ? actualStartTime : "20:00", 
+          active: true, 
+          title: "Вечерний стрим", 
+          category: "Стрим", 
+          isToday: currentDay === 4, 
+          isRecurring: true,
+          actualStartTime: currentDay === 4 && actualStartTime ? actualStartTime : null
+        },
+        { 
+          day: "Пт", 
+          time: currentDay === 5 && actualStartTime ? actualStartTime : "21:00", 
+          active: true, 
+          title: "Пятничный стрим", 
+          category: "Стрим", 
+          isToday: currentDay === 5, 
+          isRecurring: true,
+          actualStartTime: currentDay === 5 && actualStartTime ? actualStartTime : null
+        },
+        { 
+          day: "Сб", 
+          time: currentDay === 6 && actualStartTime ? actualStartTime : "18:00", 
+          active: true, 
+          title: "Выходной стрим", 
+          category: "Стрим", 
+          isToday: currentDay === 6, 
+          isRecurring: true,
+          actualStartTime: currentDay === 6 && actualStartTime ? actualStartTime : null
+        },
+      ];
+    }
+    
+    // Check if streamer is on vacation
+    if (scheduleData.vacation) {
+      const vacationStart = new Date(scheduleData.vacation.start_time);
+      const vacationEnd = new Date(scheduleData.vacation.end_time);
+      const today = new Date();
+      
+      if (today >= vacationStart && today <= vacationEnd) {
+        return weekDays.map(day => ({
+          day,
+          time: "ОТПУСК",
+          active: false,
+          title: "Стример в отпуске",
+          category: "",
+          isToday: false,
+          isVacation: true
+        }));
+      }
+    }
+    
+    const schedule = weekDays.map((day, index) => {
+      const today = new Date();
+      const currentDay = new Date(today);
+      currentDay.setDate(today.getDate() - today.getDay() + index);
+      
+      const dayStreams = scheduleData.segments.filter(segment => {
+        const streamDate = new Date(segment.start_time);
+        return streamDate.toDateString() === currentDay.toDateString();
+      });
+      
+      if (dayStreams.length > 0) {
+        const firstStream = dayStreams[0];
+        
+        // Check if stream is canceled
+        if (firstStream.canceled_until) {
+          const canceledUntil = new Date(firstStream.canceled_until);
+          if (currentDay <= canceledUntil) {
+            return {
+              day,
+              time: "ОТМЕНЕН",
+              active: false,
+              title: "Стрим отменен",
+              category: "",
+              isToday: isToday(day),
+              isCanceled: true
+            };
+          }
+        }
+        
+        return {
+          day,
+          time: formatScheduleTime(firstStream.start_time),
+          active: true,
+          title: firstStream.title,
+          category: firstStream.category,
+          isToday: isToday(day),
+          isRecurring: firstStream.is_recurring
+        };
+      }
+      
+      return { day, time: "—", active: false, title: "", category: "", isToday: false };
+    });
+    
+    return schedule;
+  };
+
+  const weekSchedule = generateWeekSchedule();
   return (
     <section id="about" className="py-24 bg-gray-900">
       <div className="max-w-6xl mx-auto px-6">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           {/* Left: avatar + schedule */}
           <div className="relative">
-            <div className="aspect-square max-w-md mx-auto lg:mx-0 rounded-3xl bg-gradient-to-br from-purple-900/50 to-violet-900/50 border border-white/10 overflow-hidden flex flex-col items-center justify-center gap-6 p-8">
-              <div className="w-40 h-40 rounded-full bg-gradient-to-br from-purple-500 to-violet-700 flex items-center justify-center text-7xl font-black text-white shadow-2xl">
-                S
-              </div>
+            <div className="max-w-md mx-auto lg:mx-0 rounded-3xl bg-gradient-to-br from-purple-900/50 to-violet-900/50 border border-white/10 overflow-hidden p-8">
               {/* Stream schedule */}
               <div className="w-full">
                 <p className="text-gray-500 text-xs uppercase tracking-widest text-center mb-3">Расписание стримов</p>
-                <div className="grid grid-cols-7 gap-1">
-                  {schedule.map((s) => (
-                    <div key={s.day} className="flex flex-col items-center gap-1">
-                      <span className="text-gray-500 text-xs">{s.day}</span>
-                      <div
-                        className={`w-full rounded-lg py-1.5 text-center text-xs font-semibold ${
-                          s.active
-                            ? "bg-purple-600/30 border border-purple-500/40 text-purple-300"
-                            : "bg-gray-800/50 border border-gray-700/50 text-gray-600"
-                        }`}
-                      >
-                        {s.time}
+                {loading ? (
+                  <div className="grid grid-cols-7 gap-1">
+                    {weekDays.map((day: string) => (
+                      <div key={day} className="flex flex-col items-center gap-1">
+                        <span className="text-gray-500 text-xs">{day}</span>
+                        <div className="w-full rounded-lg py-1.5 bg-gray-800/50 border border-gray-700/50 animate-pulse" />
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : error ? (
+                  <div className="text-center text-gray-500 text-xs py-2">
+                    Не удалось загрузить расписание
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-7 gap-1">
+                    {weekSchedule.map((s: ScheduleItem, index: number) => (
+                      <div key={index} className="flex flex-col items-center gap-1">
+                        <span className="text-gray-500 text-xs">{s.day}</span>
+                        <div
+                          className={`w-full rounded-lg py-1.5 text-center text-xs font-semibold relative ${
+                            s.active
+                              ? s.isToday 
+                                ? "bg-red-600/30 border border-red-500/40 text-red-300"
+                                : "bg-purple-600/30 border border-purple-500/40 text-purple-300"
+                              : (s as any).isVacation
+                                ? "bg-yellow-600/20 border border-yellow-500/40 text-yellow-300"
+                                : (s as any).isCanceled
+                                  ? "bg-orange-600/20 border border-orange-500/40 text-orange-300"
+                                  : "bg-gray-800/50 border border-gray-700/50 text-gray-600"
+                          }`}
+                          title={s.title ? `${s.title} - ${s.category}${(s as any).isRecurring ? ' (повторяющийся)' : ''} • ${(s as any).actualStartTime ? `Запущен в ${(s as any).actualStartTime}` : `Запуск в ${s.time}`}` : ""}
+                        >
+                          {s.time}
+                          {s.isToday && s.active && (
+                            <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-400 rounded-full animate-pulse" />
+                          )}
+                          {(s as any).isRecurring && (
+                            <div className="absolute -top-1 -right-1 w-2 h-2 bg-purple-400 rounded-full" title="Повторяющийся стрим" />
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
             {/* Decorative elements */}
