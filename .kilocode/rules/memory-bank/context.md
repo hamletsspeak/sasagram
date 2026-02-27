@@ -52,6 +52,7 @@ The template is now a fully functional personal business card website for the st
 - [x] Reverted ruler ticks in time header; simplified to hover highlight for time cells
 - [x] Added hover highlight on schedule rows for better focus while scanning timeline
 - [x] Updated week nav arrow buttons animation: button lifts on hover and presses on click, icon itself stays static
+- [x] Fixed Twitch iframe embed for custom domains by building dynamic `parent` params from current hostname + fallback domains
 
 ## Current Structure
 
@@ -120,3 +121,4 @@ To personalize the template, update:
 | 2026-02-27 | Removed watch-like ticks from time header and kept only clean hover highlight on hour cells |
 | 2026-02-27 | Added hover background highlight for each schedule day row |
 | 2026-02-27 | Week navigation arrows now animate as button lift/press only (no icon side movement) |
+| 2026-02-27 | Twitch live embed now appends runtime hostname to `parent` list to avoid browser/Twitch frame blocking on non-vercel domains |

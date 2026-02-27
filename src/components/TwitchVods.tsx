@@ -3,6 +3,15 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 
+const TWITCH_EMBED_FALLBACK_PARENTS = [
+  "localhost",
+  "127.0.0.1",
+  "sasagram.vercel.app",
+  "sasagram.d.kiloapps.io",
+  "www.sasavot141.ru",
+  "sasavot141.ru",
+];
+
 interface Vod {
   id: string;
   title: string;
@@ -68,10 +77,19 @@ function getThumbnailUrl(url: string, width = 640, height = 360): string {
   return url.replace("%{width}", String(width)).replace("%{height}", String(height));
 }
 
+function getTwitchEmbedSrc(hostname: string | null): string {
+  const params = new URLSearchParams({ channel: "sasavot", autoplay: "true", muted: "true" });
+  const parents = new Set(TWITCH_EMBED_FALLBACK_PARENTS);
+  if (hostname) parents.add(hostname);
+  for (const parent of parents) params.append("parent", parent);
+  return `https://player.twitch.tv/?${params.toString()}`;
+}
+
 export default function TwitchVods() {
   const [data, setData] = useState<TwitchData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [embedHost, setEmbedHost] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/twitch")
@@ -87,6 +105,10 @@ export default function TwitchVods() {
         setError(true);
         setLoading(false);
       });
+  }, []);
+
+  useEffect(() => {
+    setEmbedHost(window.location.hostname);
   }, []);
 
   return (
@@ -110,7 +132,7 @@ export default function TwitchVods() {
           <div className="mb-10 rounded-2xl overflow-hidden border border-red-500/40">
             <div className="relative">
               <iframe
-                src="https://player.twitch.tv/?channel=sasavot&parent=localhost&parent=sasagram.vercel.app&autoplay=true&muted=true"
+                src={getTwitchEmbedSrc(embedHost)}
                 height="480"
                 className="w-full"
                 frameBorder="0"
