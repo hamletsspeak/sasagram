@@ -45,6 +45,13 @@ The template is now a fully functional personal business card website for the st
 - [x] Fixed week calendar edge cases: 7-day week always visible, future days empty, half-hour axis, auto-refresh when stream starts
 - [x] Switched project DB config to Neon (Vercel integration env vars)
 - [x] Updated DB helpers/scripts to prefer `DATABASE_URL`/`POSTGRES_URL` with Neon SSL-ready connection strings
+- [x] Updated schedule controls: animated arrow nav buttons + date picker jump-to-week + date column format `DD.MM`
+- [x] Reworked week picker into custom month calendar (hover highlight by week + selected week row) and updated arrow button visual style
+- [x] Timeline precision improved: minute-level helper grid lines appear on row hover without extra labels
+- [x] Time axis refined with ruler-like ticks: short minute marks and longer hour marks on hover
+- [x] Reverted ruler ticks in time header; simplified to hover highlight for time cells
+- [x] Added hover highlight on schedule rows for better focus while scanning timeline
+- [x] Updated week nav arrow buttons animation: button lifts on hover and presses on click, icon itself stays static
 
 ## Current Structure
 
@@ -106,3 +113,10 @@ To personalize the template, update:
 | 2026-02-27 | Replaced browser localStorage persistence with PostgreSQL sync from live stream + VOD data |
 | 2026-02-27 | Current-day schedule card + imported Twitch archives from start of 2026 into PostgreSQL |
 | 2026-02-27 | Switched environment and DB scripts to Neon on Vercel (`DATABASE_URL`/`POSTGRES_URL`, pooled + non-pooled) |
+| 2026-02-27 | Schedule nav updated with arrow buttons hover animation, week date picker, and date display as `23.02` |
+| 2026-02-27 | Custom week calendar styled like compact datepicker: row hover/select for weeks, refreshed arrows, removed native date clear affordance |
+| 2026-02-27 | Added minute-scale vertical helper lines in schedule rows that fade in on hover (labels unchanged) |
+| 2026-02-27 | Time header now shows watch-like ticks on hover: short minute marks plus longer hour marks |
+| 2026-02-27 | Removed watch-like ticks from time header and kept only clean hover highlight on hour cells |
+| 2026-02-27 | Added hover background highlight for each schedule day row |
+| 2026-02-27 | Week navigation arrows now animate as button lift/press only (no icon side movement) |

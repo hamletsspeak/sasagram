@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 interface StreamData {
   isLive: boolean;
@@ -36,6 +36,17 @@ interface WeekGroup {
   key: string;
   label: string;
   cards: TimelineCard[];
+}
+
+interface CalendarDay {
+  key: string;
+  label: number;
+  inMonth: boolean;
+}
+
+interface CalendarWeek {
+  key: string;
+  days: CalendarDay[];
 }
 
 const VIEW_START_MINUTES = 17 * 60;
@@ -85,6 +96,41 @@ function weekLabel(weekStart: Date): string {
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekStart.getDate() + 6);
   return `${weekStart.toLocaleDateString("ru-RU", { day: "2-digit", month: "short" })} - ${weekEnd.toLocaleDateString("ru-RU", { day: "2-digit", month: "short" })}`;
+}
+
+function formatDateDot(date: Date): string {
+  return `${String(date.getDate()).padStart(2, "0")}.${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function monthLabelRu(monthStart: Date): string {
+  return monthStart.toLocaleDateString("ru-RU", { month: "long", year: "numeric" });
+}
+
+function addDays(date: Date, days: number): Date {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+function buildCalendarWeeks(monthStart: Date): CalendarWeek[] {
+  const firstDay = new Date(monthStart.getFullYear(), monthStart.getMonth(), 1);
+  const gridStart = startOfWeek(firstDay);
+  const month = monthStart.getMonth();
+  const weeks: CalendarWeek[] = [];
+
+  for (let weekOffset = 0; weekOffset < 6; weekOffset += 1) {
+    const weekStart = addDays(gridStart, weekOffset * 7);
+    const days: CalendarDay[] = [];
+
+    for (let dayOffset = 0; dayOffset < 7; dayOffset += 1) {
+      const day = addDays(weekStart, dayOffset);
+      days.push({ key: dateKey(day), label: day.getDate(), inMonth: day.getMonth() === month });
+    }
+
+    weeks.push({ key: dateKey(weekStart), days });
+  }
+
+  return weeks;
 }
 
 function minutesSinceDayStart(dateInput: string, day: Date): number | null {
@@ -176,7 +222,7 @@ function buildWeeks(dbStreams: DbStream[], liveActualStart: { key: string; start
       cards.push({
         key,
         dayLabel: current.toLocaleDateString("ru-RU", { weekday: "short" }).replace(".", ""),
-        dateLabel: current.toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit" }),
+        dateLabel: formatDateDot(current),
         timeRange,
         durationLabel,
         title,
@@ -215,6 +261,13 @@ export default function StreamSchedule() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [selectedWeekKey, setSelectedWeekKey] = useState<string | null>(null);
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [hoveredWeekKey, setHoveredWeekKey] = useState<string | null>(null);
+  const [calendarMonthStart, setCalendarMonthStart] = useState<Date>(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
+  const calendarRef = useRef<HTMLDivElement | null>(null);
 
   const mergeDbStream = (incoming: DbStream) => {
     setDbStreams((prev) => {
@@ -321,6 +374,36 @@ export default function StreamSchedule() {
   const selectedWeekIndex = selectedWeekKey ? weeks.findIndex((week) => week.key === selectedWeekKey) : weeks.length - 1;
   const safeWeekIndex = selectedWeekIndex >= 0 ? selectedWeekIndex : Math.max(weeks.length - 1, 0);
   const selectedWeek = weeks[safeWeekIndex] ?? null;
+  const calendarTodayKey = dateKey(new Date());
+  const weekPickerMin = weeks[0]?.key;
+  const weekPickerMax = weeks[weeks.length - 1]?.key;
+  const availableWeekKeys = useMemo(() => new Set(weeks.map((week) => week.key)), [weeks]);
+  const calendarWeeks = useMemo(() => buildCalendarWeeks(calendarMonthStart), [calendarMonthStart]);
+
+  useEffect(() => {
+    if (!selectedWeek?.key) return;
+    const selectedDate = new Date(`${selectedWeek.key}T00:00:00`);
+    const monthStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
+    setCalendarMonthStart((prev) => {
+      if (prev.getFullYear() === monthStart.getFullYear() && prev.getMonth() === monthStart.getMonth()) return prev;
+      return monthStart;
+    });
+  }, [selectedWeek?.key]);
+
+  useEffect(() => {
+    if (!calendarOpen) return;
+
+    const onPointerDown = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (calendarRef.current && !calendarRef.current.contains(target)) {
+        setCalendarOpen(false);
+        setHoveredWeekKey(null);
+      }
+    };
+
+    window.addEventListener("mousedown", onPointerDown);
+    return () => window.removeEventListener("mousedown", onPointerDown);
+  }, [calendarOpen]);
 
   const axisTicks = useMemo(() => {
     const ticks: string[] = [];
@@ -348,7 +431,7 @@ export default function StreamSchedule() {
           <div className="text-center text-gray-400 text-sm py-8">Не удалось загрузить расписание</div>
         ) : (
           <div className="rounded-2xl border border-slate-700/80 bg-[#0d111c] overflow-hidden">
-            <div className="flex items-center justify-between border-b border-slate-700/80 px-4 py-3 bg-slate-900/80">
+            <div className="flex flex-wrap items-center justify-between border-b border-slate-700/80 px-4 py-3 bg-slate-900/80 gap-2">
               <div className="flex items-center gap-2">
                 <button
                   type="button"
@@ -357,9 +440,12 @@ export default function StreamSchedule() {
                     setSelectedWeekKey(weeks[safeWeekIndex - 1].key);
                   }}
                   disabled={safeWeekIndex === 0}
-                  className="px-3 py-1.5 rounded-lg border border-slate-600 text-sm text-gray-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="group flex h-9 w-9 items-center justify-center rounded-full border border-slate-500/80 bg-slate-800/70 text-gray-200 shadow-[0_2px_0_rgba(15,23,42,0.55)] transition-all hover:-translate-y-0.5 hover:border-rose-400/80 hover:bg-rose-500/15 hover:text-rose-200 hover:shadow-[0_8px_16px_-8px_rgba(244,63,94,0.6)] active:translate-y-px active:shadow-[0_1px_0_rgba(15,23,42,0.55)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:active:translate-y-0 disabled:hover:border-slate-500/80 disabled:hover:bg-slate-800/70 disabled:hover:text-gray-200"
+                  aria-label="Предыдущая неделя"
                 >
-                  Назад
+                  <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-4 w-4">
+                    <path d="M11.5 4.5 6 10l5.5 5.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
                 </button>
                 <button
                   type="button"
@@ -368,10 +454,126 @@ export default function StreamSchedule() {
                     setSelectedWeekKey(weeks[safeWeekIndex + 1].key);
                   }}
                   disabled={safeWeekIndex >= weeks.length - 1}
-                  className="px-3 py-1.5 rounded-lg border border-slate-600 text-sm text-gray-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="group flex h-9 w-9 items-center justify-center rounded-full border border-slate-500/80 bg-slate-800/70 text-gray-200 shadow-[0_2px_0_rgba(15,23,42,0.55)] transition-all hover:-translate-y-0.5 hover:border-rose-400/80 hover:bg-rose-500/15 hover:text-rose-200 hover:shadow-[0_8px_16px_-8px_rgba(244,63,94,0.6)] active:translate-y-px active:shadow-[0_1px_0_rgba(15,23,42,0.55)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:active:translate-y-0 disabled:hover:border-slate-500/80 disabled:hover:bg-slate-800/70 disabled:hover:text-gray-200"
+                  aria-label="Следующая неделя"
                 >
-                  Вперед
+                  <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-4 w-4">
+                    <path d="M8.5 4.5 14 10l-5.5 5.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
                 </button>
+                <div ref={calendarRef} className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setCalendarOpen((prev) => !prev)}
+                    className="flex h-9 min-w-[168px] items-center justify-between rounded-xl border border-slate-500/80 bg-slate-800/70 px-3 text-sm text-gray-100 transition-colors hover:border-cyan-400/80 hover:bg-slate-800"
+                    aria-expanded={calendarOpen}
+                    aria-label="Открыть календарь недель"
+                  >
+                    <span>{monthLabelRu(calendarMonthStart)}</span>
+                    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className={`h-4 w-4 transition-transform ${calendarOpen ? "rotate-180" : ""}`}>
+                      <path d="m5.5 7.5 4.5 5 4.5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+
+                  {calendarOpen ? (
+                    <div className="absolute left-0 top-[calc(100%+8px)] z-20 w-[286px] rounded-2xl border border-slate-600/80 bg-[#313547] p-3 shadow-2xl">
+                      <div className="mb-3 flex items-center justify-between text-white">
+                        <p className="text-2xl font-semibold capitalize">{monthLabelRu(calendarMonthStart)}</p>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCalendarMonthStart((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+                            }}
+                            className="flex h-7 w-7 items-center justify-center rounded-full text-slate-200 transition-colors hover:bg-slate-200/15 hover:text-white"
+                            aria-label="Предыдущий месяц"
+                          >
+                            <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-4 w-4">
+                              <path d="M11.5 4.5 6 10l5.5 5.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCalendarMonthStart((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
+                            }}
+                            className="flex h-7 w-7 items-center justify-center rounded-full text-slate-200 transition-colors hover:bg-slate-200/15 hover:text-white"
+                            aria-label="Следующий месяц"
+                          >
+                            <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-4 w-4">
+                              <path d="M8.5 4.5 14 10l-5.5 5.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="mb-2 grid grid-cols-7 px-2 text-[11px] font-semibold uppercase tracking-wide text-slate-200/80">
+                        {[
+                          "пн",
+                          "вт",
+                          "ср",
+                          "чт",
+                          "пт",
+                          "сб",
+                          "вс",
+                        ].map((weekday) => (
+                          <span key={weekday} className="py-1 text-center">
+                            {weekday}
+                          </span>
+                        ))}
+                      </div>
+
+                      <div className="space-y-1" onMouseLeave={() => setHoveredWeekKey(null)}>
+                        {calendarWeeks.map((week) => {
+                          const isSelected = selectedWeek?.key === week.key;
+                          const isHovered = hoveredWeekKey === week.key;
+                          const isSelectable = availableWeekKeys.has(week.key) && (!weekPickerMin || week.key >= weekPickerMin) && (!weekPickerMax || week.key <= weekPickerMax);
+
+                          return (
+                            <div
+                              key={week.key}
+                              onMouseEnter={() => {
+                                if (!isSelectable) return;
+                                setHoveredWeekKey(week.key);
+                              }}
+                              className={`grid grid-cols-7 rounded-full px-2 py-1 transition-colors ${
+                                isSelected
+                                  ? "bg-slate-500/60"
+                                  : isHovered && isSelectable
+                                    ? "bg-slate-500/50"
+                                    : "bg-transparent"
+                              } ${isSelectable ? "cursor-pointer" : "opacity-35"}`}
+                            >
+                              {week.days.map((day) => {
+                                const isTodayDay = day.key === calendarTodayKey;
+                                return (
+                                  <button
+                                    key={day.key}
+                                    type="button"
+                                    disabled={!isSelectable}
+                                    onClick={() => {
+                                      if (!isSelectable) return;
+                                      setSelectedWeekKey(week.key);
+                                      setCalendarOpen(false);
+                                      setHoveredWeekKey(null);
+                                    }}
+                                    className={`h-8 w-8 justify-self-center rounded-full text-sm transition-colors ${
+                                      day.inMonth ? "text-white" : "text-slate-400"
+                                    } ${!isSelectable ? "cursor-not-allowed" : "hover:text-white"} ${
+                                      isTodayDay ? "ring-1 ring-cyan-300/80 bg-slate-200/15 font-semibold" : ""
+                                    }`}
+                                  >
+                                    {day.label}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
               </div>
               <p className="text-sm font-semibold text-white">{selectedWeek ? selectedWeek.label : "Неделя"}</p>
             </div>
@@ -380,7 +582,10 @@ export default function StreamSchedule() {
               <div className="text-xs text-cyan-300 px-3 py-2 border-r border-slate-800">GMT+3</div>
               <div className="grid" style={{ gridTemplateColumns: `repeat(${axisTicks.length}, minmax(0, 1fr))` }}>
                 {axisTicks.map((label) => (
-                  <div key={label} className="text-[11px] text-gray-300 px-2 py-2 border-r border-slate-800/70 last:border-r-0">
+                  <div
+                    key={label}
+                    className="text-[11px] text-gray-300 px-2 py-2 border-r border-slate-800/70 last:border-r-0 transition-colors hover:bg-slate-700/35 hover:text-white"
+                  >
                     {label}
                   </div>
                 ))}
@@ -393,11 +598,10 @@ export default function StreamSchedule() {
                 const laneClass = item.isToday ? "bg-slate-800/35" : "bg-[#0b1019]";
 
                 return (
-                  <div key={item.key} className={`grid grid-cols-[74px_1fr] min-h-[74px] border-b border-slate-800/70 ${laneClass}`}>
+                  <div key={item.key} className={`grid grid-cols-[74px_1fr] min-h-[74px] border-b border-slate-800/70 transition-colors hover:bg-slate-800/55 ${laneClass}`}>
                     <div className="px-3 py-2 border-r border-slate-800 text-center">
                       <p className="text-xs uppercase text-gray-300">{item.dayLabel}</p>
-                      <p className="text-xl leading-tight mt-1 text-white">{item.dateLabel.slice(0, 2)}</p>
-                      <p className="text-[11px] text-gray-400">{item.dateLabel.slice(3)}</p>
+                      <p className="text-base leading-tight mt-2 text-white">{item.dateLabel}</p>
                     </div>
 
                     <div className="relative px-2 py-2">
@@ -408,7 +612,6 @@ export default function StreamSchedule() {
                           backgroundSize: `calc(100% / ${axisTicks.length - 1}) 100%`,
                         }}
                       />
-
                       {!style ? (
                         <div className="h-[58px] rounded-xl border border-dashed border-slate-700/80 flex items-center px-3 text-gray-500 text-sm">--:-- - --:--</div>
                       ) : item.streamUrl ? (
