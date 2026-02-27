@@ -8,6 +8,7 @@
 | React        | 19.x    | UI library                      |
 | TypeScript   | 5.9.x   | Type-safe JavaScript            |
 | Tailwind CSS | 4.x     | Utility-first CSS               |
+| PostgreSQL   | 14+     | Persistent storage for streams  |
 | Bun          | Latest  | Package manager & runtime       |
 
 ## Development Environment
@@ -26,6 +27,8 @@ bun build          # Production build
 bun start          # Start production server
 bun lint           # Run ESLint
 bun typecheck      # Run TypeScript type checking
+npm run db:setup   # Create DB and streams table
+npm run db:import-2026 # Import Twitch archive streams since 2026-01-01
 ```
 
 ## Project Configuration
@@ -58,6 +61,7 @@ bun typecheck      # Run TypeScript type checking
 ```json
 {
   "next": "^16.1.3", // Framework
+  "pg": "^8.x", // PostgreSQL client
   "react": "^19.2.3", // UI library
   "react-dom": "^19.2.3" // React DOM
 }
@@ -68,6 +72,7 @@ bun typecheck      # Run TypeScript type checking
 ```json
 {
   "typescript": "^5.9.3",
+  "@types/pg": "^8.x",
   "@types/node": "^24.10.2",
   "@types/react": "^19.2.7",
   "@types/react-dom": "^19.2.3",
@@ -141,3 +146,4 @@ bun typecheck      # Run TypeScript type checking
 - None required for base template
 - Add as needed for features
 - Use `.env.local` for local development
+- For PostgreSQL: `DATABASE_URL` (or `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`)

@@ -1,7 +1,7 @@
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
 import About from "@/components/About";
-import Skills from "@/components/Skills";
+import StreamSchedule from "@/components/StreamSchedule";
 import TwitchVods from "@/components/TwitchVods";
 import Contact from "@/components/Contact";
 import Footer from "@/components/Footer";
@@ -12,7 +12,7 @@ export default function Home() {
       <Navbar />
       <Hero />
       <About />
-      <Skills />
+      <StreamSchedule />
       <TwitchVods />
       <Contact />
       <Footer />

@@ -3,6 +3,7 @@
 ## Critical Rules
 
 - **Package manager**: Use `bun` (not npm/yarn)
+- **Language**: Respond in Russian by default (unless the user asks otherwise)
 - **Never run** `next dev` or `bun dev` - the sandbox handles this automatically
 - **Always commit and push** after completing changes:
   ```bash
