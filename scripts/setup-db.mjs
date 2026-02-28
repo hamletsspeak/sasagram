@@ -77,7 +77,53 @@ async function ensureStreamsTable() {
     ON streams (started_at)
   `);
 
-  console.log("Table streams is ready.");
+  await appClient.query(`
+    CREATE TABLE IF NOT EXISTS twitch_vods (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      url TEXT NOT NULL,
+      thumbnail_url TEXT,
+      view_count INTEGER NOT NULL DEFAULT 0,
+      duration TEXT,
+      created_at TIMESTAMPTZ NOT NULL,
+      description TEXT,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  await appClient.query(`
+    CREATE INDEX IF NOT EXISTS twitch_vods_created_at_idx
+    ON twitch_vods (created_at DESC)
+  `);
+
+  await appClient.query(`
+    CREATE TABLE IF NOT EXISTS twitch_clips (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      url TEXT NOT NULL,
+      thumbnail_url TEXT,
+      view_count INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ NOT NULL,
+      duration_seconds NUMERIC(6,2),
+      creator_name TEXT,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  await appClient.query(`
+    CREATE INDEX IF NOT EXISTS twitch_clips_created_at_idx
+    ON twitch_clips (created_at DESC)
+  `);
+
+  await appClient.query(`
+    CREATE TABLE IF NOT EXISTS app_cache_state (
+      key TEXT PRIMARY KEY,
+      value_text TEXT,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  console.log("Tables streams/twitch_vods/twitch_clips are ready.");
   await appClient.end();
 }
 

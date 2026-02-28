@@ -8,6 +8,31 @@ const nextConfig: NextConfig = {
         hostname: "static-cdn.jtvnw.net",
         pathname: "/**",
       },
+      {
+        protocol: "https",
+        hostname: "files.kick.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "images.kick.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "unavatar.io",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "cdn.discordapp.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "api.dicebear.com",
+        pathname: "/**",
+      },
     ],
   },
 };

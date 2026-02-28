@@ -1,8 +1,33 @@
 import { NextResponse } from "next/server";
+import { getDbPool } from "@/lib/db";
 
 const TWITCH_CLIENT_ID = process.env.TWITCH_CLIENT_ID!;
 const TWITCH_CLIENT_SECRET = process.env.TWITCH_CLIENT_SECRET!;
 const TWITCH_USERNAME = "sasavot";
+const MEDIA_CACHE_KEY = "twitch_media_last_synced_at";
+const MEDIA_CACHE_TTL_MS = 10 * 60 * 1000;
+
+type TwitchVod = {
+  id: string;
+  title: string;
+  url: string;
+  thumbnail_url: string;
+  view_count: number;
+  duration: string;
+  created_at: string;
+  description: string;
+};
+
+type TwitchClip = {
+  id: string;
+  title: string;
+  url: string;
+  thumbnail_url: string;
+  view_count: number;
+  created_at: string;
+  duration: number;
+  creator_name: string;
+};
 
 async function getAccessToken(): Promise<string> {
   const res = await fetch(
@@ -10,8 +35,152 @@ async function getAccessToken(): Promise<string> {
     { method: "POST" }
   );
   if (!res.ok) throw new Error("Failed to get Twitch access token");
-  const data = await res.json();
-  return data.access_token as string;
+  const data = (await res.json()) as { access_token: string };
+  return data.access_token;
+}
+
+async function getCachedMediaState() {
+  const pool = getDbPool();
+  const [vodsRes, clipsRes, cacheStateRes] = await Promise.all([
+    pool.query(
+      `
+        SELECT id, title, url, thumbnail_url, view_count, duration, created_at, description
+        FROM twitch_vods
+        ORDER BY created_at DESC
+        LIMIT 20
+      `
+    ),
+    pool.query(
+      `
+        SELECT id, title, url, thumbnail_url, view_count, created_at, duration_seconds AS duration, creator_name
+        FROM twitch_clips
+        ORDER BY created_at DESC
+        LIMIT 20
+      `
+    ),
+    pool.query(
+      `
+        SELECT value_text
+        FROM app_cache_state
+        WHERE key = $1
+        LIMIT 1
+      `,
+      [MEDIA_CACHE_KEY]
+    ),
+  ]);
+
+  const lastSyncedAtRaw = cacheStateRes.rows[0]?.value_text as string | undefined;
+  const lastSyncedAt = lastSyncedAtRaw ? new Date(lastSyncedAtRaw) : null;
+  const hasRecentSync =
+    Boolean(lastSyncedAt) &&
+    Number.isFinite(lastSyncedAt?.getTime()) &&
+    Date.now() - (lastSyncedAt?.getTime() ?? 0) < MEDIA_CACHE_TTL_MS;
+
+  return {
+    vods: vodsRes.rows,
+    clips: clipsRes.rows,
+    hasRecentSync,
+  };
+}
+
+async function syncMediaCache(headers: Record<string, string>, userId: string) {
+  const pool = getDbPool();
+
+  const [vodsRes, clipsRes] = await Promise.all([
+    fetch(`https://api.twitch.tv/helix/videos?user_id=${userId}&type=archive&first=20`, { headers }),
+    fetch(`https://api.twitch.tv/helix/clips?broadcaster_id=${userId}&first=20`, { headers }),
+  ]);
+
+  if (!vodsRes.ok || !clipsRes.ok) {
+    throw new Error("Failed to fetch Twitch media");
+  }
+
+  const vodsJson = (await vodsRes.json()) as { data?: TwitchVod[] };
+  const clipsJson = (await clipsRes.json()) as { data?: TwitchClip[] };
+  const vods = vodsJson.data ?? [];
+  const clips = clipsJson.data ?? [];
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    for (const vod of vods) {
+      await client.query(
+        `
+          INSERT INTO twitch_vods (id, title, url, thumbnail_url, view_count, duration, created_at, description, updated_at)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+          ON CONFLICT (id)
+          DO UPDATE SET
+            title = EXCLUDED.title,
+            url = EXCLUDED.url,
+            thumbnail_url = EXCLUDED.thumbnail_url,
+            view_count = EXCLUDED.view_count,
+            duration = EXCLUDED.duration,
+            created_at = EXCLUDED.created_at,
+            description = EXCLUDED.description,
+            updated_at = NOW()
+        `,
+        [
+          vod.id,
+          vod.title,
+          vod.url,
+          vod.thumbnail_url,
+          Number(vod.view_count ?? 0),
+          vod.duration,
+          vod.created_at,
+          vod.description,
+        ]
+      );
+    }
+
+    for (const clip of clips) {
+      await client.query(
+        `
+          INSERT INTO twitch_clips (id, title, url, thumbnail_url, view_count, created_at, duration_seconds, creator_name, updated_at)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+          ON CONFLICT (id)
+          DO UPDATE SET
+            title = EXCLUDED.title,
+            url = EXCLUDED.url,
+            thumbnail_url = EXCLUDED.thumbnail_url,
+            view_count = EXCLUDED.view_count,
+            created_at = EXCLUDED.created_at,
+            duration_seconds = EXCLUDED.duration_seconds,
+            creator_name = EXCLUDED.creator_name,
+            updated_at = NOW()
+        `,
+        [
+          clip.id,
+          clip.title,
+          clip.url,
+          clip.thumbnail_url,
+          Number(clip.view_count ?? 0),
+          clip.created_at,
+          Number(clip.duration ?? 0),
+          clip.creator_name ?? null,
+        ]
+      );
+    }
+
+    await client.query(
+      `
+        INSERT INTO app_cache_state (key, value_text, updated_at)
+        VALUES ($1, $2, NOW())
+        ON CONFLICT (key)
+        DO UPDATE SET
+          value_text = EXCLUDED.value_text,
+          updated_at = NOW()
+      `,
+      [MEDIA_CACHE_KEY, new Date().toISOString()]
+    );
+
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 export async function GET() {
@@ -23,43 +192,56 @@ export async function GET() {
       Authorization: `Bearer ${token}`,
     };
 
-    // Get user info
-    const userRes = await fetch(
-      `https://api.twitch.tv/helix/users?login=${TWITCH_USERNAME}`,
-      { headers }
-    );
-    const userData = await userRes.json();
+    const userRes = await fetch(`https://api.twitch.tv/helix/users?login=${TWITCH_USERNAME}`, { headers });
+    const userData = (await userRes.json()) as {
+      data?: Array<{
+        id: string;
+        login: string;
+        display_name: string;
+        profile_image_url: string;
+        description: string;
+        view_count: number;
+      }>;
+    };
     const user = userData.data?.[0];
 
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const userId = user.id as string;
+    const userId = user.id;
 
-    // Get live stream status
-    const streamRes = await fetch(
-      `https://api.twitch.tv/helix/streams?user_login=${TWITCH_USERNAME}`,
-      { headers }
-    );
-    const streamData = await streamRes.json();
+    const [streamRes, followersRes] = await Promise.all([
+      fetch(`https://api.twitch.tv/helix/streams?user_login=${TWITCH_USERNAME}`, { headers }),
+      fetch(`https://api.twitch.tv/helix/channels/followers?broadcaster_id=${userId}`, { headers }),
+    ]);
+
+    const streamData = (await streamRes.json()) as {
+      data?: Array<{
+        title: string;
+        game_name: string;
+        viewer_count: number;
+        started_at: string;
+        thumbnail_url: string;
+      }>;
+    };
     const stream = streamData.data?.[0] ?? null;
 
-    // Get VODs (past broadcasts)
-    const vodsRes = await fetch(
-      `https://api.twitch.tv/helix/videos?user_id=${userId}&type=archive&first=6`,
-      { headers }
-    );
-    const vodsData = await vodsRes.json();
-    const vods = vodsData.data ?? [];
+    const followersData = (await followersRes.json()) as { total?: number };
+    const followersCount = followersData.total ?? 0;
 
-    // Get channel followers count
-    const followersRes = await fetch(
-      `https://api.twitch.tv/helix/channels/followers?broadcaster_id=${userId}`,
-      { headers }
-    );
-    const followersData = await followersRes.json();
-    const followersCount: number = followersData.total ?? 0;
+    let { vods, clips, hasRecentSync } = await getCachedMediaState();
+
+    if (!hasRecentSync || vods.length === 0 || clips.length === 0) {
+      try {
+        await syncMediaCache(headers, userId);
+        const fresh = await getCachedMediaState();
+        vods = fresh.vods;
+        clips = fresh.clips;
+      } catch (syncError) {
+        console.error("Twitch media cache sync error:", syncError);
+      }
+    }
 
     return NextResponse.json(
       {
@@ -81,16 +263,8 @@ export async function GET() {
               thumbnail_url: stream.thumbnail_url,
             }
           : null,
-        vods: vods.map((v: Record<string, unknown>) => ({
-          id: v.id,
-          title: v.title,
-          url: v.url,
-          thumbnail_url: v.thumbnail_url,
-          view_count: v.view_count,
-          duration: v.duration,
-          created_at: v.created_at,
-          description: v.description,
-        })),
+        vods,
+        clips,
         followersCount,
       },
       {
@@ -101,9 +275,6 @@ export async function GET() {
     );
   } catch (err) {
     console.error("Twitch API error:", err);
-    return NextResponse.json(
-      { error: "Failed to fetch Twitch data" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch Twitch data" }, { status: 500 });
   }
 }

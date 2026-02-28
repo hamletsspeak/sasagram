@@ -8,7 +8,7 @@
 | React        | 19.x    | UI library                      |
 | TypeScript   | 5.9.x   | Type-safe JavaScript            |
 | Tailwind CSS | 4.x     | Utility-first CSS               |
-| PostgreSQL   | 14+     | Persistent storage for streams  |
+| PostgreSQL   | 14+     | Persistent storage for streams + cached Twitch media |
 | Bun          | Latest  | Package manager & runtime       |
 
 ## Development Environment
@@ -27,7 +27,7 @@ bun build          # Production build
 bun start          # Start production server
 bun lint           # Run ESLint
 bun typecheck      # Run TypeScript type checking
-npm run db:setup   # Create DB and streams table
+npm run db:setup   # Create DB tables (streams, twitch_vods, twitch_clips, app_cache_state)
 npm run db:import-2026 # Import Twitch archive streams since 2026-01-01
 ```
 
@@ -109,7 +109,7 @@ npm run db:import-2026 # Import Twitch archive streams since 2026-01-01
 ### Starting Point
 
 - Minimal structure - expand as needed
-- No database by default (use recipe to add)
+- Database already integrated (PostgreSQL) for stream sessions and Twitch media caching
 - No authentication by default (add when needed)
 
 ### Browser Support

@@ -1,16 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-
-const TWITCH_EMBED_FALLBACK_PARENTS = [
-  "localhost",
-  "127.0.0.1",
-  "sasagram.vercel.app",
-  "sasagram.d.kiloapps.io",
-  "www.sasavot141.ru",
-  "sasavot141.ru",
-];
 
 interface Vod {
   id: string;
@@ -20,42 +11,40 @@ interface Vod {
   view_count: number;
   duration: string;
   created_at: string;
-  description: string;
+}
+
+interface Clip {
+  id: string;
+  title: string;
+  url: string;
+  thumbnail_url: string;
+  view_count: number;
+  created_at: string;
+  duration?: number;
 }
 
 interface TwitchData {
   user: {
     id: string;
-    login: string;
     display_name: string;
-    profile_image_url: string;
-    description: string;
-    view_count: number;
   };
-  isLive: boolean;
-  stream: {
-    title: string;
-    game_name: string;
-    viewer_count: number;
-    thumbnail_url: string;
-  } | null;
   vods: Vod[];
-  followersCount: number;
+  clips?: Clip[];
 }
 
 function formatDuration(duration: string): string {
-  // Twitch duration format: "1h2m3s" or "45m30s" or "1h30m"
   const hours = duration.match(/(\d+)h/)?.[1];
   const minutes = duration.match(/(\d+)m/)?.[1];
   const seconds = duration.match(/(\d+)s/)?.[1];
-
-  if (hours) {
-    return `${hours}:${(minutes ?? "0").padStart(2, "0")}:${(seconds ?? "0").padStart(2, "0")}`;
-  }
-  if (minutes) {
-    return `${minutes}:${(seconds ?? "0").padStart(2, "0")}`;
-  }
+  if (hours) return `${hours}:${(minutes ?? "0").padStart(2, "0")}:${(seconds ?? "0").padStart(2, "0")}`;
+  if (minutes) return `${minutes}:${(seconds ?? "0").padStart(2, "0")}`;
   return `0:${(seconds ?? "0").padStart(2, "0")}`;
+}
+
+function formatClipDuration(seconds?: number): string {
+  if (!seconds || Number.isNaN(seconds)) return "0:00";
+  const total = Math.max(0, Math.round(seconds));
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
 }
 
 function formatViewCount(count: number): string {
@@ -66,30 +55,25 @@ function formatViewCount(count: number): string {
 
 function formatDate(dateStr: string): string {
   const date = new Date(dateStr);
-  return date.toLocaleDateString("ru-RU", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+  return date.toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
 function getThumbnailUrl(url: string, width = 640, height = 360): string {
   return url.replace("%{width}", String(width)).replace("%{height}", String(height));
 }
 
-function getTwitchEmbedSrc(hostname: string | null): string {
-  const params = new URLSearchParams({ channel: "sasavot", autoplay: "true", muted: "true" });
-  const parents = new Set(TWITCH_EMBED_FALLBACK_PARENTS);
-  if (hostname) parents.add(hostname);
-  for (const parent of parents) params.append("parent", parent);
-  return `https://player.twitch.tv/?${params.toString()}`;
-}
+const arrowButtonBaseClass =
+  "inline-flex h-8 w-8 items-center justify-center rounded-full transition-all disabled:cursor-not-allowed disabled:opacity-35 active:translate-y-[1px]";
+const actionButtonBaseClass =
+  "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-all active:translate-y-[1px]";
 
 export default function TwitchVods() {
   const [data, setData] = useState<TwitchData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [embedHost, setEmbedHost] = useState<string | null>(null);
+  const [itemsPerPage, setItemsPerPage] = useState(4);
+  const [vodPage, setVodPage] = useState(0);
+  const [clipsPage, setClipsPage] = useState(0);
 
   useEffect(() => {
     fetch("/api/twitch")
@@ -108,247 +92,187 @@ export default function TwitchVods() {
   }, []);
 
   useEffect(() => {
-    setEmbedHost(window.location.hostname);
+    const updateItemsPerPage = () => {
+      const width = window.innerWidth;
+      if (width < 768) setItemsPerPage(1);
+      else if (width < 1200) setItemsPerPage(2);
+      else if (width < 1536) setItemsPerPage(3);
+      else setItemsPerPage(4);
+    };
+
+    updateItemsPerPage();
+    window.addEventListener("resize", updateItemsPerPage);
+    return () => window.removeEventListener("resize", updateItemsPerPage);
   }, []);
 
+  const clips = useMemo(
+    () => [...(data?.clips ?? [])].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
+    [data?.clips]
+  );
+
+  const totalVodPages = Math.max(1, Math.ceil((data?.vods.length ?? 0) / itemsPerPage));
+  const totalClipPages = Math.max(1, Math.ceil(clips.length / itemsPerPage));
+
+  const safeVodPage = Math.min(vodPage, totalVodPages - 1);
+  const safeClipsPage = Math.min(clipsPage, totalClipPages - 1);
+
+  const visibleVods = useMemo(() => {
+    const start = safeVodPage * itemsPerPage;
+    return (data?.vods ?? []).slice(start, start + itemsPerPage);
+  }, [data?.vods, safeVodPage, itemsPerPage]);
+
+  const visibleClips = useMemo(() => {
+    const start = safeClipsPage * itemsPerPage;
+    return clips.slice(start, start + itemsPerPage);
+  }, [clips, safeClipsPage, itemsPerPage]);
+
   return (
-    <section id="vods" className="py-24 bg-gray-900">
-      <div className="max-w-6xl mx-auto px-6">
-        {/* Header */}
-        <div className="text-center mb-16">
-          <p className="text-purple-400 font-semibold text-sm uppercase tracking-widest mb-3">
-            Twitch
-          </p>
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
-            Записи стримов
-          </h2>
-          <p className="text-gray-500 max-w-xl mx-auto">
-            Последние трансляции с Twitch — смотри в любое время
-          </p>
+    <section id="vods" className="h-screen overflow-hidden bg-[radial-gradient(75%_90%_at_50%_0%,rgba(24,30,82,0.55),transparent_65%),#0b1227] py-10">
+      <div className="mx-auto flex h-full w-full max-w-[1680px] flex-col px-6">
+        <div className="mb-4 shrink-0 text-center">
+          <p className="mb-2 text-sm font-semibold uppercase tracking-[0.28em] text-purple-300">Twitch Media</p>
+          <h2 className="mb-2 text-4xl font-black text-white md:text-5xl">Записи и лучшие клипы</h2>
+          <p className="text-gray-400">Карточки выровнены, количество на экране ограничено</p>
         </div>
 
-        {/* Live stream player */}
-        {data?.isLive && data.stream && (
-          <div className="mb-10 rounded-2xl overflow-hidden border border-red-500/40">
-            <div className="relative">
-              <iframe
-                src={getTwitchEmbedSrc(embedHost)}
-                height="480"
-                className="w-full"
-                frameBorder="0"
-                scrolling="no"
-                allowFullScreen>
-              </iframe>
-              <div className="absolute top-4 left-4 flex items-center gap-2 bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">
-                <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                LIVE
-              </div>
-            </div>
-            <div className="p-4 bg-gradient-to-r from-gray-800 via-gray-800 to-gray-900 rounded-b-2xl border-t border-red-500/20">
-              <div className="flex items-start gap-3">
-                <Image
-                  src={data.user.profile_image_url}
-                  alt={data.user.display_name}
-                  width={48}
-                  height={48}
-                  className="rounded-full border-2 border-red-500/40"
-                />
-                <div className="flex-1">
-                  <p className="text-white font-bold text-lg md:text-xl line-clamp-1 mb-2">
-                    {data.stream.title}
-                  </p>
-                  <div className="flex items-center gap-3">
-                    <span className="text-purple-300 text-sm">{data.stream.game_name}</span>
-                    <span className="text-gray-400 text-sm">
-                      👁 {formatViewCount(data.stream.viewer_count)} зрителей
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
+        {loading ? (
+          <div className="grid h-full min-h-0 grid-rows-2 gap-4">
+            <div className="rounded-3xl border border-white/10 bg-white/[0.04] animate-pulse" />
+            <div className="rounded-3xl border border-white/10 bg-white/[0.04] animate-pulse" />
           </div>
-        )}
-
-        {/* Offline banner */}
-        {!loading && !error && data && !data.isLive && (
-          <div className="mb-10 rounded-2xl overflow-hidden border border-gray-700/40">
-            <div className="p-6 bg-gradient-to-r from-gray-800 via-gray-800 to-gray-900">
-              <div className="flex items-center gap-4">
-                <Image
-                  src={data.user.profile_image_url}
-                  alt={data.user.display_name}
-                  width={64}
-                  height={64}
-                  className="rounded-full border-2 border-gray-600"
-                />
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="flex items-center gap-2 bg-gray-700 text-gray-400 text-xs font-bold px-3 py-1 rounded-full">
-                      <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
-                      OFFLINE
-                    </div>
-                    <span className="text-gray-400 text-sm">
-                      👁 {formatViewCount(data.user.view_count)} просмотров канала
-                    </span>
-                  </div>
-                  <p className="text-white font-bold text-lg mb-1">
-                    {data.user.display_name}
-                  </p>
-                  <p className="text-gray-400 text-sm line-clamp-2">
-                    {data.user.description || "Стример. Следите за анонсами следующих трансляций!"}
-                  </p>
-                  <div className="flex items-center gap-4 mt-3">
-                    <span className="text-purple-300 text-sm">
-                      👥 {formatViewCount(data.followersCount)} подписчиков
-                    </span>
-                    <a
-                      href="https://www.twitch.tv/sasavot"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-purple-400 hover:text-purple-300 text-sm underline"
-                    >
-                      Открыть канал Twitch
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Loading state */}
-        {loading && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div
-                key={i}
-                className="bg-gray-800 rounded-2xl overflow-hidden animate-pulse"
-              >
-                <div className="aspect-video bg-gray-700" />
-                <div className="p-4 space-y-2">
-                  <div className="h-4 bg-gray-700 rounded w-3/4" />
-                  <div className="h-3 bg-gray-700 rounded w-1/2" />
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Error state */}
-        {error && (
-          <div className="text-center py-16">
-            <div className="text-5xl mb-4">📡</div>
-            <p className="text-gray-400 text-lg mb-2">Не удалось загрузить записи</p>
-            <p className="text-gray-600 text-sm mb-6">
-              Проверьте настройки Twitch API или попробуйте позже
-            </p>
-            <a
-              href="https://www.twitch.tv/sasavot/videos"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-xl transition-colors"
-            >
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z" />
-              </svg>
-              Смотреть на Twitch
-            </a>
-          </div>
-        )}
-
-        {/* VODs grid */}
-        {!loading && !error && data && (
-          <>
-            {data.vods.length === 0 ? (
-              <div className="text-center py-16">
-                <div className="text-5xl mb-4">🎬</div>
-                <p className="text-gray-400 text-lg">Записей пока нет</p>
-                <p className="text-gray-600 text-sm mt-2">
-                  Следи за стримами в прямом эфире!
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {data.vods.map((vod) => (
-                  <a
-                    key={vod.id}
-                    href={vod.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group bg-gray-800 border border-gray-700 rounded-2xl overflow-hidden hover:border-purple-500/40 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-purple-900/20 flex flex-col"
-                  >
-                    {/* Thumbnail */}
-                    <div className="relative aspect-video overflow-hidden bg-gray-700">
-                      {vod.thumbnail_url ? (
-                        <Image
-                          src={getThumbnailUrl(vod.thumbnail_url, 640, 360)}
-                          alt={vod.title}
-                          fill
-                          className="object-cover group-hover:scale-105 transition-transform duration-300"
-                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                        />
-                      ) : (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <svg className="w-12 h-12 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z" />
-                          </svg>
-                        </div>
-                      )}
-                      {/* Duration badge */}
-                      <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs font-mono px-2 py-0.5 rounded">
-                        {formatDuration(vod.duration)}
-                      </div>
-                      {/* Play overlay */}
-                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-black/30">
-                        <div className="w-14 h-14 rounded-full bg-purple-600/90 flex items-center justify-center shadow-lg">
-                          <svg className="w-6 h-6 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M8 5v14l11-7z" />
-                          </svg>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Info */}
-                    <div className="p-4 flex flex-col gap-2 flex-1">
-                      <h3 className="text-white font-semibold text-sm line-clamp-2 group-hover:text-purple-300 transition-colors leading-snug">
-                        {vod.title}
-                      </h3>
-                      <div className="flex items-center gap-3 text-xs text-gray-500 mt-auto pt-2">
-                        <span className="flex items-center gap-1">
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                          </svg>
-                          {formatViewCount(vod.view_count)}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                          {formatDate(vod.created_at)}
-                        </span>
-                      </div>
-                    </div>
-                  </a>
-                ))}
-              </div>
-            )}
-
-            {/* View all link */}
-            <div className="text-center mt-10">
-              <a
-                href="https://www.twitch.tv/sasavot/videos"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-6 py-3 bg-white/5 hover:bg-purple-500/10 border border-white/10 hover:border-purple-500/40 text-white font-semibold rounded-xl transition-all duration-200"
-              >
-                <svg className="w-4 h-4 text-purple-400" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z" />
-                </svg>
-                Все записи на Twitch
+        ) : error || !data ? (
+          <div className="flex h-full items-center justify-center text-center">
+            <div>
+              <p className="mb-3 text-lg text-gray-200">Не удалось загрузить Twitch данные</p>
+              <a href="https://www.twitch.tv/sasavot/videos" target="_blank" rel="noopener noreferrer" className="text-purple-300 underline hover:text-purple-200">
+                Открыть Twitch
               </a>
             </div>
-          </>
+          </div>
+        ) : (
+          <div className="grid h-full min-h-0 grid-rows-2 gap-4">
+            <div className="flex min-h-0 flex-col">
+              <div className="mb-3 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.28em] text-cyan-300">Записи стримов</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setVodPage((prev) => Math.max(0, Math.min(prev, totalVodPages - 1) - 1))}
+                    disabled={safeVodPage === 0}
+                    className={`${arrowButtonBaseClass} border border-cyan-400/35 bg-cyan-500/10 text-cyan-100 shadow-[0_3px_0_rgba(8,145,178,0.45)] hover:bg-cyan-500/20 active:shadow-[0_1px_0_rgba(8,145,178,0.45)]`}
+                    aria-label="Предыдущая страница записей"
+                  >
+                    <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none">
+                      <path d="M11.5 4.5 6 10l5.5 5.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setVodPage((prev) => Math.min(totalVodPages - 1, Math.min(prev, totalVodPages - 1) + 1))}
+                    disabled={safeVodPage >= totalVodPages - 1}
+                    className={`${arrowButtonBaseClass} border border-cyan-400/35 bg-cyan-500/10 text-cyan-100 shadow-[0_3px_0_rgba(8,145,178,0.45)] hover:bg-cyan-500/20 active:shadow-[0_1px_0_rgba(8,145,178,0.45)]`}
+                    aria-label="Следующая страница записей"
+                  >
+                    <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none">
+                      <path d="M8.5 4.5 14 10l-5.5 5.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+                  <a
+                    href="https://www.twitch.tv/sasavot/videos?filter=all&sort=time"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`${actionButtonBaseClass} border border-cyan-400/35 bg-cyan-500/10 text-cyan-100 shadow-[0_3px_0_rgba(8,145,178,0.45)] hover:bg-cyan-500/20 active:shadow-[0_1px_0_rgba(8,145,178,0.45)]`}
+                  >
+                    Все видео
+                  </a>
+                </div>
+              </div>
+
+              <div className="min-h-0 overflow-hidden">
+                <div className="grid h-full min-h-[205px] gap-3" style={{ gridTemplateColumns: `repeat(${itemsPerPage}, minmax(0, 1fr))` }}>
+                  {visibleVods.map((vod) => (
+                    <a key={vod.id} href={vod.url} target="_blank" rel="noopener noreferrer" className="group relative h-full overflow-hidden rounded-2xl border border-cyan-300/30 bg-black/30">
+                      <Image src={getThumbnailUrl(vod.thumbnail_url, 960, 540)} alt={vod.title} fill className="object-cover transition-transform duration-500 group-hover:scale-105" sizes="(max-width: 768px) 100vw, 25vw" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/45 to-black/20" />
+                      <div className="absolute right-3 top-3 rounded-lg bg-black/80 px-2 py-1 text-xs font-mono text-white">{formatDuration(vod.duration)}</div>
+                      <div className="absolute inset-x-0 bottom-0 p-4">
+                        <h3 className="line-clamp-2 text-xl font-black leading-tight text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.75)] md:text-2xl">{vod.title}</h3>
+                        <div className="mt-1.5 flex items-center gap-3 text-xs text-cyan-100/90 md:text-sm">
+                          <span>👁 {formatViewCount(vod.view_count)}</span>
+                          <span>{formatDate(vod.created_at)}</span>
+                        </div>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex min-h-0 flex-col">
+              <div className="mb-3 flex items-center justify-between">
+                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-violet-300">Избранные клипы</p>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setClipsPage((prev) => Math.max(0, Math.min(prev, totalClipPages - 1) - 1))}
+                    disabled={safeClipsPage === 0}
+                    className={`${arrowButtonBaseClass} border border-violet-400/35 bg-violet-500/10 text-violet-100 shadow-[0_3px_0_rgba(139,92,246,0.45)] hover:bg-violet-500/20 active:shadow-[0_1px_0_rgba(139,92,246,0.45)]`}
+                    aria-label="Предыдущая страница клипов"
+                  >
+                    <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none">
+                      <path d="M11.5 4.5 6 10l5.5 5.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setClipsPage((prev) => Math.min(totalClipPages - 1, Math.min(prev, totalClipPages - 1) + 1))}
+                    disabled={safeClipsPage >= totalClipPages - 1}
+                    className={`${arrowButtonBaseClass} border border-violet-400/35 bg-violet-500/10 text-violet-100 shadow-[0_3px_0_rgba(139,92,246,0.45)] hover:bg-violet-500/20 active:shadow-[0_1px_0_rgba(139,92,246,0.45)]`}
+                    aria-label="Следующая страница клипов"
+                  >
+                    <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none">
+                      <path d="M8.5 4.5 14 10l-5.5 5.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+                  <a
+                    href="https://www.twitch.tv/sasavot/videos?featured=true&filter=clips&range=all"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`${actionButtonBaseClass} border border-violet-400/35 bg-violet-500/10 text-violet-100 shadow-[0_3px_0_rgba(139,92,246,0.45)] hover:bg-violet-500/20 active:shadow-[0_1px_0_rgba(139,92,246,0.45)]`}
+                  >
+                    Все клипы
+                  </a>
+                </div>
+              </div>
+
+              <div className="min-h-0 overflow-hidden">
+                <div className="grid h-full min-h-[195px] gap-3" style={{ gridTemplateColumns: `repeat(${itemsPerPage}, minmax(0, 1fr))` }}>
+                  {visibleClips.length === 0 ? (
+                    <div className="flex h-full items-center justify-center rounded-2xl border border-dashed border-violet-400/25 text-gray-400" style={{ gridColumn: `1 / -1` }}>
+                      Клипы пока не найдены
+                    </div>
+                  ) : (
+                    visibleClips.map((clip) => (
+                      <a key={clip.id} href={clip.url} target="_blank" rel="noopener noreferrer" className="group relative h-full overflow-hidden rounded-2xl border border-violet-300/25 bg-black/25">
+                        <Image src={clip.thumbnail_url} alt={clip.title} fill className="object-cover transition-transform duration-500 group-hover:scale-105" sizes="(max-width: 768px) 100vw, 25vw" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/10" />
+                        <div className="absolute right-3 top-3 rounded-lg bg-black/80 px-2 py-1 text-xs font-mono text-white">{formatClipDuration(clip.duration)}</div>
+                        <div className="absolute inset-x-0 bottom-0 p-4">
+                          <h3 className="line-clamp-2 text-base font-bold text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.75)] md:text-lg">{clip.title}</h3>
+                          <div className="mt-2 flex items-center gap-3 text-xs text-violet-100/90">
+                            <span>👁 {formatViewCount(clip.view_count)}</span>
+                            <span>{formatDate(clip.created_at)}</span>
+                          </div>
+                        </div>
+                      </a>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </section>

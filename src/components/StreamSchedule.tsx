@@ -50,8 +50,9 @@ interface CalendarWeek {
 }
 
 const VIEW_START_MINUTES = 17 * 60;
-const VIEW_END_MINUTES = 26 * 60;
-const SLOT_MINUTES = 30;
+const BASE_VIEW_END_MINUTES = 26 * 60;
+const MAX_VIEW_END_MINUTES = 36 * 60;
+const SLOT_MINUTES = 60;
 const WEEKS_COUNT = 12;
 
 function dateKey(date: Date): string {
@@ -181,7 +182,7 @@ function buildWeeks(dbStreams: DbStream[], liveActualStart: { key: string; start
       const key = dateKey(current);
       const isToday = key === todayKey;
       const isFuture = current > today;
-      const isLiveToday = Boolean(isToday && liveActualStart && liveActualStart.key === todayKey);
+      const isLiveForDate = Boolean(liveActualStart && liveActualStart.key === key);
       const dbStream = isFuture ? undefined : dbStreamByDate.get(key);
 
       let timeRange = "--:-- - --:--";
@@ -192,13 +193,16 @@ function buildWeeks(dbStreams: DbStream[], liveActualStart: { key: string; start
       let endMinutes: number | null = null;
       let isLive = false;
 
-      if (isLiveToday && liveActualStart) {
+      if (isLiveForDate && liveActualStart) {
         timeRange = timeRu(liveActualStart.startedAt);
         durationLabel = "В эфире";
         title = liveActualStart.title || "Прямой эфир";
         streamUrl = "https://www.twitch.tv/sasavot";
         startMinutes = minutesSinceDayStart(liveActualStart.startedAt, current);
-        endMinutes = Math.max(startMinutes ?? VIEW_START_MINUTES, minutesSinceDayStart(new Date().toISOString(), current) ?? VIEW_END_MINUTES);
+        endMinutes = Math.max(
+          startMinutes ?? VIEW_START_MINUTES,
+          minutesSinceDayStart(new Date().toISOString(), current) ?? BASE_VIEW_END_MINUTES
+        );
         isLive = true;
       } else if (dbStream) {
         const durationHours = Number(dbStream.duration_hours);
@@ -228,7 +232,7 @@ function buildWeeks(dbStreams: DbStream[], liveActualStart: { key: string; start
         title,
         streamUrl,
         isToday,
-        isActive: Boolean(dbStream) || isLiveToday,
+        isActive: Boolean(dbStream) || isLiveForDate,
         isLive,
         startMinutes,
         endMinutes,
@@ -241,15 +245,15 @@ function buildWeeks(dbStreams: DbStream[], liveActualStart: { key: string; start
   return weeks;
 }
 
-function streamBlockStyle(card: TimelineCard): { left: string; width: string } | null {
+function streamBlockStyle(card: TimelineCard, viewStartMinutes: number, viewEndMinutes: number): { left: string; width: string } | null {
   if (card.startMinutes === null) return null;
 
-  const total = VIEW_END_MINUTES - VIEW_START_MINUTES;
-  const start = Math.max(VIEW_START_MINUTES, Math.min(VIEW_END_MINUTES, card.startMinutes));
-  const rawEnd = card.endMinutes ?? Math.min(VIEW_END_MINUTES, start + 45);
-  const end = Math.max(start + 20, Math.max(VIEW_START_MINUTES, Math.min(VIEW_END_MINUTES, rawEnd)));
+  const total = viewEndMinutes - viewStartMinutes;
+  const start = Math.max(viewStartMinutes, Math.min(viewEndMinutes, card.startMinutes));
+  const rawEnd = card.endMinutes ?? Math.min(viewEndMinutes, start + 45);
+  const end = Math.max(start + 20, Math.max(viewStartMinutes, Math.min(viewEndMinutes, rawEnd)));
 
-  const left = ((start - VIEW_START_MINUTES) / total) * 100;
+  const left = ((start - viewStartMinutes) / total) * 100;
   const width = Math.max(5, ((end - start) / total) * 100);
 
   return { left: `${left}%`, width: `${width}%` };
@@ -380,6 +384,21 @@ export default function StreamSchedule() {
   const availableWeekKeys = useMemo(() => new Set(weeks.map((week) => week.key)), [weeks]);
   const calendarWeeks = useMemo(() => buildCalendarWeeks(calendarMonthStart), [calendarMonthStart]);
 
+  const viewEndMinutes = useMemo(() => {
+    const cards = selectedWeek?.cards ?? [];
+    let latestEnd = BASE_VIEW_END_MINUTES;
+
+    for (const card of cards) {
+      const candidateEnd = card.endMinutes ?? (card.startMinutes !== null ? card.startMinutes + 120 : null);
+      if (candidateEnd !== null) {
+        latestEnd = Math.max(latestEnd, candidateEnd);
+      }
+    }
+
+    const roundedWithBuffer = Math.ceil((latestEnd + 30) / 60) * 60;
+    return Math.min(MAX_VIEW_END_MINUTES, Math.max(BASE_VIEW_END_MINUTES, roundedWithBuffer));
+  }, [selectedWeek]);
+
   useEffect(() => {
     if (!selectedWeek?.key) return;
     const selectedDate = new Date(`${selectedWeek.key}T00:00:00`);
@@ -407,12 +426,12 @@ export default function StreamSchedule() {
 
   const axisTicks = useMemo(() => {
     const ticks: string[] = [];
-    for (let m = VIEW_START_MINUTES; m <= VIEW_END_MINUTES; m += SLOT_MINUTES) ticks.push(formatAxis(m));
+    for (let m = VIEW_START_MINUTES; m <= viewEndMinutes; m += SLOT_MINUTES) ticks.push(formatAxis(m));
     return ticks;
-  }, []);
+  }, [viewEndMinutes]);
 
   return (
-    <section id="schedule" className="py-20 bg-gray-900/70 border-y border-gray-800/60">
+    <section id="schedule" className="min-h-screen py-20 bg-gray-900/70 border-y border-gray-800/60">
       <div className="max-w-6xl mx-auto px-6">
         <div className="flex items-center justify-between mb-4 gap-3">
           <h2 className="text-2xl md:text-3xl font-bold text-white">Расписание стримов</h2>
@@ -578,23 +597,23 @@ export default function StreamSchedule() {
               <p className="text-sm font-semibold text-white">{selectedWeek ? selectedWeek.label : "Неделя"}</p>
             </div>
 
-            <div className="grid grid-cols-[74px_1fr] border-b border-slate-800 bg-slate-900/40">
-              <div className="text-xs text-cyan-300 px-3 py-2 border-r border-slate-800">GMT+3</div>
-              <div className="grid" style={{ gridTemplateColumns: `repeat(${axisTicks.length}, minmax(0, 1fr))` }}>
-                {axisTicks.map((label) => (
-                  <div
-                    key={label}
-                    className="text-[11px] text-gray-300 px-2 py-2 border-r border-slate-800/70 last:border-r-0 transition-colors hover:bg-slate-700/35 hover:text-white"
-                  >
-                    {label}
-                  </div>
-                ))}
+              <div className="grid grid-cols-[74px_1fr] border-b border-slate-800 bg-slate-900/40">
+                <div className="text-xs text-cyan-300 px-3 py-2 border-r border-slate-800">GMT+3</div>
+                <div className="grid" style={{ gridTemplateColumns: `repeat(${Math.max(axisTicks.length - 1, 1)}, minmax(0, 1fr))` }}>
+                  {axisTicks.slice(0, -1).map((label) => (
+                    <div
+                      key={label}
+                      className="text-[11px] text-gray-300 px-2 py-2 border-r border-slate-800/70 last:border-r-0 transition-colors hover:bg-slate-700/35 hover:text-white"
+                    >
+                      {label}
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
 
             <div>
               {(selectedWeek?.cards ?? []).map((item) => {
-                const style = streamBlockStyle(item);
+                const style = streamBlockStyle(item, VIEW_START_MINUTES, viewEndMinutes);
                 const laneClass = item.isToday ? "bg-slate-800/35" : "bg-[#0b1019]";
 
                 return (
@@ -623,9 +642,24 @@ export default function StreamSchedule() {
                           style={style}
                           title={item.title}
                         >
+                          {item.isLive ? (
+                            <>
+                              <div
+                                className="pointer-events-none absolute inset-0 rounded-xl"
+                                style={{
+                                  backgroundImage: "linear-gradient(110deg, rgba(244,63,94,0.14) 0%, rgba(251,113,133,0.34) 35%, rgba(244,63,94,0.14) 70%)",
+                                  backgroundSize: "220% 220%",
+                                  animation: "liveShimmer 3.2s ease-in-out infinite alternate",
+                                }}
+                              />
+                              <div className="pointer-events-none absolute inset-0 rounded-xl bg-gradient-to-r from-red-500/8 via-rose-400/18 to-red-500/8" style={{ animation: "liveBreath 2.8s ease-in-out infinite" }} />
+                            </>
+                          ) : null}
                           <p className="text-xs font-semibold text-white line-clamp-1">{item.title}</p>
                           <p className="text-[11px] text-gray-200 line-clamp-1">{item.timeRange}</p>
-                          <p className="text-[11px] text-emerald-300 line-clamp-1">{item.isLive ? "В эфире" : item.durationLabel}</p>
+                          <p className={`text-[11px] line-clamp-1 ${item.isLive ? "text-red-300" : "text-emerald-300"}`}>
+                            {item.isLive ? "В эфире" : item.durationLabel}
+                          </p>
                         </a>
                       ) : (
                         <div
