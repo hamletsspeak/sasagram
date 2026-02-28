@@ -8,8 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "db:setup": "node scripts/setup-db.mjs",
-    "db:import-2026": "node --env-file=.env.local scripts/import-streams-2026.mjs"
+    "db:setup": "node --env-file=.env.local scripts/setup-db.mjs",
+    "db:import-2026": "node --env-file=.env.local scripts/import-streams-2026.mjs",
+    "db:migrate-to-supabase": "node --env-file=.env.local scripts/migrate-to-supabase.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",

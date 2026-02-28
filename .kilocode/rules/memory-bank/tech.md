@@ -29,6 +29,7 @@ bun lint           # Run ESLint
 bun typecheck      # Run TypeScript type checking
 npm run db:setup   # Create DB tables (streams, twitch_vods, twitch_clips, app_cache_state)
 npm run db:import-2026 # Import Twitch archive streams since 2026-01-01
+npm run db:migrate-to-supabase # Copy streams/media/cache data into Supabase Postgres
 ```
 
 ## Project Configuration
@@ -147,3 +148,4 @@ npm run db:import-2026 # Import Twitch archive streams since 2026-01-01
 - Add as needed for features
 - Use `.env.local` for local development
 - For PostgreSQL: `DATABASE_URL` (or `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`)
+- For Supabase Postgres target: `SUPABASE_DB_URL` (or `SUPABASE_DATABASE_URL`)

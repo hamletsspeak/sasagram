@@ -111,6 +111,9 @@ The template is now a fully functional personal business card website for the st
 - [x] Reworked VOD/Clips into vertically aligned paged shelves with fixed visible card count and explicit prev/next pagination buttons
 - [x] Hero content refreshed and live-player presentation enhanced (larger in-hero size during live)
 - [x] Added PostgreSQL media cache for Twitch VODs/clips (`twitch_vods`, `twitch_clips`, `app_cache_state`) and switched `/api/twitch` to DB-first media reads with TTL-based sync
+- [x] Added Supabase migration support: DB URL fallbacks for Supabase and script `db:migrate-to-supabase` for full table copy
+- [x] Migrated core PostgreSQL data to Supabase via MCP (`streams`, `twitch_vods`, `twitch_clips`, `app_cache_state`)
+- [x] Added project-level OpenCode MCP config for Supabase remote server (`opencode.json`)
 
 ## Current Structure
 
@@ -130,6 +133,7 @@ The template is now a fully functional personal business card website for the st
 | `src/app/api/twitch/route.ts` | Twitch API with DB-cached VOD/clip sync | ✅ Ready |
 | `src/lib/db.ts` | PostgreSQL connection pool helper | ✅ Ready |
 | `scripts/setup-db.mjs` | Initializes DB tables (`streams`, `twitch_vods`, `twitch_clips`, `app_cache_state`) | ✅ Ready |
+| `scripts/migrate-to-supabase.mjs` | Migrates streams/media/cache data to Supabase Postgres | ✅ Ready |
 | `.kilocode/` | AI context & recipes | ✅ Ready |
 
 ## Website Sections
@@ -238,4 +242,7 @@ To personalize the template, update:
 | 2026-03-01 | Implemented physical button press feel for media shelf controls using active-state Y-offset and compressed shadow |
 | 2026-03-01 | Replaced free horizontal-scroll shelves with page-based layout: cards are aligned in equal vertical grid columns, number of visible cards is capped per breakpoint, and rows navigate via dedicated prev/next buttons |
 | 2026-03-01 | Added DB-backed Twitch media caching layer: new tables for VODs/clips + cache state, setup script updated, and `/api/twitch` now serves media from PostgreSQL with periodic Twitch sync |
+| 2026-03-01 | Added Supabase migration path: DB helpers now accept `SUPABASE_DB_URL`/`SUPABASE_DATABASE_URL`; created `db:migrate-to-supabase` script for `streams`, `twitch_vods`, `twitch_clips`, `app_cache_state` |
+| 2026-03-01 | Completed Supabase MCP data migration and verified counts: streams=52, twitch_vods=20, twitch_clips=20, app_cache_state=1 |
 | 2026-02-28 | Reworked Hero text blocks and made live player significantly larger in Hero with stronger visual emphasis while stream is active |
+| 2026-03-01 | Added `opencode.json` with Supabase MCP remote server configuration; attempted `opencode mcp auth supabase`, but local OpenCode binary crashed in this environment (Bun/JSC assertion) |

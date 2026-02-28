@@ -4,6 +4,8 @@ let pool: Pool | null = null;
 
 function getConnectionString(): string {
   const envConnectionString =
+    process.env.SUPABASE_DB_URL ??
+    process.env.SUPABASE_DATABASE_URL ??
     process.env.DATABASE_URL ??
     process.env.POSTGRES_PRISMA_URL ??
     process.env.POSTGRES_URL ??
