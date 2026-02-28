@@ -2,6 +2,23 @@ import { Pool } from "pg";
 
 let pool: Pool | null = null;
 
+function normalizeConnectionString(connectionString: string): string {
+  try {
+    const parsed = new URL(connectionString);
+    const host = parsed.hostname;
+    const requiresSsl = host.includes("neon.tech") || host.includes("supabase.co");
+    const hasSslConfig = parsed.searchParams.has("sslmode") || parsed.searchParams.has("ssl");
+
+    if (requiresSsl && !hasSslConfig) {
+      parsed.searchParams.set("sslmode", "require");
+    }
+
+    return parsed.toString();
+  } catch {
+    return connectionString;
+  }
+}
+
 function getConnectionString(): string {
   const envConnectionString =
     process.env.SUPABASE_DB_URL ??
@@ -13,7 +30,7 @@ function getConnectionString(): string {
     process.env.DATABASE_URL_UNPOOLED;
 
   if (envConnectionString) {
-    return envConnectionString;
+    return normalizeConnectionString(envConnectionString);
   }
 
   const host = process.env.PGHOST ?? process.env.POSTGRES_HOST ?? "localhost";
@@ -21,7 +38,7 @@ function getConnectionString(): string {
   const user = process.env.PGUSER ?? process.env.POSTGRES_USER ?? "postgres";
   const password = process.env.PGPASSWORD ?? process.env.POSTGRES_PASSWORD ?? "123";
   const database = process.env.PGDATABASE ?? process.env.POSTGRES_DATABASE ?? "sasagram_streams";
-  const sslMode = process.env.PGSSLMODE ?? (host.includes("neon.tech") ? "require" : null);
+  const sslMode = process.env.PGSSLMODE ?? (host.includes("neon.tech") || host.includes("supabase.co") ? "require" : null);
 
   const connection = `postgresql://${encodeURIComponent(user)}:${encodeURIComponent(password)}@${host}:${port}/${database}`;
 

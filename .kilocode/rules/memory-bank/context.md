@@ -114,6 +114,8 @@ The template is now a fully functional personal business card website for the st
 - [x] Added Supabase migration support: DB URL fallbacks for Supabase and script `db:migrate-to-supabase` for full table copy
 - [x] Migrated core PostgreSQL data to Supabase via MCP (`streams`, `twitch_vods`, `twitch_clips`, `app_cache_state`)
 - [x] Added project-level OpenCode MCP config for Supabase remote server (`opencode.json`)
+- [x] Cleaned local env keys: removed legacy Neon/Vercel-only variables and kept active Supabase + API credentials only
+- [x] Hardened DB connection parsing: auto-enforces `sslmode=require` for Supabase/Neon URLs when missing
 
 ## Current Structure
 
@@ -246,3 +248,5 @@ To personalize the template, update:
 | 2026-03-01 | Completed Supabase MCP data migration and verified counts: streams=52, twitch_vods=20, twitch_clips=20, app_cache_state=1 |
 | 2026-02-28 | Reworked Hero text blocks and made live player significantly larger in Hero with stronger visual emphasis while stream is active |
 | 2026-03-01 | Added `opencode.json` with Supabase MCP remote server configuration; attempted `opencode mcp auth supabase`, but local OpenCode binary crashed in this environment (Bun/JSC assertion) |
+| 2026-03-01 | Removed unused keys from `.env.local`; dropped legacy Neon and Vercel-only tokens, leaving Supabase DB URL + active Twitch/Kick credentials |
+| 2026-03-01 | Updated `src/lib/db.ts` to normalize env connection strings and append `sslmode=require` for Supabase/Neon hosts when absent |
