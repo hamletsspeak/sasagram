@@ -120,8 +120,16 @@ function findLiveFlag(value: unknown, depth = 0): boolean | null {
 
     for (const candidate of direct) {
       if (typeof candidate === "boolean") return candidate;
-      if (candidate && typeof candidate === "object") return true;
       if (typeof candidate === "number") return candidate > 0;
+      if (typeof candidate === "string") {
+        const normalized = candidate.trim().toLowerCase();
+        if (["live", "online", "streaming"].includes(normalized)) return true;
+        if (["offline", "ended", "end"].includes(normalized)) return false;
+      }
+      if (candidate && typeof candidate === "object") {
+        const nested = findLiveFlag(candidate, depth + 1);
+        if (nested !== null) return nested;
+      }
     }
 
     for (const entry of Object.values(obj)) {

@@ -116,6 +116,7 @@ The template is now a fully functional personal business card website for the st
 - [x] Added project-level OpenCode MCP config for Supabase remote server (`opencode.json`)
 - [x] Cleaned local env keys: removed legacy Neon/Vercel-only variables and kept active Supabase + API credentials only
 - [x] Hardened DB connection parsing: auto-enforces `sslmode=require` for Supabase/Neon URLs when missing
+- [x] Fixed false-positive Kick live status in `/api/watch-also` by removing object-truthy live detection and relying on nested `is_live`/status values
 
 ## Current Structure
 
@@ -250,3 +251,4 @@ To personalize the template, update:
 | 2026-03-01 | Added `opencode.json` with Supabase MCP remote server configuration; attempted `opencode mcp auth supabase`, but local OpenCode binary crashed in this environment (Bun/JSC assertion) |
 | 2026-03-01 | Removed unused keys from `.env.local`; dropped legacy Neon and Vercel-only tokens, leaving Supabase DB URL + active Twitch/Kick credentials |
 | 2026-03-01 | Updated `src/lib/db.ts` to normalize env connection strings and append `sslmode=require` for Supabase/Neon hosts when absent |
+| 2026-03-01 | Corrected Kick online/offline detection in `/api/watch-also`: nested stream objects no longer auto-mark channels as live without explicit live flag |
