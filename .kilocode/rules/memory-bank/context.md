@@ -117,6 +117,7 @@ The template is now a fully functional personal business card website for the st
 - [x] Cleaned local env keys: removed legacy Neon/Vercel-only variables and kept active Supabase + API credentials only
 - [x] Hardened DB connection parsing: auto-enforces `sslmode=require` for Supabase/Neon URLs when missing
 - [x] Fixed false-positive Kick live status in `/api/watch-also` by removing object-truthy live detection and relying on nested `is_live`/status values
+- [x] Optimized stream sync write-path: added bulk upsert support in `/api/streams` and deduplicated VOD sync on client to reduce repetitive POST bursts
 
 ## Current Structure
 
@@ -252,3 +253,4 @@ To personalize the template, update:
 | 2026-03-01 | Removed unused keys from `.env.local`; dropped legacy Neon and Vercel-only tokens, leaving Supabase DB URL + active Twitch/Kick credentials |
 | 2026-03-01 | Updated `src/lib/db.ts` to normalize env connection strings and append `sslmode=require` for Supabase/Neon hosts when absent |
 | 2026-03-01 | Corrected Kick online/offline detection in `/api/watch-also`: nested stream objects no longer auto-mark channels as live without explicit live flag |
+| 2026-03-01 | Reduced DB write spam from schedule sync: `POST /api/streams` now accepts bulk payloads; `StreamSchedule` syncs only changed VOD signatures and sends one batch request |
