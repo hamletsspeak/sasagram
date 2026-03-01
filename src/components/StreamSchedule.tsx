@@ -6,7 +6,7 @@ import { fetchJsonWithCache } from "@/lib/client-api-cache";
 interface StreamData {
   isLive: boolean;
   stream: { started_at: string; title: string } | null;
-  vods: Array<{ created_at: string; duration: string; title: string; url: string }>;
+  vods: Array<{ id: string; created_at: string; duration: string; title: string; url: string }>;
 }
 
 interface StreamsResponse {
@@ -277,6 +277,7 @@ export default function StreamSchedule() {
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
   const calendarRef = useRef<HTMLDivElement | null>(null);
+  const syncedVodSignaturesRef = useRef<Map<string, string>>(new Map());
 
   const mergeDbStream = (incoming: DbStream) => {
     setDbStreams((prev) => {
@@ -353,31 +354,66 @@ export default function StreamSchedule() {
     };
   }, [liveActualStart]);
 
-  const vodSyncKey = useMemo(() => (streamData?.vods ?? []).map((vod) => `${vod.created_at}|${vod.url}`).join(";"), [streamData?.vods]);
+  const vodSyncKey = useMemo(
+    () =>
+      (streamData?.vods ?? [])
+        .map((vod) => `${vod.id}|${vod.created_at}|${vod.duration}|${vod.url}|${vod.title}`)
+        .join(";"),
+    [streamData?.vods]
+  );
 
   useEffect(() => {
     if (!streamData?.vods?.length) return;
 
     const syncVods = async () => {
-      const responses = await Promise.allSettled(
-        streamData.vods.map((vod) =>
-          fetch("/api/streams", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ startedAt: vod.created_at, durationHours: parseTwitchDurationToHours(vod.duration), title: vod.title, streamUrl: vod.url }),
-          })
-        )
-      );
+      const changedVods = streamData.vods.filter((vod) => {
+        const signature = `${vod.created_at}|${vod.duration}|${vod.url}|${vod.title}`;
+        return syncedVodSignaturesRef.current.get(vod.id) !== signature;
+      });
 
-      for (const item of responses) {
-        if (item.status !== "fulfilled" || !item.value.ok) continue;
-        const payload = (await item.value.json()) as { stream: DbStream };
-        mergeDbStream(payload.stream);
+      if (changedVods.length === 0) return;
+
+      const response = await fetch("/api/streams", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          streams: changedVods.map((vod) => ({
+            startedAt: vod.created_at,
+            durationHours: parseTwitchDurationToHours(vod.duration),
+            title: vod.title,
+            streamUrl: vod.url,
+          })),
+        }),
+      });
+
+      if (!response.ok) return;
+
+      const payload = (await response.json()) as { streams?: DbStream[]; stream?: DbStream };
+      const syncedStreams = payload.streams ?? (payload.stream ? [payload.stream] : []);
+
+      for (const stream of syncedStreams) {
+        mergeDbStream(stream);
+      }
+
+      for (const vod of changedVods) {
+        const signature = `${vod.created_at}|${vod.duration}|${vod.url}|${vod.title}`;
+        syncedVodSignaturesRef.current.set(vod.id, signature);
       }
     };
 
     syncVods().catch(() => {});
-  }, [streamData, vodSyncKey]);
+  }, [vodSyncKey]);
+
+  useEffect(() => {
+    if (!streamData?.vods?.length) return;
+
+    const activeIds = new Set(streamData.vods.map((vod) => vod.id));
+    for (const id of syncedVodSignaturesRef.current.keys()) {
+      if (!activeIds.has(id)) {
+        syncedVodSignaturesRef.current.delete(id);
+      }
+    }
+  }, [streamData?.vods]);
 
   const weeks = useMemo(() => buildWeeks(dbStreams, liveActualStart), [dbStreams, liveActualStart]);
   const selectedWeekIndex = selectedWeekKey ? weeks.findIndex((week) => week.key === selectedWeekKey) : weeks.length - 1;

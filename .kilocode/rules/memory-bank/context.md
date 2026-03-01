@@ -4,7 +4,7 @@
 
 **Template Status**: ✅ SASAVOT streamer business card website implemented
 
-The template is now a fully functional personal business card website for the streamer SASAVOT, built with Next.js 16, TypeScript, and Tailwind CSS 4. Main sections are implemented with a dark horror-like theme (black base) and deep red "blood" accents.
+The template is now a fully functional personal business card website for the streamer SASAVOT, built with Next.js 16, TypeScript, and Tailwind CSS 4. All sections are implemented with a dark theme (gray-950 base) and purple/violet streamer accent colors.
 
 ## Recently Completed
 
@@ -117,27 +117,6 @@ The template is now a fully functional personal business card website for the st
 - [x] Cleaned local env keys: removed legacy Neon/Vercel-only variables and kept active Supabase + API credentials only
 - [x] Hardened DB connection parsing: auto-enforces `sslmode=require` for Supabase/Neon URLs when missing
 - [x] Fixed false-positive Kick live status in `/api/watch-also` by removing object-truthy live detection and relying on nested `is_live`/status values
-- [x] Added DB outage fail-soft behavior: `/api/streams` now returns empty list on connectivity errors and `/api/twitch` keeps working without cached media when Postgres DNS/network is down
-- [x] Updated DB SSL default for Supabase/Neon to `sslmode=verify-full` and switched Twitch avatar API to image-proxy responses to prevent Next Image "invalid image" failures on redirects
-- [x] Fixed Supabase pooler connectivity for runtime APIs: disabled strict TLS cert verification (`ssl.rejectUnauthorized=false`) specifically for `pooler.supabase.com` and skipped auto `sslmode=verify-full` injection for pooler hosts
-- [x] Added shared client-side API cache layer (`src/lib/client-api-cache.ts`) with in-flight request deduplication to prevent duplicate `/api/twitch`, `/api/streams`, `/api/watch-also` fetches across multiple components
-- [x] Added shared server-side Twitch OAuth token cache (`src/lib/twitch-auth.ts`) and wired all Twitch API routes to reuse one token until expiry
-- [x] Improved API cache headers for `/api/streams` and added short revalidation hints for Twitch Helix fetches in `/api/twitch`
-- [x] Navbar logo switched to `sasavot_logo_v3.webm`; autoplay trigger now runs every 8 seconds, and manual logo click replay resets the 8-second timer
-- [x] Twitch clips order changed to popularity-first: cards are sorted by `view_count` descending (left-to-right)
-- [x] Removed redundant section overline labels: deleted duplicated "Полезные ссылки" pre-title and removed "Twitch Media" caption
-- [x] Global visual style switched to darker streamer theme: black background layers, blood-red accents, and stronger red glow/border styling across Navbar, Hero, About, Schedule, VODs, Contact, and Footer
-- [x] Removed top section titles/descriptions in VODs and Contacts by request; replaced "Смотреть также" Kick badge SVG with local asset `public/assets/logo/kick-streaming-platform-logo-icon.svg`
-- [x] "Смотреть также" creator tiles are now forced into a single horizontal row: reduced tile/avatar sizes and enabled horizontal overflow instead of wrapping
-- [x] Tuned vertical spacing between VOD shelves ("Записи стримов" and "Избранные клипы") to keep rows closer and avoid upward drift of the first row
-- [x] Hid horizontal scrollbar in "Смотреть также" row while preserving horizontal scroll behavior
-- [x] Tuned `#vods` anchor/viewport layout: added scroll offset and vertical centering so media rows appear in the middle of the screen after navbar jump
-- [x] Refined `#vods` anchor offset (`scroll-mt`) to prevent schedule section bleed-through when jumping from navbar "Записи"
-- [x] Schedule timeline color logic adjusted: inactive stream cards and grid returned to neutral gray; only active live card remains red-accented
-- [x] Schedule header controls rearranged by request: calendar moved to the right side, "Сегодня" button placed where week-date text was, and top duplicate "Сегодня" button removed
-- [x] Schedule header refined: calendar returned to left control cluster and its button label now shows selected week range (`DD.MM - DD.MM`) instead of month/year
-- [x] Hero live behavior updated: when stream is live, player is rendered first at top of page and the greeting/intro section remains visible below instead of being replaced
-- [x] Cleaned ESLint/react-hooks errors across UI components: refactored Navbar logo autoplay scheduler, removed problematic synchronous state updates in Hero/StreamSchedule effects, and restored lint/typecheck pass
 
 ## Current Structure
 
@@ -171,7 +150,7 @@ The template is now a fully functional personal business card website for the st
 
 ## Design System
 
-- **Color scheme**: Dark (near-black backgrounds), deep red/blood accents
+- **Color scheme**: Dark (gray-950 / gray-900 backgrounds), Indigo/Purple accents
 - **Typography**: Geist Sans (headings), Geist Mono (code)
 - **Smooth scroll**: Enabled via `scroll-smooth` on `<html>`
 - **Responsive**: Mobile-first, breakpoints at `sm:`, `md:`, `lg:`
@@ -273,22 +252,3 @@ To personalize the template, update:
 | 2026-03-01 | Removed unused keys from `.env.local`; dropped legacy Neon and Vercel-only tokens, leaving Supabase DB URL + active Twitch/Kick credentials |
 | 2026-03-01 | Updated `src/lib/db.ts` to normalize env connection strings and append `sslmode=require` for Supabase/Neon hosts when absent |
 | 2026-03-01 | Corrected Kick online/offline detection in `/api/watch-also`: nested stream objects no longer auto-mark channels as live without explicit live flag |
-| 2026-03-01 | Added connectivity-aware fallbacks for PostgreSQL outages (`ENOTFOUND`/network errors) in `/api/streams` and `/api/twitch`, changed Supabase/Neon SSL default to `verify-full`, and rewrote Twitch avatar endpoint to proxy real image bytes instead of redirects |
-| 2026-03-01 | Fixed pg connection for Supabase pooler host (`aws-1-...pooler.supabase.com:6543`): avoid forced `sslmode=verify-full` for pooler and use `ssl: { rejectUnauthorized: false }` in Pool config to resolve `SELF_SIGNED_CERT_IN_CHAIN` |
-| 2026-03-01 | Added client request dedupe/TTL cache helper and switched `Hero`, `TwitchVods`, `StreamSchedule`, `Contact` to cached API reads to reduce repeated network calls |
-| 2026-03-01 | Added shared Twitch app-token cache utility and reused it in `/api/twitch`, `/api/twitch/avatar/[login]`, `/api/twitch/schedule`, `/api/watch-also` to cut OAuth token chatter |
-| 2026-03-01 | Updated navbar logo source to `sasavot_logo_v3.webm`; logo animation now auto-plays every 8 seconds and clicking logo immediately replays it while restarting the 8-second cycle |
-| 2026-03-01 | Changed clips ordering in `TwitchVods` from newest-first to most-viewed-first (`view_count` DESC) so cards go left-to-right by popularity |
-| 2026-03-01 | Cleaned repeated section headings in UI: removed extra "Полезные ссылки" pre-title in Contact and removed "Twitch Media" overline in VODs |
-| 2026-03-01 | Reworked site design into darker black/red style with blood-like accents and glow effects in all main visible sections (Navbar/Hero/About/Schedule/VODs/Contact/Footer) |
-| 2026-03-01 | Removed VOD and Contact top heading/description blocks and switched Kick platform badge to custom local icon asset `kick-streaming-platform-logo-icon.svg` |
-| 2026-03-01 | Updated "Смотреть также" layout to one-line horizontal strip (no wrapping) with smaller cards/avatars and horizontal scroll fallback on narrow widths |
-| 2026-03-01 | Adjusted VOD/Clips inter-row spacing to a tighter layout so both rows stay visually closer and the top list does not drift too high in the section |
-| 2026-03-01 | Hidden visible scrollbar for "Смотреть также" horizontal strip while keeping swipe/scroll functionality |
-| 2026-03-01 | Improved `#vods` jump position from navbar via `scroll-mt` and centered media content vertically in the section to prevent the top shelf from sticking to the top edge |
-| 2026-03-01 | Reduced `#vods` anchor offset from oversized value to `scroll-mt-12 md:scroll-mt-16` so navbar jump lands on VOD section instead of exposing schedule area |
-| 2026-03-01 | Recolored schedule timeline by request: grid lines and non-active cards switched back to gray, while only LIVE/active card styling stays red |
-| 2026-03-01 | Repositioned schedule controls in panel header: right corner now hosts the calendar dropdown, and "Сегодня" moved to the former week-date spot (removed extra top-level button) |
-| 2026-03-01 | Updated schedule calendar trigger text to selected week range format (`DD.MM - DD.MM`) and returned calendar control to its original left-side position by request |
-| 2026-03-01 | Changed Hero live layout: live player now appears as first block while original welcome content stays rendered underneath during active stream (no structural removal) |
-| 2026-03-01 | Resolved current lint blockers (`react-hooks/immutability`, `set-state-in-effect`, `preserve-manual-memoization`) by refactoring `Navbar`, `Hero`, and `StreamSchedule`; project lint/typecheck now pass |
