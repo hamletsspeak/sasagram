@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { getDbPool } from "@/lib/db";
+import { getDbPool, isDatabaseConnectivityError } from "@/lib/db";
+import { getTwitchAppAccessToken } from "@/lib/twitch-auth";
 
 const TWITCH_CLIENT_ID = process.env.TWITCH_CLIENT_ID!;
 const TWITCH_CLIENT_SECRET = process.env.TWITCH_CLIENT_SECRET!;
@@ -28,16 +29,6 @@ type TwitchClip = {
   duration: number;
   creator_name: string;
 };
-
-async function getAccessToken(): Promise<string> {
-  const res = await fetch(
-    `https://id.twitch.tv/oauth2/token?client_id=${TWITCH_CLIENT_ID}&client_secret=${TWITCH_CLIENT_SECRET}&grant_type=client_credentials`,
-    { method: "POST" }
-  );
-  if (!res.ok) throw new Error("Failed to get Twitch access token");
-  const data = (await res.json()) as { access_token: string };
-  return data.access_token;
-}
 
 async function getCachedMediaState() {
   const pool = getDbPool();
@@ -185,14 +176,17 @@ async function syncMediaCache(headers: Record<string, string>, userId: string) {
 
 export async function GET() {
   try {
-    const token = await getAccessToken();
+    const token = await getTwitchAppAccessToken(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET);
 
     const headers = {
       "Client-ID": TWITCH_CLIENT_ID,
       Authorization: `Bearer ${token}`,
     };
 
-    const userRes = await fetch(`https://api.twitch.tv/helix/users?login=${TWITCH_USERNAME}`, { headers });
+    const userRes = await fetch(`https://api.twitch.tv/helix/users?login=${TWITCH_USERNAME}`, {
+      headers,
+      next: { revalidate: 60 },
+    });
     const userData = (await userRes.json()) as {
       data?: Array<{
         id: string;
@@ -212,8 +206,14 @@ export async function GET() {
     const userId = user.id;
 
     const [streamRes, followersRes] = await Promise.all([
-      fetch(`https://api.twitch.tv/helix/streams?user_login=${TWITCH_USERNAME}`, { headers }),
-      fetch(`https://api.twitch.tv/helix/channels/followers?broadcaster_id=${userId}`, { headers }),
+      fetch(`https://api.twitch.tv/helix/streams?user_login=${TWITCH_USERNAME}`, {
+        headers,
+        next: { revalidate: 30 },
+      }),
+      fetch(`https://api.twitch.tv/helix/channels/followers?broadcaster_id=${userId}`, {
+        headers,
+        next: { revalidate: 60 },
+      }),
     ]);
 
     const streamData = (await streamRes.json()) as {
@@ -230,7 +230,22 @@ export async function GET() {
     const followersData = (await followersRes.json()) as { total?: number };
     const followersCount = followersData.total ?? 0;
 
-    let { vods, clips, hasRecentSync } = await getCachedMediaState();
+    let vods: unknown[] = [];
+    let clips: unknown[] = [];
+    let hasRecentSync = false;
+
+    try {
+      const cacheState = await getCachedMediaState();
+      vods = cacheState.vods;
+      clips = cacheState.clips;
+      hasRecentSync = cacheState.hasRecentSync;
+    } catch (cacheError) {
+      if (!isDatabaseConnectivityError(cacheError)) {
+        throw cacheError;
+      }
+
+      console.warn("Twitch media cache read skipped: database is unavailable.");
+    }
 
     if (!hasRecentSync || vods.length === 0 || clips.length === 0) {
       try {
@@ -239,7 +254,11 @@ export async function GET() {
         vods = fresh.vods;
         clips = fresh.clips;
       } catch (syncError) {
-        console.error("Twitch media cache sync error:", syncError);
+        if (isDatabaseConnectivityError(syncError)) {
+          console.warn("Twitch media cache sync skipped: database is unavailable.");
+        } else {
+          console.error("Twitch media cache sync error:", syncError);
+        }
       }
     }
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import { fetchJsonWithCache } from "@/lib/client-api-cache";
 
 const TWITCH_EMBED_FALLBACK_PARENTS = [
   "localhost",
@@ -51,13 +52,14 @@ function clamp(value: number, min: number, max: number): number {
 
 export default function Hero() {
   const [streamInfo, setStreamInfo] = useState<StreamInfo | null>(null);
-  const [embedHost, setEmbedHost] = useState<string | null>(null);
+  const [embedHost] = useState<string | null>(() => (typeof window === "undefined" ? null : window.location.hostname));
   const [showFloatingPlayer, setShowFloatingPlayer] = useState(false);
   const [chatHidden, setChatHidden] = useState(false);
   const [pipHidden, setPipHidden] = useState(false);
   const [pipWidth, setPipWidth] = useState(300);
   const [pipHeight, setPipHeight] = useState(170);
   const [pipPosition, setPipPosition] = useState({ x: 0, y: 0 });
+  const isLive = streamInfo?.isLive ?? false;
   const heroRef = useRef<HTMLElement | null>(null);
   const interactionRef = useRef({
     mode: "none" as "none" | "move" | "resize",
@@ -71,36 +73,33 @@ export default function Hero() {
   });
 
   useEffect(() => {
-    fetch("/api/twitch")
-      .then((res) => res.ok ? res.json() : null)
+    fetchJsonWithCache<StreamInfo>("api:twitch", "/api/twitch", { ttlMs: 45_000 })
       .then((data) => {
-        if (data) {
-          setStreamInfo({ 
-            user: data.user,
-            isLive: data.isLive, 
-            stream: data.stream 
-          });
-        }
+        setStreamInfo({
+          user: data.user,
+          isLive: data.isLive,
+          stream: data.stream,
+        });
       })
       .catch(() => {/* silently fail */});
   }, []);
 
   useEffect(() => {
-    setEmbedHost(window.location.hostname);
-  }, []);
-
-  useEffect(() => {
-    if (!streamInfo?.isLive) {
-      setShowFloatingPlayer(false);
-      setPipHidden(false);
-      return;
-    }
+    if (!streamInfo?.isLive) return;
 
     const updateFloatingPlayer = () => {
       const hero = heroRef.current;
       if (!hero) return;
       const { bottom } = hero.getBoundingClientRect();
-      setShowFloatingPlayer(bottom < 160);
+      const shouldFloat = bottom < 160;
+      if (shouldFloat) {
+        const maxX = Math.max(8, window.innerWidth - pipWidth - 8);
+        const maxY = Math.max(8, window.innerHeight - pipHeight - 8);
+        setPipPosition((prev) => (prev.x > 0 || prev.y > 0 ? prev : { x: maxX, y: maxY }));
+      } else {
+        setPipHidden(false);
+      }
+      setShowFloatingPlayer(shouldFloat);
     };
 
     updateFloatingPlayer();
@@ -111,35 +110,11 @@ export default function Hero() {
       window.removeEventListener("scroll", updateFloatingPlayer);
       window.removeEventListener("resize", updateFloatingPlayer);
     };
-  }, [streamInfo?.isLive]);
-
-  useEffect(() => {
-    if (!showFloatingPlayer) {
-      setPipHidden(false);
-    }
-  }, [showFloatingPlayer]);
-
-  useEffect(() => {
-    if (!showFloatingPlayer || pipHidden) return;
-
-    const maxX = Math.max(8, window.innerWidth - pipWidth - 8);
-    const maxY = Math.max(8, window.innerHeight - pipHeight - 8);
-
-    setPipPosition((prev) => {
-      const hasPosition = prev.x > 0 || prev.y > 0;
-      if (!hasPosition) {
-        return { x: maxX, y: maxY };
-      }
-      return {
-        x: clamp(prev.x, 8, maxX),
-        y: clamp(prev.y, 8, maxY),
-      };
-    });
-  }, [showFloatingPlayer, pipHidden, pipWidth]);
+  }, [streamInfo?.isLive, pipWidth, pipHeight]);
 
   useEffect(() => {
     const onPointerMove = (event: PointerEvent) => {
-      if (!showFloatingPlayer || pipHidden) return;
+      if (!isLive || !showFloatingPlayer || pipHidden) return;
 
       if (interactionRef.current.mode === "move") {
         const maxX = Math.max(8, window.innerWidth - pipWidth - 8);
@@ -216,10 +191,10 @@ export default function Hero() {
       window.removeEventListener("pointerup", onPointerUp);
       window.removeEventListener("pointercancel", onPointerUp);
     };
-  }, [showFloatingPlayer, pipHidden, pipWidth, pipHeight]);
+  }, [isLive, showFloatingPlayer, pipHidden, pipWidth, pipHeight]);
 
   useEffect(() => {
-    if (!showFloatingPlayer || pipHidden) return;
+    if (!isLive || !showFloatingPlayer || pipHidden) return;
 
     const onResize = () => {
       const maxX = Math.max(8, window.innerWidth - pipWidth - 8);
@@ -229,159 +204,162 @@ export default function Hero() {
 
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
-  }, [showFloatingPlayer, pipHidden, pipWidth, pipHeight]);
-
-  const isLive = streamInfo?.isLive ?? false;
+  }, [isLive, showFloatingPlayer, pipHidden, pipWidth, pipHeight]);
 
   return (
     <>
       <section
         id="home"
         ref={heroRef}
-        className={`relative flex justify-center overflow-hidden bg-gray-950 ${
+        className={`relative blood-divider flex justify-center overflow-hidden bg-transparent ${
           isLive ? "min-h-screen items-start pt-28 pb-16" : "min-h-screen items-center"
         }`}
       >
       {/* Background gradient blobs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-purple-600/20 rounded-full blur-3xl" />
-        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-violet-600/20 rounded-full blur-3xl" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-purple-900/10 rounded-full blur-3xl" />
+        <div className="absolute -top-40 -right-40 h-96 w-96 rounded-full bg-red-700/20 blur-3xl" />
+        <div className="absolute -bottom-40 -left-40 h-96 w-96 rounded-full bg-rose-900/30 blur-3xl" />
+        <div className="absolute top-1/2 left-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-red-950/30 blur-3xl" />
+        <div className="absolute -top-20 left-1/3 h-56 w-14 rounded-full bg-gradient-to-b from-red-700/35 via-red-900/20 to-transparent blur-2xl" style={{ animation: "bloodPulse 7s ease-in-out infinite" }} />
       </div>
 
       <div className={`relative z-10 mx-auto px-6 text-center ${isLive ? "max-w-6xl" : "max-w-4xl"}`}>
-        {/* Avatar */}
-        <div className="mb-8 flex justify-center">
-          <div className="relative">
-            {isLive ? (
-              showFloatingPlayer && pipHidden ? null : (
-                <div className={`${showFloatingPlayer && !pipHidden ? "" : "w-[min(94vw,1120px)]"}`}>
-                  <div
-                    className={`overflow-hidden border border-red-500/50 bg-black transition-all duration-500 ease-out ${
-                      showFloatingPlayer && !pipHidden
-                        ? "fixed z-50 rounded-xl shadow-2xl select-none"
-                        : "rounded-3xl shadow-[0_24px_80px_rgba(239,68,68,0.28)]"
-                    }`}
-                    style={
-                      showFloatingPlayer && !pipHidden
-                        ? { width: `${pipWidth}px`, height: `${pipHeight}px`, left: `${pipPosition.x}px`, top: `${pipPosition.y}px` }
-                        : undefined
-                    }
-                  >
-                    {showFloatingPlayer && !pipHidden ? (
+        {isLive ? (
+          showFloatingPlayer && pipHidden ? null : (
+            <div className="mb-10 flex justify-center">
+              <div className={`${showFloatingPlayer && !pipHidden ? "" : "w-[min(94vw,1120px)]"}`}>
+                <div
+                  className={`blood-glow overflow-hidden border border-red-500/50 bg-black transition-all duration-500 ease-out ${
+                    showFloatingPlayer && !pipHidden
+                      ? "fixed z-50 rounded-xl shadow-2xl select-none"
+                      : "rounded-3xl shadow-[0_24px_80px_rgba(239,68,68,0.28)]"
+                  }`}
+                  style={
+                    showFloatingPlayer && !pipHidden
+                      ? { width: `${pipWidth}px`, height: `${pipHeight}px`, left: `${pipPosition.x}px`, top: `${pipPosition.y}px` }
+                      : undefined
+                  }
+                >
+                  {showFloatingPlayer && !pipHidden ? (
+                    <iframe
+                      src={getTwitchEmbedSrc(embedHost)}
+                      className="h-full w-full"
+                      frameBorder="0"
+                      scrolling="no"
+                      allowFullScreen
+                      title="Live stream"
+                    />
+                  ) : (
+                    <div className={`grid gap-0 ${chatHidden ? "" : "md:grid-cols-[minmax(0,1fr)_320px]"}`}>
                       <iframe
                         src={getTwitchEmbedSrc(embedHost)}
-                        className="h-full w-full"
+                        className={`w-full aspect-video md:min-h-[620px] ${chatHidden ? "" : "md:aspect-auto"}`}
                         frameBorder="0"
                         scrolling="no"
                         allowFullScreen
                         title="Live stream"
                       />
-                    ) : (
-                      <div className={`grid gap-0 ${chatHidden ? "" : "md:grid-cols-[minmax(0,1fr)_320px]"}`}>
+                      {!chatHidden ? (
                         <iframe
-                          src={getTwitchEmbedSrc(embedHost)}
-                          className={`w-full aspect-video md:min-h-[620px] ${chatHidden ? "" : "md:aspect-auto"}`}
+                          src={getTwitchChatEmbedSrc(embedHost)}
+                          className="h-[360px] w-full border-t border-red-500/40 md:h-auto md:min-h-[620px] md:border-l md:border-t-0 md:border-red-500/40"
                           frameBorder="0"
                           scrolling="no"
-                          allowFullScreen
-                          title="Live stream"
+                          title="Twitch chat"
                         />
-                        {!chatHidden ? (
-                          <iframe
-                            src={getTwitchChatEmbedSrc(embedHost)}
-                            className="h-[360px] w-full border-t border-red-500/40 md:h-auto md:min-h-[620px] md:border-l md:border-t-0 md:border-red-500/40"
-                            frameBorder="0"
-                            scrolling="no"
-                            title="Twitch chat"
-                          />
-                        ) : null}
-                      </div>
-                    )}
-                    <div className="absolute top-3 left-3 flex items-center gap-1 bg-red-600 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow-lg pointer-events-none">
-                      <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                      LIVE
+                      ) : null}
                     </div>
-                    {!showFloatingPlayer ? (
-                      <button
-                        type="button"
-                        onClick={() => setChatHidden((prev) => !prev)}
-                        className="absolute top-3 right-3 z-[3] inline-flex items-center gap-1 rounded-full bg-gray-950/85 px-2.5 py-1 text-xs font-semibold text-gray-100 transition-colors hover:bg-gray-900"
-                        aria-label={chatHidden ? "Показать чат" : "Скрыть чат"}
+                  )}
+                  <div className="absolute top-3 left-3 flex items-center gap-1 bg-red-600 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow-lg pointer-events-none">
+                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                    LIVE
+                  </div>
+                  {!showFloatingPlayer ? (
+                    <button
+                      type="button"
+                      onClick={() => setChatHidden((prev) => !prev)}
+                      className="absolute top-3 right-3 z-[3] inline-flex items-center gap-1 rounded-full border border-red-900/45 bg-black/85 px-2.5 py-1 text-xs font-semibold text-gray-100 transition-colors hover:bg-zinc-900"
+                      aria-label={chatHidden ? "Показать чат" : "Скрыть чат"}
+                    >
+                      <svg
+                        className={`h-3.5 w-3.5 transition-transform ${chatHidden ? "rotate-180" : ""}`}
+                        viewBox="0 0 20 20"
+                        fill="none"
+                        aria-hidden="true"
                       >
-                        <svg
-                          className={`h-3.5 w-3.5 transition-transform ${chatHidden ? "rotate-180" : ""}`}
-                          viewBox="0 0 20 20"
-                          fill="none"
-                          aria-hidden="true"
-                        >
-                          <path d="M7 4.5 12.5 10 7 15.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                        {chatHidden ? "Показать чат" : "Скрыть чат"}
-                      </button>
-                    ) : null}
-                    {showFloatingPlayer && !pipHidden ? (
-                      <>
+                        <path d="M7 4.5 12.5 10 7 15.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      {chatHidden ? "Показать чат" : "Скрыть чат"}
+                    </button>
+                  ) : null}
+                  {showFloatingPlayer && !pipHidden ? (
+                    <>
+                      <div
+                        className="absolute inset-x-0 top-0 z-[2] h-8 cursor-move bg-gradient-to-b from-gray-950/70 to-transparent"
+                        onPointerDown={(event) => {
+                          interactionRef.current.mode = "move";
+                          interactionRef.current.startX = event.clientX;
+                          interactionRef.current.startY = event.clientY;
+                          interactionRef.current.startPosX = pipPosition.x;
+                          interactionRef.current.startPosY = pipPosition.y;
+                        }}
+                      />
+                      {[
+                        { dir: "n", className: "absolute left-2 right-2 top-0 z-[2] h-1.5 cursor-ns-resize" },
+                        { dir: "s", className: "absolute left-2 right-2 bottom-0 z-[2] h-1.5 cursor-ns-resize" },
+                        { dir: "e", className: "absolute right-0 top-2 bottom-2 z-[2] w-1.5 cursor-ew-resize" },
+                        { dir: "w", className: "absolute left-0 top-2 bottom-2 z-[2] w-1.5 cursor-ew-resize" },
+                        { dir: "ne", className: "absolute right-0 top-0 z-[2] h-3 w-3 cursor-nesw-resize" },
+                        { dir: "nw", className: "absolute left-0 top-0 z-[2] h-3 w-3 cursor-nwse-resize" },
+                        { dir: "se", className: "absolute right-0 bottom-0 z-[2] h-3 w-3 cursor-nwse-resize" },
+                        { dir: "sw", className: "absolute left-0 bottom-0 z-[2] h-3 w-3 cursor-nesw-resize" },
+                      ].map((handle) => (
                         <div
-                          className="absolute inset-x-0 top-0 z-[2] h-8 cursor-move bg-gradient-to-b from-gray-950/70 to-transparent"
+                          key={handle.dir}
+                          className={handle.className}
                           onPointerDown={(event) => {
-                            interactionRef.current.mode = "move";
+                            interactionRef.current.mode = "resize";
+                            interactionRef.current.resizeDir = handle.dir as "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
                             interactionRef.current.startX = event.clientX;
                             interactionRef.current.startY = event.clientY;
+                            interactionRef.current.startWidth = pipWidth;
+                            interactionRef.current.startHeight = pipHeight;
                             interactionRef.current.startPosX = pipPosition.x;
                             interactionRef.current.startPosY = pipPosition.y;
                           }}
                         />
-                        {[
-                          { dir: "n", className: "absolute left-2 right-2 top-0 z-[2] h-1.5 cursor-ns-resize" },
-                          { dir: "s", className: "absolute left-2 right-2 bottom-0 z-[2] h-1.5 cursor-ns-resize" },
-                          { dir: "e", className: "absolute right-0 top-2 bottom-2 z-[2] w-1.5 cursor-ew-resize" },
-                          { dir: "w", className: "absolute left-0 top-2 bottom-2 z-[2] w-1.5 cursor-ew-resize" },
-                          { dir: "ne", className: "absolute right-0 top-0 z-[2] h-3 w-3 cursor-nesw-resize" },
-                          { dir: "nw", className: "absolute left-0 top-0 z-[2] h-3 w-3 cursor-nwse-resize" },
-                          { dir: "se", className: "absolute right-0 bottom-0 z-[2] h-3 w-3 cursor-nwse-resize" },
-                          { dir: "sw", className: "absolute left-0 bottom-0 z-[2] h-3 w-3 cursor-nesw-resize" },
-                        ].map((handle) => (
-                          <div
-                            key={handle.dir}
-                            className={handle.className}
-                            onPointerDown={(event) => {
-                              interactionRef.current.mode = "resize";
-                              interactionRef.current.resizeDir = handle.dir as "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
-                              interactionRef.current.startX = event.clientX;
-                              interactionRef.current.startY = event.clientY;
-                              interactionRef.current.startWidth = pipWidth;
-                              interactionRef.current.startHeight = pipHeight;
-                              interactionRef.current.startPosX = pipPosition.x;
-                              interactionRef.current.startPosY = pipPosition.y;
-                            }}
-                          />
-                        ))}
-                        <div className="absolute top-3 right-3 z-[3] flex items-center gap-1 rounded-lg bg-gray-950/85 p-1">
-                          <button
-                            type="button"
-                            onClick={() => setPipHidden(true)}
-                            className="h-6 w-6 rounded text-gray-200 hover:bg-red-500/20 hover:text-red-300"
-                            aria-label="Закрыть плеер"
-                          >
-                            x
-                          </button>
-                        </div>
-                      </>
-                    ) : null}
-                  </div>
+                      ))}
+                      <div className="absolute top-3 right-3 z-[3] flex items-center gap-1 rounded-lg border border-red-900/45 bg-black/85 p-1">
+                        <button
+                          type="button"
+                          onClick={() => setPipHidden(true)}
+                          className="h-6 w-6 rounded text-gray-200 hover:bg-red-500/20 hover:text-red-300"
+                          aria-label="Закрыть плеер"
+                        >
+                          x
+                        </button>
+                      </div>
+                    </>
+                  ) : null}
                 </div>
-              )
-            ) : streamInfo?.user?.profile_image_url ? (
+              </div>
+            </div>
+          )
+        ) : null}
+
+        {/* Avatar */}
+        <div className="mb-8 flex justify-center">
+          <div className="relative">
+            {streamInfo?.user?.profile_image_url ? (
               <Image
                 src={streamInfo.user.profile_image_url}
                 alt={streamInfo.user.display_name}
                 width={144}
                 height={144}
-                className="w-36 h-36 rounded-full shadow-2xl ring-4 ring-purple-500/40"
+                className="h-36 w-36 rounded-full shadow-2xl ring-4 ring-red-700/45"
               />
             ) : (
-              <div className="w-36 h-36 rounded-full bg-gradient-to-br from-purple-500 to-violet-700 flex items-center justify-center text-5xl font-black text-white shadow-2xl ring-4 ring-purple-500/40">
+              <div className="flex h-36 w-36 items-center justify-center rounded-full bg-gradient-to-br from-red-700 to-red-950 text-5xl font-black text-white shadow-2xl ring-4 ring-red-700/45">
                 S
               </div>
             )}
@@ -413,52 +391,51 @@ export default function Hero() {
           </a>
         )}
 
-        {!isLive && (
-          <>
-            {/* Badge */}
-            <div className="inline-flex items-center gap-2 bg-purple-500/10 border border-purple-500/30 rounded-full px-4 py-1.5 mb-6">
-              <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-              <span className="text-purple-300 text-sm font-medium">Стример • Контент-мейкер</span>
-            </div>
+        <>
+          {/* Badge */}
+          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-red-700/45 bg-red-900/30 px-4 py-1.5">
+            <span className="h-2 w-2 rounded-full bg-red-300 animate-pulse" />
+            <span className="text-red-300 text-sm font-medium">Стример • Контент-мейкер</span>
+          </div>
 
-            <h1 className="text-5xl md:text-7xl font-extrabold text-white mb-4 leading-tight tracking-tight">
-              Привет, я{" "}
-              <span className="bg-gradient-to-r from-purple-400 to-violet-400 bg-clip-text text-transparent">
-                SASAVOT
-              </span>
-            </h1>
+          <h1 className="text-5xl md:text-7xl font-extrabold text-white mb-4 leading-tight tracking-tight">
+            Привет, я{" "}
+            <span className="bg-gradient-to-r from-red-300 via-red-500 to-rose-700 bg-clip-text text-transparent">
+              SASAVOT
+            </span>
+          </h1>
 
-            <p className="text-xl md:text-2xl text-gray-400 mb-8 font-light">
-              Стримлю, играю, развлекаю 🎮
-            </p>
+          <p className="text-xl md:text-2xl text-gray-400 mb-8 font-light">
+            Стримлю, играю, развлекаю 🎮
+          </p>
 
-            <p className="text-gray-500 max-w-xl mx-auto mb-10 leading-relaxed">
-              Добро пожаловать на мой официальный сайт! Здесь ты найдёшь всё о стримах, контенте и способах связи.
-            </p>
+          <p className="text-gray-500 max-w-xl mx-auto mb-10 leading-relaxed">
+            Добро пожаловать на мой официальный сайт! Здесь ты найдёшь всё о стримах, контенте и способах связи.
+          </p>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <a
-                href="https://www.twitch.tv/sasavot"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-8 py-3.5 font-semibold rounded-xl transition-all duration-200 shadow-lg hover:-translate-y-0.5 flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-500 text-white shadow-purple-600/30 hover:shadow-purple-500/40"
-              >
-                {/* Twitch icon */}
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z" />
-                </svg>
-                Смотреть на Twitch
-              </a>
-              <a
-                href="#contact"
-                className="px-8 py-3.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-semibold rounded-xl transition-all duration-200 hover:-translate-y-0.5"
-              >
-                Написать мне
-              </a>
-            </div>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <a
+              href="https://www.twitch.tv/sasavot"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="blood-glow flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-red-800 to-rose-700 px-8 py-3.5 font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:from-red-700 hover:to-rose-600"
+            >
+              {/* Twitch icon */}
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z" />
+              </svg>
+              Смотреть на Twitch
+            </a>
+            <a
+              href="#contact"
+              className="rounded-xl border border-red-900/50 bg-black/45 px-8 py-3.5 font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-red-950/35"
+            >
+              Написать мне
+            </a>
+          </div>
 
-            {/* Social links */}
-            <div className="mt-12 flex justify-center gap-5">
+          {/* Social links */}
+          <div className="mt-12 flex justify-center gap-5">
           {[
             {
               label: "Twitch",
@@ -503,14 +480,13 @@ export default function Hero() {
               target="_blank"
               rel="noopener noreferrer"
               aria-label={social.label}
-              className="w-10 h-10 rounded-full bg-white/5 hover:bg-purple-500/20 border border-white/10 hover:border-purple-500/50 flex items-center justify-center text-gray-400 hover:text-purple-400 transition-all duration-200"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-red-900/50 bg-black/45 text-gray-400 transition-all duration-200 hover:border-red-500/50 hover:bg-red-900/30 hover:text-red-200"
             >
               {social.icon}
             </a>
               ))}
             </div>
-          </>
-        )}
+        </>
       </div>
 
       {/* Scroll indicator */}

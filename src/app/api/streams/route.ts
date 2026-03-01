@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDbPool } from "@/lib/db";
+import { getDbPool, isDatabaseConnectivityError } from "@/lib/db";
 
 export const runtime = "nodejs";
 
@@ -22,9 +22,32 @@ export async function GET() {
       `
     );
 
-    return NextResponse.json({ streams: result.rows });
+    return NextResponse.json(
+      { streams: result.rows },
+      {
+        headers: {
+          "Cache-Control": "s-maxage=30, stale-while-revalidate=30",
+        },
+      }
+    );
   } catch (error) {
     console.error("GET /api/streams error:", error);
+
+    if (isDatabaseConnectivityError(error)) {
+      return NextResponse.json(
+        {
+          streams: [],
+          warning: "Database is temporarily unavailable; returning empty stream history.",
+        },
+        {
+          status: 200,
+          headers: {
+            "Cache-Control": "s-maxage=10, stale-while-revalidate=20",
+          },
+        }
+      );
+    }
+
     return NextResponse.json({ error: "Не удалось получить трансляции" }, { status: 500 });
   }
 }
@@ -74,6 +97,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ stream: result.rows[0] }, { status: 201 });
   } catch (error) {
     console.error("POST /api/streams error:", error);
+
+    if (isDatabaseConnectivityError(error)) {
+      return NextResponse.json(
+        { error: "База данных временно недоступна. Повторите попытку позже." },
+        { status: 503 }
+      );
+    }
+
     return NextResponse.json({ error: "Не удалось сохранить трансляцию" }, { status: 500 });
   }
 }

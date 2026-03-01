@@ -1,5 +1,75 @@
 @import "tailwindcss";
 
+:root {
+  --bg-base: #040405;
+  --bg-elev: #0b0b0d;
+  --bg-panel: #121014;
+  --text-main: #f5f5f5;
+  --text-muted: #9c9398;
+  --blood-500: #9d0d1f;
+  --blood-400: #c11a2f;
+  --blood-300: #e53b4f;
+}
+
+body {
+  color: var(--text-main);
+  background:
+    radial-gradient(120% 80% at 10% -10%, rgba(151, 17, 34, 0.28), transparent 55%),
+    radial-gradient(90% 75% at 92% 8%, rgba(99, 8, 22, 0.22), transparent 50%),
+    linear-gradient(180deg, #060608 0%, #030304 45%, #060507 100%);
+  min-height: 100vh;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.2;
+  z-index: -1;
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 255, 255, 0.025) 0,
+      rgba(255, 255, 255, 0.025) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+}
+
+.blood-glow {
+  box-shadow:
+    0 0 0 1px rgba(157, 13, 31, 0.34),
+    0 24px 60px rgba(88, 6, 16, 0.48),
+    0 0 44px rgba(193, 26, 47, 0.18);
+}
+
+.blood-divider {
+  position: relative;
+}
+
+.blood-divider::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(229, 59, 79, 0.55), transparent);
+}
+
+@keyframes bloodPulse {
+  0%,
+  100% {
+    opacity: 0.42;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.78;
+    transform: scale(1.035);
+  }
+}
+
 @keyframes liveShimmer {
   0% {
     background-position: 0% 50%;

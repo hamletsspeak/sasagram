@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
+import { fetchJsonWithCache } from "@/lib/client-api-cache";
 
 interface Vod {
   id: string;
@@ -76,11 +77,7 @@ export default function TwitchVods() {
   const [clipsPage, setClipsPage] = useState(0);
 
   useEffect(() => {
-    fetch("/api/twitch")
-      .then((res) => {
-        if (!res.ok) throw new Error("API error");
-        return res.json();
-      })
+    fetchJsonWithCache<TwitchData>("api:twitch", "/api/twitch", { ttlMs: 45_000 })
       .then((json: TwitchData) => {
         setData(json);
         setLoading(false);
@@ -106,7 +103,7 @@ export default function TwitchVods() {
   }, []);
 
   const clips = useMemo(
-    () => [...(data?.clips ?? [])].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
+    () => [...(data?.clips ?? [])].sort((a, b) => b.view_count - a.view_count),
     [data?.clips]
   );
 
@@ -127,41 +124,35 @@ export default function TwitchVods() {
   }, [clips, safeClipsPage, itemsPerPage]);
 
   return (
-    <section id="vods" className="h-screen overflow-hidden bg-[radial-gradient(75%_90%_at_50%_0%,rgba(24,30,82,0.55),transparent_65%),#0b1227] py-10">
-      <div className="mx-auto flex h-full w-full max-w-[1680px] flex-col px-6">
-        <div className="mb-4 shrink-0 text-center">
-          <p className="mb-2 text-sm font-semibold uppercase tracking-[0.28em] text-purple-300">Twitch Media</p>
-          <h2 className="mb-2 text-4xl font-black text-white md:text-5xl">Записи и лучшие клипы</h2>
-          <p className="text-gray-400">Карточки выровнены, количество на экране ограничено</p>
-        </div>
-
+    <section id="vods" className="min-h-screen scroll-mt-12 md:scroll-mt-16 overflow-hidden bg-[radial-gradient(75%_90%_at_50%_0%,rgba(128,16,32,0.36),transparent_65%),#070708] py-10">
+      <div className="mx-auto flex min-h-[76vh] w-full max-w-[1680px] flex-col justify-center px-6">
         {loading ? (
-          <div className="grid h-full min-h-0 grid-rows-2 gap-4">
+          <div className="grid h-[min(72vh,760px)] min-h-[440px] grid-rows-2 gap-3">
             <div className="rounded-3xl border border-white/10 bg-white/[0.04] animate-pulse" />
             <div className="rounded-3xl border border-white/10 bg-white/[0.04] animate-pulse" />
           </div>
         ) : error || !data ? (
-          <div className="flex h-full items-center justify-center text-center">
+          <div className="flex h-[min(72vh,760px)] min-h-[440px] items-center justify-center text-center">
             <div>
               <p className="mb-3 text-lg text-gray-200">Не удалось загрузить Twitch данные</p>
-              <a href="https://www.twitch.tv/sasavot/videos" target="_blank" rel="noopener noreferrer" className="text-purple-300 underline hover:text-purple-200">
+              <a href="https://www.twitch.tv/sasavot/videos" target="_blank" rel="noopener noreferrer" className="text-red-300 underline hover:text-red-200">
                 Открыть Twitch
               </a>
             </div>
           </div>
         ) : (
-          <div className="grid h-full min-h-0 grid-rows-2 gap-4">
+          <div className="grid h-[min(72vh,760px)] min-h-[440px] grid-rows-2 gap-3">
             <div className="flex min-h-0 flex-col">
               <div className="mb-3 flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.28em] text-cyan-300">Записи стримов</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.28em] text-red-300">Записи стримов</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={() => setVodPage((prev) => Math.max(0, Math.min(prev, totalVodPages - 1) - 1))}
                     disabled={safeVodPage === 0}
-                    className={`${arrowButtonBaseClass} border border-cyan-400/35 bg-cyan-500/10 text-cyan-100 shadow-[0_3px_0_rgba(8,145,178,0.45)] hover:bg-cyan-500/20 active:shadow-[0_1px_0_rgba(8,145,178,0.45)]`}
+                    className={`${arrowButtonBaseClass} border border-red-500/40 bg-red-900/25 text-red-100 shadow-[0_3px_0_rgba(104,11,24,0.5)] hover:bg-red-900/40 active:shadow-[0_1px_0_rgba(104,11,24,0.5)]`}
                     aria-label="Предыдущая страница записей"
                   >
                     <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none">
@@ -172,7 +163,7 @@ export default function TwitchVods() {
                     type="button"
                     onClick={() => setVodPage((prev) => Math.min(totalVodPages - 1, Math.min(prev, totalVodPages - 1) + 1))}
                     disabled={safeVodPage >= totalVodPages - 1}
-                    className={`${arrowButtonBaseClass} border border-cyan-400/35 bg-cyan-500/10 text-cyan-100 shadow-[0_3px_0_rgba(8,145,178,0.45)] hover:bg-cyan-500/20 active:shadow-[0_1px_0_rgba(8,145,178,0.45)]`}
+                    className={`${arrowButtonBaseClass} border border-red-500/40 bg-red-900/25 text-red-100 shadow-[0_3px_0_rgba(104,11,24,0.5)] hover:bg-red-900/40 active:shadow-[0_1px_0_rgba(104,11,24,0.5)]`}
                     aria-label="Следующая страница записей"
                   >
                     <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none">
@@ -183,7 +174,7 @@ export default function TwitchVods() {
                     href="https://www.twitch.tv/sasavot/videos?filter=all&sort=time"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={`${actionButtonBaseClass} border border-cyan-400/35 bg-cyan-500/10 text-cyan-100 shadow-[0_3px_0_rgba(8,145,178,0.45)] hover:bg-cyan-500/20 active:shadow-[0_1px_0_rgba(8,145,178,0.45)]`}
+                    className={`${actionButtonBaseClass} border border-red-500/40 bg-red-900/25 text-red-100 shadow-[0_3px_0_rgba(104,11,24,0.5)] hover:bg-red-900/40 active:shadow-[0_1px_0_rgba(104,11,24,0.5)]`}
                   >
                     Все видео
                   </a>
@@ -193,13 +184,13 @@ export default function TwitchVods() {
               <div className="min-h-0 overflow-hidden">
                 <div className="grid h-full min-h-[205px] gap-3" style={{ gridTemplateColumns: `repeat(${itemsPerPage}, minmax(0, 1fr))` }}>
                   {visibleVods.map((vod) => (
-                    <a key={vod.id} href={vod.url} target="_blank" rel="noopener noreferrer" className="group relative h-full overflow-hidden rounded-2xl border border-cyan-300/30 bg-black/30">
+                    <a key={vod.id} href={vod.url} target="_blank" rel="noopener noreferrer" className="group relative h-full overflow-hidden rounded-2xl border border-red-400/25 bg-black/35">
                       <Image src={getThumbnailUrl(vod.thumbnail_url, 960, 540)} alt={vod.title} fill className="object-cover transition-transform duration-500 group-hover:scale-105" sizes="(max-width: 768px) 100vw, 25vw" />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/45 to-black/20" />
                       <div className="absolute right-3 top-3 rounded-lg bg-black/80 px-2 py-1 text-xs font-mono text-white">{formatDuration(vod.duration)}</div>
                       <div className="absolute inset-x-0 bottom-0 p-4">
                         <h3 className="line-clamp-2 text-xl font-black leading-tight text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.75)] md:text-2xl">{vod.title}</h3>
-                        <div className="mt-1.5 flex items-center gap-3 text-xs text-cyan-100/90 md:text-sm">
+                        <div className="mt-1.5 flex items-center gap-3 text-xs text-red-100/85 md:text-sm">
                           <span>👁 {formatViewCount(vod.view_count)}</span>
                           <span>{formatDate(vod.created_at)}</span>
                         </div>
@@ -212,13 +203,13 @@ export default function TwitchVods() {
 
             <div className="flex min-h-0 flex-col">
               <div className="mb-3 flex items-center justify-between">
-                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-violet-300">Избранные клипы</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-rose-300">Избранные клипы</p>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={() => setClipsPage((prev) => Math.max(0, Math.min(prev, totalClipPages - 1) - 1))}
                     disabled={safeClipsPage === 0}
-                    className={`${arrowButtonBaseClass} border border-violet-400/35 bg-violet-500/10 text-violet-100 shadow-[0_3px_0_rgba(139,92,246,0.45)] hover:bg-violet-500/20 active:shadow-[0_1px_0_rgba(139,92,246,0.45)]`}
+                    className={`${arrowButtonBaseClass} border border-rose-500/40 bg-rose-900/25 text-rose-100 shadow-[0_3px_0_rgba(122,16,44,0.5)] hover:bg-rose-900/40 active:shadow-[0_1px_0_rgba(122,16,44,0.5)]`}
                     aria-label="Предыдущая страница клипов"
                   >
                     <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none">
@@ -229,7 +220,7 @@ export default function TwitchVods() {
                     type="button"
                     onClick={() => setClipsPage((prev) => Math.min(totalClipPages - 1, Math.min(prev, totalClipPages - 1) + 1))}
                     disabled={safeClipsPage >= totalClipPages - 1}
-                    className={`${arrowButtonBaseClass} border border-violet-400/35 bg-violet-500/10 text-violet-100 shadow-[0_3px_0_rgba(139,92,246,0.45)] hover:bg-violet-500/20 active:shadow-[0_1px_0_rgba(139,92,246,0.45)]`}
+                    className={`${arrowButtonBaseClass} border border-rose-500/40 bg-rose-900/25 text-rose-100 shadow-[0_3px_0_rgba(122,16,44,0.5)] hover:bg-rose-900/40 active:shadow-[0_1px_0_rgba(122,16,44,0.5)]`}
                     aria-label="Следующая страница клипов"
                   >
                     <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none">
@@ -240,7 +231,7 @@ export default function TwitchVods() {
                     href="https://www.twitch.tv/sasavot/videos?featured=true&filter=clips&range=all"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={`${actionButtonBaseClass} border border-violet-400/35 bg-violet-500/10 text-violet-100 shadow-[0_3px_0_rgba(139,92,246,0.45)] hover:bg-violet-500/20 active:shadow-[0_1px_0_rgba(139,92,246,0.45)]`}
+                    className={`${actionButtonBaseClass} border border-rose-500/40 bg-rose-900/25 text-rose-100 shadow-[0_3px_0_rgba(122,16,44,0.5)] hover:bg-rose-900/40 active:shadow-[0_1px_0_rgba(122,16,44,0.5)]`}
                   >
                     Все клипы
                   </a>
@@ -250,18 +241,18 @@ export default function TwitchVods() {
               <div className="min-h-0 overflow-hidden">
                 <div className="grid h-full min-h-[195px] gap-3" style={{ gridTemplateColumns: `repeat(${itemsPerPage}, minmax(0, 1fr))` }}>
                   {visibleClips.length === 0 ? (
-                    <div className="flex h-full items-center justify-center rounded-2xl border border-dashed border-violet-400/25 text-gray-400" style={{ gridColumn: `1 / -1` }}>
+                    <div className="flex h-full items-center justify-center rounded-2xl border border-dashed border-rose-500/25 text-gray-400" style={{ gridColumn: `1 / -1` }}>
                       Клипы пока не найдены
                     </div>
                   ) : (
                     visibleClips.map((clip) => (
-                      <a key={clip.id} href={clip.url} target="_blank" rel="noopener noreferrer" className="group relative h-full overflow-hidden rounded-2xl border border-violet-300/25 bg-black/25">
+                      <a key={clip.id} href={clip.url} target="_blank" rel="noopener noreferrer" className="group relative h-full overflow-hidden rounded-2xl border border-rose-400/25 bg-black/30">
                         <Image src={clip.thumbnail_url} alt={clip.title} fill className="object-cover transition-transform duration-500 group-hover:scale-105" sizes="(max-width: 768px) 100vw, 25vw" />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/10" />
                         <div className="absolute right-3 top-3 rounded-lg bg-black/80 px-2 py-1 text-xs font-mono text-white">{formatClipDuration(clip.duration)}</div>
                         <div className="absolute inset-x-0 bottom-0 p-4">
                           <h3 className="line-clamp-2 text-base font-bold text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.75)] md:text-lg">{clip.title}</h3>
-                          <div className="mt-2 flex items-center gap-3 text-xs text-violet-100/90">
+                          <div className="mt-2 flex items-center gap-3 text-xs text-rose-100/85">
                             <span>👁 {formatViewCount(clip.view_count)}</span>
                             <span>{formatDate(clip.created_at)}</span>
                           </div>

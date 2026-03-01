@@ -1,11 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { fetchJsonWithCache } from "@/lib/client-api-cache";
 
 interface StreamData {
   isLive: boolean;
   stream: { started_at: string; title: string } | null;
   vods: Array<{ created_at: string; duration: string; title: string; url: string }>;
+}
+
+interface StreamsResponse {
+  streams?: DbStream[];
 }
 
 interface DbStream {
@@ -288,14 +293,14 @@ export default function StreamSchedule() {
 
     const loadData = async () => {
       try {
-        const [streamRes, dbStreamsRes] = await Promise.all([fetch("/api/twitch"), fetch("/api/streams")]);
-        if (!streamRes.ok || !dbStreamsRes.ok) throw new Error("API error");
-
-        const [stream, persisted] = await Promise.all([streamRes.json(), dbStreamsRes.json()]);
+        const [stream, persisted] = await Promise.all([
+          fetchJsonWithCache<StreamData>("api:twitch", "/api/twitch", { ttlMs: 45_000 }),
+          fetchJsonWithCache<StreamsResponse>("api:streams", "/api/streams", { ttlMs: 45_000 }),
+        ]);
         if (!isMounted) return;
 
-        setStreamData(stream as StreamData);
-        setDbStreams((persisted as { streams: DbStream[] }).streams ?? []);
+        setStreamData(stream);
+        setDbStreams(persisted.streams ?? []);
         setError(false);
         setLoading(false);
       } catch {
@@ -378,6 +383,14 @@ export default function StreamSchedule() {
   const selectedWeekIndex = selectedWeekKey ? weeks.findIndex((week) => week.key === selectedWeekKey) : weeks.length - 1;
   const safeWeekIndex = selectedWeekIndex >= 0 ? selectedWeekIndex : Math.max(weeks.length - 1, 0);
   const selectedWeek = weeks[safeWeekIndex] ?? null;
+  const selectedWeekRangeLabel = selectedWeek?.key
+    ? (() => {
+        const start = new Date(`${selectedWeek.key}T00:00:00`);
+        const end = new Date(start);
+        end.setDate(start.getDate() + 6);
+        return `${formatDateDot(start)} - ${formatDateDot(end)}`;
+      })()
+    : monthLabelRu(calendarMonthStart);
   const calendarTodayKey = dateKey(new Date());
   const weekPickerMin = weeks[0]?.key;
   const weekPickerMax = weeks[weeks.length - 1]?.key;
@@ -398,16 +411,6 @@ export default function StreamSchedule() {
     const roundedWithBuffer = Math.ceil((latestEnd + 30) / 60) * 60;
     return Math.min(MAX_VIEW_END_MINUTES, Math.max(BASE_VIEW_END_MINUTES, roundedWithBuffer));
   }, [selectedWeek]);
-
-  useEffect(() => {
-    if (!selectedWeek?.key) return;
-    const selectedDate = new Date(`${selectedWeek.key}T00:00:00`);
-    const monthStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
-    setCalendarMonthStart((prev) => {
-      if (prev.getFullYear() === monthStart.getFullYear() && prev.getMonth() === monthStart.getMonth()) return prev;
-      return monthStart;
-    });
-  }, [selectedWeek?.key]);
 
   useEffect(() => {
     if (!calendarOpen) return;
@@ -431,26 +434,19 @@ export default function StreamSchedule() {
   }, [viewEndMinutes]);
 
   return (
-    <section id="schedule" className="min-h-screen py-20 bg-gray-900/70 border-y border-gray-800/60">
+    <section id="schedule" className="min-h-screen py-20 bg-black/35 border-y border-red-950/35">
       <div className="max-w-6xl mx-auto px-6">
         <div className="flex items-center justify-between mb-4 gap-3">
           <h2 className="text-2xl md:text-3xl font-bold text-white">Расписание стримов</h2>
-          <button
-            type="button"
-            onClick={() => setSelectedWeekKey(weeks.length > 0 ? weeks[weeks.length - 1].key : null)}
-            className="px-3 py-1.5 text-xs font-semibold rounded-full bg-rose-700/90 hover:bg-rose-600 text-white"
-          >
-            Сегодня
-          </button>
         </div>
 
         {loading ? (
-          <div className="h-80 rounded-2xl bg-slate-800/80 animate-pulse" />
+          <div className="h-80 rounded-2xl bg-zinc-900/80 animate-pulse" />
         ) : error ? (
           <div className="text-center text-gray-400 text-sm py-8">Не удалось загрузить расписание</div>
         ) : (
-          <div className="rounded-2xl border border-slate-700/80 bg-[#0d111c] overflow-hidden">
-            <div className="flex flex-wrap items-center justify-between border-b border-slate-700/80 px-4 py-3 bg-slate-900/80 gap-2">
+          <div className="rounded-2xl border border-red-950/45 bg-[#09090b] overflow-hidden">
+            <div className="flex flex-wrap items-center justify-between border-b border-red-950/45 px-4 py-3 bg-zinc-950/80 gap-2">
               <div className="flex items-center gap-2">
                 <button
                   type="button"
@@ -459,7 +455,7 @@ export default function StreamSchedule() {
                     setSelectedWeekKey(weeks[safeWeekIndex - 1].key);
                   }}
                   disabled={safeWeekIndex === 0}
-                  className="group flex h-9 w-9 items-center justify-center rounded-full border border-slate-500/80 bg-slate-800/70 text-gray-200 shadow-[0_2px_0_rgba(15,23,42,0.55)] transition-all hover:-translate-y-0.5 hover:border-rose-400/80 hover:bg-rose-500/15 hover:text-rose-200 hover:shadow-[0_8px_16px_-8px_rgba(244,63,94,0.6)] active:translate-y-px active:shadow-[0_1px_0_rgba(15,23,42,0.55)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:active:translate-y-0 disabled:hover:border-slate-500/80 disabled:hover:bg-slate-800/70 disabled:hover:text-gray-200"
+                  className="group flex h-9 w-9 items-center justify-center rounded-full border border-zinc-700/90 bg-zinc-900/75 text-gray-200 shadow-[0_2px_0_rgba(15,23,42,0.55)] transition-all hover:-translate-y-0.5 hover:border-red-500/65 hover:bg-red-900/20 hover:text-red-200 hover:shadow-[0_8px_16px_-8px_rgba(200,38,67,0.55)] active:translate-y-px active:shadow-[0_1px_0_rgba(15,23,42,0.55)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:active:translate-y-0 disabled:hover:border-zinc-700/90 disabled:hover:bg-zinc-900/75 disabled:hover:text-gray-200"
                   aria-label="Предыдущая неделя"
                 >
                   <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-4 w-4">
@@ -473,7 +469,7 @@ export default function StreamSchedule() {
                     setSelectedWeekKey(weeks[safeWeekIndex + 1].key);
                   }}
                   disabled={safeWeekIndex >= weeks.length - 1}
-                  className="group flex h-9 w-9 items-center justify-center rounded-full border border-slate-500/80 bg-slate-800/70 text-gray-200 shadow-[0_2px_0_rgba(15,23,42,0.55)] transition-all hover:-translate-y-0.5 hover:border-rose-400/80 hover:bg-rose-500/15 hover:text-rose-200 hover:shadow-[0_8px_16px_-8px_rgba(244,63,94,0.6)] active:translate-y-px active:shadow-[0_1px_0_rgba(15,23,42,0.55)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:active:translate-y-0 disabled:hover:border-slate-500/80 disabled:hover:bg-slate-800/70 disabled:hover:text-gray-200"
+                  className="group flex h-9 w-9 items-center justify-center rounded-full border border-zinc-700/90 bg-zinc-900/75 text-gray-200 shadow-[0_2px_0_rgba(15,23,42,0.55)] transition-all hover:-translate-y-0.5 hover:border-red-500/65 hover:bg-red-900/20 hover:text-red-200 hover:shadow-[0_8px_16px_-8px_rgba(200,38,67,0.55)] active:translate-y-px active:shadow-[0_1px_0_rgba(15,23,42,0.55)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:active:translate-y-0 disabled:hover:border-zinc-700/90 disabled:hover:bg-zinc-900/75 disabled:hover:text-gray-200"
                   aria-label="Следующая неделя"
                 >
                   <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-4 w-4">
@@ -484,18 +480,18 @@ export default function StreamSchedule() {
                   <button
                     type="button"
                     onClick={() => setCalendarOpen((prev) => !prev)}
-                    className="flex h-9 min-w-[168px] items-center justify-between rounded-xl border border-slate-500/80 bg-slate-800/70 px-3 text-sm text-gray-100 transition-colors hover:border-cyan-400/80 hover:bg-slate-800"
+                    className="flex h-9 min-w-[168px] items-center justify-between rounded-xl border border-zinc-700/90 bg-zinc-900/75 px-3 text-sm text-gray-100 transition-colors hover:border-red-500/65 hover:bg-zinc-900"
                     aria-expanded={calendarOpen}
                     aria-label="Открыть календарь недель"
                   >
-                    <span>{monthLabelRu(calendarMonthStart)}</span>
+                    <span>{selectedWeekRangeLabel}</span>
                     <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className={`h-4 w-4 transition-transform ${calendarOpen ? "rotate-180" : ""}`}>
                       <path d="m5.5 7.5 4.5 5 4.5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   </button>
 
                   {calendarOpen ? (
-                    <div className="absolute left-0 top-[calc(100%+8px)] z-20 w-[286px] rounded-2xl border border-slate-600/80 bg-[#313547] p-3 shadow-2xl">
+                    <div className="absolute left-0 top-[calc(100%+8px)] z-20 w-[286px] rounded-2xl border border-red-950/45 bg-[#141116] p-3 shadow-2xl">
                       <div className="mb-3 flex items-center justify-between text-white">
                         <p className="text-2xl font-semibold capitalize">{monthLabelRu(calendarMonthStart)}</p>
                         <div className="flex items-center gap-2">
@@ -504,7 +500,7 @@ export default function StreamSchedule() {
                             onClick={() => {
                               setCalendarMonthStart((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
                             }}
-                            className="flex h-7 w-7 items-center justify-center rounded-full text-slate-200 transition-colors hover:bg-slate-200/15 hover:text-white"
+                            className="flex h-7 w-7 items-center justify-center rounded-full text-zinc-300 transition-colors hover:bg-red-900/20 hover:text-white"
                             aria-label="Предыдущий месяц"
                           >
                             <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-4 w-4">
@@ -516,7 +512,7 @@ export default function StreamSchedule() {
                             onClick={() => {
                               setCalendarMonthStart((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
                             }}
-                            className="flex h-7 w-7 items-center justify-center rounded-full text-slate-200 transition-colors hover:bg-slate-200/15 hover:text-white"
+                            className="flex h-7 w-7 items-center justify-center rounded-full text-zinc-300 transition-colors hover:bg-red-900/20 hover:text-white"
                             aria-label="Следующий месяц"
                           >
                             <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-4 w-4">
@@ -526,7 +522,7 @@ export default function StreamSchedule() {
                         </div>
                       </div>
 
-                      <div className="mb-2 grid grid-cols-7 px-2 text-[11px] font-semibold uppercase tracking-wide text-slate-200/80">
+                      <div className="mb-2 grid grid-cols-7 px-2 text-[11px] font-semibold uppercase tracking-wide text-zinc-300/80">
                         {[
                           "пн",
                           "вт",
@@ -557,9 +553,9 @@ export default function StreamSchedule() {
                               }}
                               className={`grid grid-cols-7 rounded-full px-2 py-1 transition-colors ${
                                 isSelected
-                                  ? "bg-slate-500/60"
+                                  ? "bg-red-900/55"
                                   : isHovered && isSelectable
-                                    ? "bg-slate-500/50"
+                                    ? "bg-red-950/65"
                                     : "bg-transparent"
                               } ${isSelectable ? "cursor-pointer" : "opacity-35"}`}
                             >
@@ -577,9 +573,9 @@ export default function StreamSchedule() {
                                       setHoveredWeekKey(null);
                                     }}
                                     className={`h-8 w-8 justify-self-center rounded-full text-sm transition-colors ${
-                                      day.inMonth ? "text-white" : "text-slate-400"
+                                      day.inMonth ? "text-white" : "text-zinc-500"
                                     } ${!isSelectable ? "cursor-not-allowed" : "hover:text-white"} ${
-                                      isTodayDay ? "ring-1 ring-cyan-300/80 bg-slate-200/15 font-semibold" : ""
+                                      isTodayDay ? "ring-1 ring-red-400/70 bg-red-900/25 font-semibold" : ""
                                     }`}
                                   >
                                     {day.label}
@@ -594,16 +590,25 @@ export default function StreamSchedule() {
                   ) : null}
                 </div>
               </div>
-              <p className="text-sm font-semibold text-white">{selectedWeek ? selectedWeek.label : "Неделя"}</p>
+
+              <div className="ml-auto flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedWeekKey(weeks.length > 0 ? weeks[weeks.length - 1].key : null)}
+                  className="px-3 py-1.5 text-xs font-semibold rounded-full bg-rose-700/90 hover:bg-rose-600 text-white"
+                >
+                  Сегодня
+                </button>
+              </div>
             </div>
 
-              <div className="grid grid-cols-[74px_1fr] border-b border-slate-800 bg-slate-900/40">
-                <div className="text-xs text-cyan-300 px-3 py-2 border-r border-slate-800">GMT+3</div>
+              <div className="grid grid-cols-[74px_1fr] border-b border-red-950/45 bg-zinc-950/50">
+                <div className="text-xs text-red-300 px-3 py-2 border-r border-red-950/40">GMT+3</div>
                 <div className="grid" style={{ gridTemplateColumns: `repeat(${Math.max(axisTicks.length - 1, 1)}, minmax(0, 1fr))` }}>
                   {axisTicks.slice(0, -1).map((label) => (
                     <div
                       key={label}
-                      className="text-[11px] text-gray-300 px-2 py-2 border-r border-slate-800/70 last:border-r-0 transition-colors hover:bg-slate-700/35 hover:text-white"
+                      className="text-[11px] text-gray-300 px-2 py-2 border-r border-red-950/35 last:border-r-0 transition-colors hover:bg-red-950/35 hover:text-white"
                     >
                       {label}
                     </div>
@@ -614,11 +619,11 @@ export default function StreamSchedule() {
             <div>
               {(selectedWeek?.cards ?? []).map((item) => {
                 const style = streamBlockStyle(item, VIEW_START_MINUTES, viewEndMinutes);
-                const laneClass = item.isToday ? "bg-slate-800/35" : "bg-[#0b1019]";
+                const laneClass = item.isToday ? "bg-zinc-900/45" : "bg-[#09090b]";
 
                 return (
-                  <div key={item.key} className={`grid grid-cols-[74px_1fr] min-h-[74px] border-b border-slate-800/70 transition-colors hover:bg-slate-800/55 ${laneClass}`}>
-                    <div className="px-3 py-2 border-r border-slate-800 text-center">
+                  <div key={item.key} className={`grid grid-cols-[74px_1fr] min-h-[74px] border-b border-red-950/35 transition-colors hover:bg-zinc-900/70 ${laneClass}`}>
+                    <div className="px-3 py-2 border-r border-red-950/40 text-center">
                       <p className="text-xs uppercase text-gray-300">{item.dayLabel}</p>
                       <p className="text-base leading-tight mt-2 text-white">{item.dateLabel}</p>
                     </div>
@@ -632,13 +637,17 @@ export default function StreamSchedule() {
                         }}
                       />
                       {!style ? (
-                        <div className="h-[58px] rounded-xl border border-dashed border-slate-700/80 flex items-center px-3 text-gray-500 text-sm">--:-- - --:--</div>
+                        <div className="h-[58px] rounded-xl border border-dashed border-zinc-700/70 flex items-center px-3 text-gray-500 text-sm">--:-- - --:--</div>
                       ) : item.streamUrl ? (
                         <a
                           href={item.streamUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className={`absolute top-2 h-[58px] rounded-xl border px-3 py-2 overflow-hidden transition-colors ${item.isToday ? "border-rose-400/50 bg-rose-500/15" : "border-cyan-400/40 bg-cyan-500/10"}`}
+                          className={`absolute top-2 h-[58px] rounded-xl border px-3 py-2 overflow-hidden transition-colors ${
+                            item.isLive
+                              ? "border-rose-400/55 bg-rose-900/30"
+                              : "border-zinc-500/60 bg-zinc-800/70"
+                          }`}
                           style={style}
                           title={item.title}
                         >
@@ -663,7 +672,11 @@ export default function StreamSchedule() {
                         </a>
                       ) : (
                         <div
-                          className={`absolute top-2 h-[58px] rounded-xl border px-3 py-2 overflow-hidden ${item.isToday ? "border-rose-400/50 bg-rose-500/15" : "border-slate-600 bg-slate-800/70"}`}
+                          className={`absolute top-2 h-[58px] rounded-xl border px-3 py-2 overflow-hidden ${
+                            item.isLive
+                              ? "border-rose-400/55 bg-rose-900/30"
+                              : "border-zinc-600/70 bg-zinc-800/70"
+                          }`}
                           style={style}
                         >
                           <p className="text-xs font-semibold text-white line-clamp-1">{item.title}</p>
@@ -682,3 +695,4 @@ export default function StreamSchedule() {
     </section>
   );
 }
+

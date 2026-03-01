@@ -1,22 +1,13 @@
 import { NextResponse } from "next/server";
+import { getTwitchAppAccessToken } from "@/lib/twitch-auth";
 
 const TWITCH_CLIENT_ID = process.env.TWITCH_CLIENT_ID!;
 const TWITCH_CLIENT_SECRET = process.env.TWITCH_CLIENT_SECRET!;
 const TWITCH_USERNAME = "sasavot";
 
-async function getAccessToken(): Promise<string> {
-  const res = await fetch(
-    `https://id.twitch.tv/oauth2/token?client_id=${TWITCH_CLIENT_ID}&client_secret=${TWITCH_CLIENT_SECRET}&grant_type=client_credentials`,
-    { method: "POST" }
-  );
-  if (!res.ok) throw new Error("Failed to get Twitch access token");
-  const data = await res.json();
-  return data.access_token as string;
-}
-
 export async function GET() {
   try {
-    const token = await getAccessToken();
+    const token = await getTwitchAppAccessToken(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET);
 
     const headers = {
       "Client-ID": TWITCH_CLIENT_ID,

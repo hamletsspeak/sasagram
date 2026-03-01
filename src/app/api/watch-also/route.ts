@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getTwitchAppAccessToken } from "@/lib/twitch-auth";
 
 const TWITCH_CLIENT_ID = process.env.TWITCH_CLIENT_ID;
 const TWITCH_CLIENT_SECRET = process.env.TWITCH_CLIENT_SECRET;
@@ -29,17 +30,11 @@ type CreatorState = {
 };
 
 async function getTwitchAccessToken(): Promise<string | null> {
-  if (!TWITCH_CLIENT_ID || !TWITCH_CLIENT_SECRET) return null;
-
-  const res = await fetch(
-    `https://id.twitch.tv/oauth2/token?client_id=${TWITCH_CLIENT_ID}&client_secret=${TWITCH_CLIENT_SECRET}&grant_type=client_credentials`,
-    { method: "POST" }
-  );
-
-  if (!res.ok) return null;
-
-  const data = (await res.json()) as { access_token: string };
-  return data.access_token;
+  try {
+    return await getTwitchAppAccessToken(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET);
+  } catch {
+    return null;
+  }
 }
 
 function findAvatarUrl(value: unknown, depth = 0): string | null {

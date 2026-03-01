@@ -2,11 +2,11 @@ export default function Footer() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="bg-gray-950 border-t border-gray-800 py-8">
+    <footer className="bg-black/70 border-t border-red-950/35 py-8">
       <div className="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-2">
-          <span className="text-purple-400">▶</span>
-          <span className="text-white font-bold">SASA<span className="text-purple-400">VOT</span></span>
+          <span className="text-red-400">▶</span>
+          <span className="text-white font-bold">SASA<span className="text-red-400">VOT</span></span>
           <span className="text-gray-600 text-sm ml-2">© {year}. Все права защищены.</span>
         </div>
         <div className="flex items-center gap-6">
@@ -21,7 +21,7 @@ export default function Footer() {
               href={link.href}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-gray-600 hover:text-gray-400 text-sm transition-colors"
+              className="text-gray-600 hover:text-red-300 text-sm transition-colors"
             >
               {link.label}
             </a>

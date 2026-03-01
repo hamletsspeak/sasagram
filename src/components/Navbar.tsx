@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, type MouseEvent } from "react";
+import { useState, useEffect, useRef, useCallback, type MouseEvent } from "react";
 
 const navLinks = [
   { label: "Главная", href: "#home" },
@@ -14,6 +14,28 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const logoVideoRef = useRef<HTMLVideoElement | null>(null);
+  const logoIntervalRef = useRef<number | null>(null);
+
+  const clearLogoInterval = useCallback(() => {
+    if (logoIntervalRef.current !== null) {
+      window.clearInterval(logoIntervalRef.current);
+      logoIntervalRef.current = null;
+    }
+  }, []);
+
+  const playLogo = useCallback(() => {
+    const video = logoVideoRef.current;
+    if (!video) return;
+    video.currentTime = 0;
+    video.play().catch(() => {});
+  }, []);
+
+  const restartLogoInterval = useCallback(() => {
+    clearLogoInterval();
+    logoIntervalRef.current = window.setInterval(() => {
+      playLogo();
+    }, 8000);
+  }, [clearLogoInterval, playLogo]);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -21,12 +43,18 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  useEffect(() => {
+    restartLogoInterval();
+    return () => clearLogoInterval();
+  }, [clearLogoInterval, restartLogoInterval]);
+
   const handleLogoClick = (event: MouseEvent<HTMLAnchorElement>) => {
     event.preventDefault();
     const video = logoVideoRef.current;
     if (!video) return;
     video.currentTime = 0;
     video.play().catch(() => {});
+    restartLogoInterval();
   };
 
   return (
@@ -44,6 +72,7 @@ export default function Navbar() {
           preload="metadata"
           aria-label="SASAVOT"
         >
+          <source src="/assets/logo/sasavot_logo_v3.webm" type="video/webm" />
           <source src="/assets/logo/sasavot_logo_v2.webm" type="video/webm" />
           <source src="/assets/logo/sasavot_logo.webm" type="video/webm" />
         </video>
@@ -54,7 +83,7 @@ export default function Navbar() {
         href="https://www.twitch.tv/sasavot"
         target="_blank"
         rel="noopener noreferrer"
-        className="pointer-events-auto fixed top-8 right-6 z-[60] hidden items-center gap-2 rounded-full bg-purple-600 px-4 py-1.5 text-sm font-semibold text-white transition-colors duration-200 hover:bg-purple-500 md:flex"
+        className="pointer-events-auto fixed top-8 right-6 z-[60] hidden items-center gap-2 rounded-full border border-rose-500/55 bg-gradient-to-r from-rose-800 to-red-800 px-4 py-1.5 text-sm font-semibold text-white shadow-[0_8px_28px_rgba(122,8,24,0.45)] transition-colors duration-200 hover:from-rose-700 hover:to-red-700 md:flex"
       >
         <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
         Смотреть
@@ -63,8 +92,8 @@ export default function Navbar() {
       <nav
         className={`pointer-events-auto mx-auto mt-5 flex w-fit items-center rounded-full border px-5 py-2 shadow-2xl backdrop-blur-xl transition-all duration-300 md:mt-6 md:px-8 md:py-3 ${
           scrolled
-            ? "border-gray-700/70 bg-gray-950/88 shadow-black/60"
-            : "border-gray-700/45 bg-gray-950/65 shadow-black/35"
+            ? "border-rose-900/65 bg-black/85 shadow-[0_14px_40px_rgba(0,0,0,0.7)]"
+            : "border-zinc-800/90 bg-zinc-950/70 shadow-[0_12px_34px_rgba(0,0,0,0.56)]"
         }`}
       >
         {/* Desktop nav */}
@@ -73,7 +102,7 @@ export default function Navbar() {
             <li key={link.href}>
               <a
                 href={link.href}
-                className="text-gray-400 hover:text-white text-sm font-medium transition-colors duration-200"
+                className="text-zinc-400 hover:text-rose-200 text-sm font-medium transition-colors duration-200"
               >
                 {link.label}
               </a>
@@ -83,7 +112,7 @@ export default function Navbar() {
 
         {/* Mobile burger */}
         <button
-          className="text-gray-300 transition-colors hover:text-white md:hidden"
+          className="text-zinc-300 transition-colors hover:text-rose-100 md:hidden"
           onClick={() => setMenuOpen(!menuOpen)}
           aria-label="Toggle menu"
         >
@@ -99,13 +128,13 @@ export default function Navbar() {
 
       {/* Mobile menu */}
       {menuOpen && (
-        <div className="pointer-events-auto mx-auto mt-3 w-[min(94vw,880px)] rounded-3xl border border-gray-700/70 bg-gray-950/95 px-6 py-5 shadow-2xl backdrop-blur-xl md:hidden">
+        <div className="pointer-events-auto mx-auto mt-3 w-[min(94vw,880px)] rounded-3xl border border-rose-900/50 bg-zinc-950/95 px-6 py-5 shadow-[0_20px_55px_rgba(0,0,0,0.7)] backdrop-blur-xl md:hidden">
           <ul className="flex flex-col gap-4">
             {navLinks.map((link) => (
               <li key={link.href}>
                 <a
                   href={link.href}
-                  className="text-gray-300 hover:text-white text-sm font-medium transition-colors"
+                  className="text-zinc-300 hover:text-rose-200 text-sm font-medium transition-colors"
                   onClick={() => setMenuOpen(false)}
                 >
                   {link.label}
@@ -117,7 +146,7 @@ export default function Navbar() {
             href="https://www.twitch.tv/sasavot"
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-4 flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold rounded-full transition-colors w-fit"
+            className="mt-4 flex w-fit items-center gap-2 rounded-full border border-rose-500/60 bg-gradient-to-r from-rose-800 to-red-800 px-4 py-2 text-sm font-semibold text-white transition-colors hover:from-rose-700 hover:to-red-700"
           >
             <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
             Смотреть на Twitch
