@@ -481,7 +481,110 @@ export default function StreamSchedule() {
         ) : error ? (
           <div className="text-center text-gray-400 text-sm py-8">Не удалось загрузить расписание</div>
         ) : (
-          <div className="rounded-2xl border border-red-950/45 bg-[#09090b] overflow-hidden">
+          <>
+            <div className="md:hidden rounded-2xl bg-[#09090b] overflow-hidden">
+              <div className="flex items-center justify-between px-3 py-3 bg-zinc-950/80">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (safeWeekIndex <= 0) return;
+                    setSelectedWeekKey(weeks[safeWeekIndex - 1].key);
+                  }}
+                  disabled={safeWeekIndex === 0}
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-zinc-700/90 bg-zinc-900/75 text-gray-200 disabled:opacity-40"
+                  aria-label="Предыдущая неделя"
+                >
+                  <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-4 w-4">
+                    <path d="M11.5 4.5 6 10l5.5 5.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+
+                <p className="font-type-light-sans flex-1 px-2 py-[3px] text-center text-[21px] leading-none font-semibold text-gray-100">
+                  {selectedWeekRangeLabel}
+                </p>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (safeWeekIndex >= weeks.length - 1) return;
+                    setSelectedWeekKey(weeks[safeWeekIndex + 1].key);
+                  }}
+                  disabled={safeWeekIndex >= weeks.length - 1}
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-zinc-700/90 bg-zinc-900/75 text-gray-200 disabled:opacity-40"
+                  aria-label="Следующая неделя"
+                >
+                  <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-4 w-4">
+                    <path d="M8.5 4.5 14 10l-5.5 5.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="px-3 py-2 bg-zinc-950/60">
+                <button
+                  type="button"
+                  onClick={() => setSelectedWeekKey(weeks.length > 0 ? weeks[weeks.length - 1].key : null)}
+                  className="rounded-full bg-rose-700/90 px-3 py-1.5 text-xs font-semibold text-white"
+                >
+                  Сегодня
+                </button>
+              </div>
+
+              <div className="space-y-1.5 p-2.5">
+                {(selectedWeek?.cards ?? []).map((item) => {
+                  const cardClass = item.isLive
+                    ? "border-rose-400/55 bg-rose-900/30"
+                    : item.isActive
+                      ? "border-zinc-600/70 bg-zinc-800/70"
+                      : "border-zinc-800/70 bg-zinc-900/45";
+
+                  const content = (
+                    <div className={`rounded-lg border px-2.5 py-2 ${cardClass}`}>
+                      <div className="mb-1 flex items-center justify-between gap-2">
+                        <p className="text-[11px] uppercase text-gray-300">
+                          {item.dayLabel}, {item.dateLabel}
+                        </p>
+                        <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+                          item.isLive
+                            ? "bg-red-500/90 text-white"
+                            : item.isActive
+                              ? "bg-emerald-500/20 text-emerald-300"
+                              : "bg-gray-800/90 text-gray-300"
+                        }`}>
+                          {item.isLive ? "LIVE" : item.isActive ? "Был эфир" : "Пусто"}
+                        </span>
+                      </div>
+                      <p className="text-xs font-semibold text-white line-clamp-1">
+                        {item.isActive ? item.title : "В этот день нет эфира"}
+                      </p>
+                      <div className="mt-1 flex items-center justify-between gap-2">
+                        <p className="text-[11px] text-gray-300 line-clamp-1">{item.timeRange}</p>
+                        <p className={`text-[11px] ${
+                          item.isLive ? "text-red-300" : item.isActive ? "text-emerald-300" : "text-gray-500"
+                        }`}>
+                          {item.isLive ? "В эфире" : item.isActive ? item.durationLabel : "—"}
+                        </p>
+                      </div>
+                    </div>
+                  );
+
+                  if (item.streamUrl) {
+                    return (
+                      <a key={item.key} href={item.streamUrl} target="_blank" rel="noopener noreferrer" className="block">
+                        {content}
+                      </a>
+                    );
+                  }
+
+                  return (
+                    <div key={item.key}>
+                      {content}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="hidden rounded-2xl border border-red-950/45 bg-[#09090b] overflow-hidden md:block">
             <div className="flex flex-wrap items-center justify-between border-b border-red-950/45 px-4 py-3 bg-zinc-950/80 gap-2">
               <div className="flex items-center gap-2">
                 <button
@@ -520,7 +623,7 @@ export default function StreamSchedule() {
                     aria-expanded={calendarOpen}
                     aria-label="Открыть календарь недель"
                   >
-                    <span>{selectedWeekRangeLabel}</span>
+                    <span className="font-type-light-sans">{selectedWeekRangeLabel}</span>
                     <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className={`h-4 w-4 transition-transform ${calendarOpen ? "rotate-180" : ""}`}>
                       <path d="m5.5 7.5 4.5 5 4.5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
@@ -608,7 +711,7 @@ export default function StreamSchedule() {
                                       setCalendarOpen(false);
                                       setHoveredWeekKey(null);
                                     }}
-                                    className={`h-8 w-8 justify-self-center rounded-full text-sm transition-colors ${
+                                    className={`font-type-light-sans h-8 w-8 justify-self-center rounded-full text-sm transition-colors ${
                                       day.inMonth ? "text-white" : "text-zinc-500"
                                     } ${!isSelectable ? "cursor-not-allowed" : "hover:text-white"} ${
                                       isTodayDay ? "ring-1 ring-red-400/70 bg-red-900/25 font-semibold" : ""
@@ -726,6 +829,7 @@ export default function StreamSchedule() {
               })}
             </div>
           </div>
+          </>
         )}
       </div>
     </section>

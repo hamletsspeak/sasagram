@@ -11,7 +11,7 @@ export default function About() {
       <div className="max-w-6xl mx-auto px-6">
         <div className="max-w-3xl">
           <p className="text-red-300 font-semibold text-sm uppercase tracking-widest mb-3">О стримере</p>
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-6 leading-tight">Кто такой SASAVOT?</h2>
+          <h2 className="text-3xl md:text-5xl font-bold text-white mb-6 leading-tight">Кто такой SASAVOT?</h2>
           <p className="text-gray-400 leading-relaxed mb-4">
             SASAVOT — популярный русскоязычный стример и контент-мейкер. Стримлю уже более 5 лет,
             за это время собрал большое и дружное комьюнити. Каждый эфир — это не просто игра,

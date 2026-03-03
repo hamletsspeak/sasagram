@@ -4,12 +4,12 @@ export default function Footer() {
   return (
     <footer className="bg-black/45 py-8">
       <div className="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-center gap-2 text-center sm:justify-start sm:text-left">
           <span className="text-red-400">▶</span>
           <span className="text-white font-bold">SASA<span className="text-red-400">VOT</span></span>
-          <span className="text-gray-600 text-sm ml-2">© {year}. Все права защищены.</span>
+          <span className="text-gray-600 text-sm sm:ml-2">© {year}. Все права защищены.</span>
         </div>
-        <div className="flex items-center gap-6">
+        <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
           {[
             { label: "Twitch", href: "https://www.twitch.tv/sasavot" },
             { label: "YouTube", href: "https://www.youtube.com/@sasavot" },

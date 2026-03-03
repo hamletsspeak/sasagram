@@ -135,6 +135,20 @@ The template is now a fully functional personal business card website for the st
 - [x] Removed section divider lines: disabled `blood-divider` pseudo-line and removed top/between-section borders from Schedule, VODs, and Footer wrappers
 - [x] Unified post-Hero section darkening: About, Schedule, VODs, Contact, and Footer now use consistent overlay `bg-black/45` to eliminate visible tone shifts between sections
 - [x] Fixed Kick avatar rendering in "Смотреть также": `next/image` optimization is now bypassed for `/api/*` avatar sources (same as remote URLs) to avoid optimizer issues with redirecting API image endpoints
+- [x] Improved "Смотреть также" UX: removed upward hover shift from creator avatars (scale-only hover to prevent top clipping) and added mobile-first 2-column card layout with larger readable labels
+- [x] Mobile navbar alignment updated: burger control moved from centered island position to top-right corner; mobile dropdown menu now right-aligned with compact max width
+- [x] Stream schedule now has dual UX by breakpoint: mobile (`< md`) uses compact day cards with weekly navigation, while desktop/tablet (`md+`) preserves timeline grid layout
+- [x] Mobile schedule cards compacted to fit full week view better: reduced paddings/spacings/font sizes and merged time+duration into a denser single row
+- [x] Removed "Смотреть на Twitch" CTA from mobile navbar dropdown menu per UI cleanup request
+- [x] Added local `Type Light Sans` font and applied it to schedule calendar date rendering (week range label + date cells) for visual consistency
+- [x] Tuned mobile week-range label in schedule header: larger centered `Type Light Sans` text with explicit `3px` top/bottom padding
+- [x] Increased mobile week-range number size by an additional 5px (`text-[21px]`) for stronger readability
+- [x] Disabled horizontal page drift on mobile by enforcing `overflow-x: hidden` on both `html` and `body`
+- [x] Removed mobile schedule separator lines: dropped outer border and internal bottom borders in the mobile week header block for cleaner continuous panel look
+- [x] Matched post-Hero fixed background behavior on mobile with desktop: mobile now uses a dedicated `fixed` background layer (`md:hidden`) while desktop keeps sticky parallax layer (`md:block`)
+- [x] Restored Hero background visibility after mobile fixed backdrop change by increasing Hero section stacking order (`z-20`)
+- [x] Final mobile QA pass applied: tightened Hero headline/avatar scale for narrow screens, made VOD/Clips header controls wrap cleanly, reduced mobile side paddings in VOD section, and enabled footer link/copyright wrapping
+- [x] Fixed Hero mobile avatar distortion by enforcing square sizing (`size-*` + `aspect-square` + `shrink-0`) on the avatar frame to prevent oval stretching
 
 ## Current Structure
 
@@ -304,3 +318,17 @@ To personalize the template, update:
 | 2026-03-03 | Removed visible horizontal separators between sections by disabling global divider pseudo-element and dropping section-level top/between borders on Schedule/VODs/Footer |
 | 2026-03-03 | Standardized section backdrop opacity across all non-hero sections by aligning wrappers to `bg-black/45`, including replacing the custom radial VOD backdrop and dark Footer tone |
 | 2026-03-03 | Resolved missing Kick avatar tile by bypassing Next image optimizer for local `/api/*` avatar URLs in `Contact` (direct browser fetch now handles API redirects consistently) |
+| 2026-03-03 | Refined "Смотреть также" responsiveness and hover behavior: switched mobile layout to 2-column cards, increased avatar/text readability, and replaced translate-up hover animation with scale to remove avatar clipping |
+| 2026-03-03 | Repositioned mobile burger navigation to the right corner by changing nav alignment (`ml-auto`) and right-aligning the mobile menu panel with a narrower max width |
+| 2026-03-03 | Redesigned schedule behavior for phones: replaced horizontal time-axis matrix with vertical per-day cards plus prev/next week controls and "Сегодня" jump; desktop/tablet timeline remains unchanged |
+| 2026-03-03 | Tightened mobile schedule card density (smaller rounded blocks, less vertical gap, compact typography) so all 7 days are visible on a typical phone viewport without heavy scrolling |
+| 2026-03-03 | Deleted the extra Twitch CTA button from the mobile burger menu in `Navbar` to simplify the mobile header actions |
+| 2026-03-03 | Integrated `Type Light Sans` (`TypeLightSans.otf`) via global `@font-face` and used `font-type-light-sans` in StreamSchedule calendar date UI (selected week range + month grid day numbers) |
+| 2026-03-03 | Updated mobile week range display (`23.02 - 01.03`) to be more legible: increased font size, enforced center alignment with `flex-1`, and set vertical padding `py-[3px]` |
+| 2026-03-03 | Bumped mobile week-range digits by +5px (from `text-base` to `text-[21px]`) while preserving center alignment and 3px vertical padding |
+| 2026-03-03 | Applied global horizontal-overflow guard (`html, body { overflow-x: hidden; }`) to prevent sideways swipe/rotation-like layout shift on mobile devices |
+| 2026-03-03 | Eliminated the visible "separator stroke" on phone schedule UI by removing mobile-only container/header borders in `StreamSchedule` |
+| 2026-03-03 | Updated page background layering: added mobile-only fixed video backdrop for non-hero sections and kept desktop sticky backdrop, with content offset (`md:-mt-[100vh]`) only on desktop |
+| 2026-03-03 | Fixed Hero background regression by elevating Hero section above shared fixed/sticky background layers (`z-20`), restoring dedicated Hero video rendering |
+| 2026-03-03 | Completed targeted phone-width hardening (320–390px): Hero title lowered to `text-2xl` and avatar to `220px`, VOD/Clips controls now stack/wrap on mobile, container padding reduced to `px-3`, About heading scaled down on mobile, and Footer rows now wrap without overflow |
+| 2026-03-03 | Corrected Hero avatar becoming vertically stretched on mobile by switching frame classes to unified `size-[220px] md:size-[276px]` with `aspect-square` and `shrink-0` |

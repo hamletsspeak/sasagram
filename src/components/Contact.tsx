@@ -240,14 +240,14 @@ export default function Contact() {
           <p className="mb-4 text-center text-red-300 text-sm font-semibold uppercase tracking-[0.22em]">
             Смотреть также
           </p>
-          <div className="flex items-start justify-start gap-2 overflow-x-auto pb-2 [ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:justify-center sm:gap-3">
+          <div className="grid grid-cols-2 gap-3 pt-1 sm:flex sm:items-start sm:justify-center sm:gap-3 sm:overflow-x-auto sm:pb-2 sm:[ms-overflow-style:none] sm:[scrollbar-width:none] sm:[&::-webkit-scrollbar]:hidden">
             {watchAlsoLinks.map((item) => (
               <a
                 key={item.key}
                 href={item.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group flex w-20 min-w-20 flex-col items-center text-center sm:w-24 sm:min-w-24"
+                className="group flex w-full min-w-0 flex-col items-center rounded-2xl border border-red-950/45 bg-black/35 px-2 py-3 text-center sm:w-24 sm:min-w-24 sm:rounded-none sm:border-0 sm:bg-transparent sm:px-0 sm:py-0"
               >
                 <div className="relative">
                   <Image
@@ -255,7 +255,7 @@ export default function Contact() {
                     alt={item.label}
                     width={80}
                     height={80}
-                    className="h-14 w-14 rounded-full border border-gray-700/80 object-cover shadow-lg transition-transform duration-200 group-hover:-translate-y-1 sm:h-16 sm:w-16"
+                    className="h-16 w-16 rounded-full border border-gray-700/80 object-cover shadow-lg transition-transform duration-200 group-hover:scale-105"
                     unoptimized={shouldBypassNextImage(creatorStates[item.key]?.avatarUrl ?? item.avatarUrl)}
                   />
                   <span className="absolute bottom-0 right-0 drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)]">
@@ -287,10 +287,10 @@ export default function Contact() {
                     {creatorStates[item.key]?.isLive ? "LIVE" : "OFF"}
                   </span>
                 </div>
-                <span className="mt-2 text-xs text-gray-300 transition-colors group-hover:text-white sm:text-sm">
+                <span className="mt-2 text-sm text-gray-300 transition-colors group-hover:text-white">
                   @{item.label}
                 </span>
-                <span className="mt-0.5 text-[11px] text-gray-500 sm:text-xs">
+                <span className="mt-0.5 text-xs text-gray-500">
                   {item.realName}
                 </span>
               </a>

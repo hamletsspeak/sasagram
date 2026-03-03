@@ -412,7 +412,7 @@ export default function Hero() {
       <section
         id="home"
         ref={heroRef}
-        className="relative blood-divider flex min-h-screen items-start justify-center overflow-hidden bg-transparent pt-[66px] md:pt-[78px]"
+        className="relative z-20 blood-divider flex min-h-screen items-start justify-center overflow-hidden bg-transparent pt-[66px] md:pt-[78px]"
       >
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           {isLive ? (
@@ -445,7 +445,7 @@ export default function Hero() {
 
         <div className="relative z-10 mt-5 flex w-full flex-col items-center justify-start gap-6 px-6 pb-10">
           <h1
-            className={`hero-typewriter-line flex h-[64px] items-center justify-center text-center text-3xl sm:h-[82px] sm:text-4xl md:h-[112px] md:text-5xl ${HERO_TYPEWRITER_SLIDES[titleSlideIndex].className}`}
+            className={`hero-typewriter-line flex h-[64px] items-center justify-center text-center text-2xl sm:h-[82px] sm:text-4xl md:h-[112px] md:text-5xl ${HERO_TYPEWRITER_SLIDES[titleSlideIndex].className}`}
             aria-live="polite"
             aria-label={HERO_TYPEWRITER_SLIDES[titleSlideIndex].text}
           >
@@ -466,7 +466,7 @@ export default function Hero() {
             <div
               ref={heroAvatarPointRef}
               data-hero-avatar-point="true"
-              className="h-[244px] w-[244px] overflow-hidden rounded-full border-4 border-red-700/45 shadow-2xl md:h-[276px] md:w-[276px]"
+              className="size-[220px] shrink-0 aspect-square overflow-hidden rounded-full border-4 border-red-700/45 shadow-2xl md:size-[276px]"
             >
               <video
                 className="h-full w-full scale-[1.34] object-cover object-[center_38%]"

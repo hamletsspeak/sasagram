@@ -85,7 +85,7 @@ export default function Navbar() {
       </a>
 
       <nav
-        className={`pointer-events-auto mx-auto mt-0 flex w-fit items-center rounded-full border px-5 py-2 shadow-2xl transition-all duration-300 md:mt-0 md:px-8 md:py-3 ${
+        className={`pointer-events-auto ml-auto mt-0 mr-0 flex w-fit items-center rounded-full border px-5 py-2 shadow-2xl transition-all duration-300 md:mx-auto md:mt-0 md:px-8 md:py-3 ${
           scrolled
             ? "native-glass--strong shadow-[0_14px_40px_rgba(0,0,0,0.62)]"
             : "native-glass shadow-[0_12px_34px_rgba(0,0,0,0.5)]"
@@ -123,7 +123,7 @@ export default function Navbar() {
 
       {/* Mobile menu */}
       {menuOpen && (
-        <div className="native-glass--strong pointer-events-auto mx-auto mt-3 w-[min(94vw,880px)] rounded-3xl border px-6 py-5 shadow-[0_20px_55px_rgba(0,0,0,0.65)] md:hidden">
+        <div className="native-glass--strong pointer-events-auto ml-auto mt-3 mr-0 w-[min(94vw,380px)] rounded-3xl border px-6 py-5 shadow-[0_20px_55px_rgba(0,0,0,0.65)] md:hidden">
           <ul className="flex flex-col gap-4">
             {navLinks.map((link) => (
               <li key={link.href}>
@@ -137,15 +137,6 @@ export default function Navbar() {
               </li>
             ))}
           </ul>
-          <a
-            href="https://www.twitch.tv/sasavot"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-4 flex w-fit items-center gap-2 rounded-full border border-rose-500/60 bg-gradient-to-r from-rose-800 to-red-800 px-4 py-2 text-sm font-semibold text-white transition-colors hover:from-rose-700 hover:to-red-700"
-          >
-            <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
-            Смотреть на Twitch
-          </a>
         </div>
       )}
     </header>

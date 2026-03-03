@@ -16,6 +16,14 @@
   font-display: swap;
 }
 
+@font-face {
+  font-family: "Type Light Sans";
+  src: url("/assets/font/Type%20Light%20Sans/TypeLightSans.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --bg-base: #040405;
   --bg-elev: #0b0b0d;
@@ -31,6 +39,11 @@ body {
   color: var(--text-main);
   background: linear-gradient(180deg, #060608 0%, #030304 45%, #060507 100%);
   min-height: 100vh;
+  overflow-x: hidden;
+}
+
+html {
+  overflow-x: hidden;
 }
 
 .site-dark-glow {
@@ -81,6 +94,10 @@ body {
 
 .font-them-people {
   font-family: "Them People", serif;
+}
+
+.font-type-light-sans {
+  font-family: "Type Light Sans", "Audex", sans-serif;
 }
 
 .hero-typewriter-line {

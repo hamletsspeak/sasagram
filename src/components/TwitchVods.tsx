@@ -125,7 +125,7 @@ export default function TwitchVods() {
 
   return (
     <section id="vods" className="relative z-10 min-h-screen scroll-mt-0 overflow-hidden bg-black/45 py-20 md:py-24">
-      <div className="mx-auto flex min-h-[calc(100vh-10rem)] w-full max-w-[1680px] flex-col justify-center px-6">
+      <div className="mx-auto flex min-h-[calc(100vh-10rem)] w-full max-w-[1680px] flex-col justify-center px-3 sm:px-6">
         {loading ? (
           <div className="grid h-[calc(100vh-14rem)] min-h-[440px] grid-rows-2 gap-3">
             <div className="rounded-3xl border border-white/10 bg-white/[0.04] animate-pulse" />
@@ -143,11 +143,11 @@ export default function TwitchVods() {
         ) : (
           <div className="grid h-[calc(100vh-14rem)] min-h-[440px] grid-rows-2 gap-3">
             <div className="flex min-h-0 flex-col">
-              <div className="mb-3 flex items-center justify-between">
+              <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.28em] text-red-300">Записи стримов</p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                   <button
                     type="button"
                     onClick={() => setVodPage((prev) => Math.max(0, Math.min(prev, totalVodPages - 1) - 1))}
@@ -202,9 +202,9 @@ export default function TwitchVods() {
             </div>
 
             <div className="flex min-h-0 flex-col">
-              <div className="mb-3 flex items-center justify-between">
+              <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-xs font-semibold uppercase tracking-[0.28em] text-rose-300">Избранные клипы</p>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                   <button
                     type="button"
                     onClick={() => setClipsPage((prev) => Math.max(0, Math.min(prev, totalClipPages - 1) - 1))}
