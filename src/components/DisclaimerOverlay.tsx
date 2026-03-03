@@ -12,6 +12,24 @@ const MOBILE_DISCLAIMER_SRC =
 const getDisclaimerSrc = (isMobile: boolean) =>
   encodeURI(isMobile ? MOBILE_DISCLAIMER_SRC : DESKTOP_DISCLAIMER_SRC);
 
+const getVideoBufferedProgress = (video: HTMLVideoElement) => {
+  if (video.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) {
+    return 1;
+  }
+
+  if (video.buffered.length === 0) {
+    return 0;
+  }
+
+  const duration = video.duration;
+  if (!Number.isFinite(duration) || duration <= 0) {
+    return 0.85;
+  }
+
+  const bufferedEnd = video.buffered.end(video.buffered.length - 1);
+  return Math.max(0, Math.min(1, bufferedEnd / duration));
+};
+
 export default function DisclaimerOverlay() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [disclaimerSrc, setDisclaimerSrc] = useState(() => {
@@ -38,9 +56,12 @@ export default function DisclaimerOverlay() {
   });
   const [playBlocked, setPlayBlocked] = useState(false);
   const [hasError, setHasError] = useState(false);
+  const [videoLoadProgress, setVideoLoadProgress] = useState(0);
   const disclaimerType = disclaimerSrc.toLowerCase().endsWith(".webm")
     ? "video/webm"
     : "video/mp4";
+  const pageLoadProgress = isPageLoaded ? 1 : 0;
+  const loadingProgress = Math.round((pageLoadProgress * 0.35 + videoLoadProgress * 0.65) * 100);
 
   const tryPlay = useCallback(async () => {
     const video = videoRef.current;
@@ -116,6 +137,7 @@ export default function DisclaimerOverlay() {
     setIsVideoReady(false);
     setPlayBlocked(false);
     setHasError(false);
+    setVideoLoadProgress(0);
     video.load();
   }, [disclaimerSrc]);
 
@@ -143,25 +165,38 @@ export default function DisclaimerOverlay() {
           <div className="flex flex-col items-center gap-4">
             <p className="text-sm uppercase tracking-[0.3em]">Загрузка</p>
             <div className="h-1 w-44 overflow-hidden rounded-full bg-zinc-800">
-              <div className="h-full w-1/2 animate-pulse rounded-full bg-zinc-300" />
+              <div
+                className="h-full rounded-full bg-zinc-300 transition-[width] duration-200 ease-out"
+                style={{ width: `${loadingProgress}%` }}
+              />
             </div>
+            <p className="text-xs tabular-nums text-zinc-400">{loadingProgress}%</p>
           </div>
         </div>
       ) : null}
 
       <video
         ref={videoRef}
-        className={`h-full w-full object-cover transition-opacity duration-200 ${
+        className={`h-full w-full max-w-full object-contain transition-opacity duration-200 md:object-cover ${
           isVideoReady ? "opacity-100" : "opacity-0"
         }`}
-        autoPlay
         muted
         playsInline
         preload="auto"
         disablePictureInPicture
         controlsList="nodownload noplaybackrate noremoteplayback nofullscreen"
+        onLoadedMetadata={(event) => {
+          setVideoLoadProgress(getVideoBufferedProgress(event.currentTarget));
+        }}
+        onProgress={(event) => {
+          setVideoLoadProgress(getVideoBufferedProgress(event.currentTarget));
+        }}
+        onLoadedData={(event) => {
+          setVideoLoadProgress(getVideoBufferedProgress(event.currentTarget));
+        }}
         onCanPlay={() => {
           setIsVideoReady(true);
+          setVideoLoadProgress(1);
         }}
         onEnded={() => {
           setIsVisible(false);
@@ -196,6 +231,7 @@ export default function DisclaimerOverlay() {
               }
               setIsVideoReady(false);
               setHasError(false);
+              setVideoLoadProgress(0);
               video.load();
             }}
           >

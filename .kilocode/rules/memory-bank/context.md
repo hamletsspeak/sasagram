@@ -124,6 +124,7 @@ The template is now a fully functional personal business card website for the st
 - [x] Updated startup disclaimer default asset to local `дисклеймер_final.webm` with dynamic MIME type handling (`webm`/`mp4`) in `DisclaimerOverlay`
 - [x] Disclaimer now switches by breakpoint: mobile uses `дисклеймен_final_mob.webm`, desktop keeps `дисклеймер_final.webm` (with optional env overrides)
 - [x] Disclaimer preloader updated: label changed to `Загрузка`, and playback now starts only after both video readiness and full page `window.load`
+- [x] Disclaimer preloader now shows real numeric progress (`%`) from combined page load + video buffering; `autoPlay` disabled to prevent premature start
 - [x] Removed Next Image CDN dependency for Twitch previews/avatars: VOD/clip cards now use unoptimized image loading and `watch-also` API returns local avatar proxy routes
 - [x] Removed `static-cdn.jtvnw.net` from Next Image remote patterns to avoid CDN optimizer path
 - [x] Unified Hero background video source: both live and offline states now use `фон_сайт_онлайн.webm`; legacy `фон_сайт.webm` removed from runtime usage
@@ -336,3 +337,4 @@ To personalize the template, update:
 | 2026-03-03 | Corrected Hero avatar becoming vertically stretched on mobile by switching frame classes to unified `size-[220px] md:size-[276px]` with `aspect-square` and `shrink-0` |
 | 2026-03-03 | Updated startup disclaimer source selection by viewport: `дисклеймен_final_mob.webm` is now used on mobile (`max-width: 767px`) while desktop stays on `дисклеймер_final.webm`; source auto-updates on breakpoint changes |
 | 2026-03-03 | Updated disclaimer loading gate: preloader text is now `Загрузка`, and disclaimer playback waits for full site load (`window.load`) plus video readiness before starting |
+| 2026-03-03 | Improved disclaimer UX: mobile rendering now uses adaptive fit (`object-contain` on phones), loading bar reflects real progress (page + video), and autoplay is disabled so playback begins only after full readiness |
