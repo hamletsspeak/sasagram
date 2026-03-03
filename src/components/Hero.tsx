@@ -83,6 +83,7 @@ export default function Hero() {
   const [showFloatingPlayer, setShowFloatingPlayer] = useState(false);
   const [chatHidden, setChatHidden] = useState(false);
   const [pipHidden, setPipHidden] = useState(false);
+  const [isDisclaimerVisible, setIsDisclaimerVisible] = useState(true);
   const [isHeroInView, setIsHeroInView] = useState(true);
   const [avatarShouldDock, setAvatarShouldDock] = useState(false);
   const [avatarInNavbar, setAvatarInNavbar] = useState(false);
@@ -290,6 +291,25 @@ export default function Hero() {
   }, []);
 
   useEffect(() => {
+    const onVisibility = (event: Event) => {
+      const customEvent = event as CustomEvent<boolean>;
+      setIsDisclaimerVisible(Boolean(customEvent.detail));
+    };
+
+    const onFinished = () => {
+      setIsDisclaimerVisible(false);
+    };
+
+    window.addEventListener("sasagram:disclaimer-visibility", onVisibility as EventListener);
+    window.addEventListener("sasagram:disclaimer-finished", onFinished);
+
+    return () => {
+      window.removeEventListener("sasagram:disclaimer-visibility", onVisibility as EventListener);
+      window.removeEventListener("sasagram:disclaimer-finished", onFinished);
+    };
+  }, []);
+
+  useEffect(() => {
     const onFinished = () => {
       const onlineVideo = onlineBackgroundRef.current;
       const offlineVideo = offlineBackgroundRef.current;
@@ -320,6 +340,12 @@ export default function Hero() {
     const onlineVideo = onlineBackgroundRef.current;
     const offlineVideo = offlineBackgroundRef.current;
 
+    if (isDisclaimerVisible) {
+      onlineVideo?.pause();
+      offlineVideo?.pause();
+      return;
+    }
+
     if (isLive) {
       if (offlineVideo) {
         offlineVideo.pause();
@@ -346,7 +372,7 @@ export default function Hero() {
       return;
     }
     void offlineVideo.play().catch(() => {});
-  }, [isLive, isHeroInView]);
+  }, [isDisclaimerVisible, isLive, isHeroInView]);
 
   useEffect(() => {
     setAvatarInNavbar(avatarShouldDock);
@@ -421,7 +447,7 @@ export default function Hero() {
               className="h-full w-full object-cover rotate-180"
               muted
               playsInline
-              preload="auto"
+              preload="metadata"
               aria-hidden="true"
             >
               <source src={encodeURI("/assets/logo/фон_сайт_онлайн.webm")} type="video/webm" />
@@ -433,7 +459,7 @@ export default function Hero() {
               muted
               loop
               playsInline
-              preload="auto"
+              preload="metadata"
               aria-hidden="true"
             >
               <source src={encodeURI("/assets/logo/фон_сайт_онлайн.webm")} type="video/webm" />

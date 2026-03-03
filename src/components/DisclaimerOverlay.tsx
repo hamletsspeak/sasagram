@@ -19,6 +19,7 @@ const mobileDisclaimerType = mobileDisclaimerSrc.toLowerCase().endsWith(".webm")
 
 export default function DisclaimerOverlay() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const startupTimeoutRef = useRef<number | null>(null);
   const [isVisible, setIsVisible] = useState(() => {
     if (typeof performance === "undefined") {
       return true;
@@ -29,15 +30,15 @@ export default function DisclaimerOverlay() {
     return navigationEntry?.type !== "reload";
   });
   const [isVideoReady, setIsVideoReady] = useState(false);
-  const [isPageLoaded, setIsPageLoaded] = useState(() => {
+  const [isPageReady, setIsPageReady] = useState(() => {
     if (typeof document === "undefined") {
       return false;
     }
-    return document.readyState === "complete";
+    return document.readyState !== "loading";
   });
   const [playBlocked, setPlayBlocked] = useState(false);
   const [hasError, setHasError] = useState(false);
-  const pageLoadProgress = isPageLoaded ? 1 : 0;
+  const pageLoadProgress = isPageReady ? 1 : 0;
   const videoLoadProgress = isVideoReady ? 1 : 0;
   const loadingProgress = Math.round((pageLoadProgress * 0.4 + videoLoadProgress * 0.6) * 100);
 
@@ -57,19 +58,27 @@ export default function DisclaimerOverlay() {
   }, []);
 
   useEffect(() => {
-    if (isPageLoaded) {
+    if (isPageReady) {
       return;
     }
 
-    const onLoad = () => {
-      setIsPageLoaded(true);
+    const onReady = () => {
+      setIsPageReady(true);
     };
 
-    window.addEventListener("load", onLoad);
+    document.addEventListener("DOMContentLoaded", onReady);
+
+    startupTimeoutRef.current = window.setTimeout(() => {
+      setIsPageReady(true);
+    }, 1500);
+
     return () => {
-      window.removeEventListener("load", onLoad);
+      document.removeEventListener("DOMContentLoaded", onReady);
+      if (startupTimeoutRef.current !== null) {
+        window.clearTimeout(startupTimeoutRef.current);
+      }
     };
-  }, [isPageLoaded]);
+  }, [isPageReady]);
 
   useEffect(() => {
     const html = document.documentElement;
@@ -93,7 +102,7 @@ export default function DisclaimerOverlay() {
   }, [isVisible]);
 
   useEffect(() => {
-    if (!isVisible || hasError || !isVideoReady || !isPageLoaded) {
+    if (!isVisible || hasError || !isVideoReady || !isPageReady) {
       return;
     }
 
@@ -104,7 +113,7 @@ export default function DisclaimerOverlay() {
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [hasError, isPageLoaded, isVideoReady, isVisible, tryPlay]);
+  }, [hasError, isPageReady, isVideoReady, isVisible, tryPlay]);
 
   if (!isVisible) {
     return null;
@@ -118,7 +127,7 @@ export default function DisclaimerOverlay() {
       aria-label="Обязательный дисклеймер"
       onClick={playBlocked ? () => void tryPlay() : undefined}
     >
-      {(!isVideoReady || !isPageLoaded) && !hasError ? (
+      {(!isVideoReady || !isPageReady) && !hasError ? (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-black text-zinc-300">
           <div className="flex flex-col items-center gap-4">
             <p className="text-sm uppercase tracking-[0.3em]">Загрузка</p>
@@ -146,6 +155,9 @@ export default function DisclaimerOverlay() {
         onLoadedData={(event) => {
           setIsVideoReady(true);
           event.currentTarget.pause();
+        }}
+        onCanPlay={() => {
+          setIsVideoReady(true);
         }}
         onEnded={() => {
           setIsVisible(false);
