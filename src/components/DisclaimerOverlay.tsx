@@ -8,36 +8,17 @@ const DESKTOP_DISCLAIMER_SRC =
 const MOBILE_DISCLAIMER_SRC =
   process.env.NEXT_PUBLIC_DISCLAIMER_VIDEO_URL_MOBILE ??
   "/assets/logo/дисклеймен_final_mob.webm";
-
-const getDisclaimerSrc = (isMobile: boolean) =>
-  encodeURI(isMobile ? MOBILE_DISCLAIMER_SRC : DESKTOP_DISCLAIMER_SRC);
-
-const getVideoBufferedProgress = (video: HTMLVideoElement) => {
-  if (video.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) {
-    return 1;
-  }
-
-  if (video.buffered.length === 0) {
-    return 0;
-  }
-
-  const duration = video.duration;
-  if (!Number.isFinite(duration) || duration <= 0) {
-    return 0.85;
-  }
-
-  const bufferedEnd = video.buffered.end(video.buffered.length - 1);
-  return Math.max(0, Math.min(1, bufferedEnd / duration));
-};
+const desktopDisclaimerSrc = encodeURI(DESKTOP_DISCLAIMER_SRC);
+const mobileDisclaimerSrc = encodeURI(MOBILE_DISCLAIMER_SRC);
+const desktopDisclaimerType = desktopDisclaimerSrc.toLowerCase().endsWith(".webm")
+  ? "video/webm"
+  : "video/mp4";
+const mobileDisclaimerType = mobileDisclaimerSrc.toLowerCase().endsWith(".webm")
+  ? "video/webm"
+  : "video/mp4";
 
 export default function DisclaimerOverlay() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const [disclaimerSrc, setDisclaimerSrc] = useState(() => {
-    if (typeof window === "undefined") {
-      return getDisclaimerSrc(false);
-    }
-    return getDisclaimerSrc(window.matchMedia(MOBILE_QUERY).matches);
-  });
   const [isVisible, setIsVisible] = useState(() => {
     if (typeof performance === "undefined") {
       return true;
@@ -56,12 +37,9 @@ export default function DisclaimerOverlay() {
   });
   const [playBlocked, setPlayBlocked] = useState(false);
   const [hasError, setHasError] = useState(false);
-  const [videoLoadProgress, setVideoLoadProgress] = useState(0);
-  const disclaimerType = disclaimerSrc.toLowerCase().endsWith(".webm")
-    ? "video/webm"
-    : "video/mp4";
   const pageLoadProgress = isPageLoaded ? 1 : 0;
-  const loadingProgress = Math.round((pageLoadProgress * 0.35 + videoLoadProgress * 0.65) * 100);
+  const videoLoadProgress = isVideoReady ? 1 : 0;
+  const loadingProgress = Math.round((pageLoadProgress * 0.4 + videoLoadProgress * 0.6) * 100);
 
   const tryPlay = useCallback(async () => {
     const video = videoRef.current;
@@ -115,37 +93,17 @@ export default function DisclaimerOverlay() {
   }, [isVisible]);
 
   useEffect(() => {
-    const mediaQuery = window.matchMedia(MOBILE_QUERY);
-    const updateSource = () => {
-      setDisclaimerSrc(getDisclaimerSrc(mediaQuery.matches));
-    };
-
-    updateSource();
-    mediaQuery.addEventListener("change", updateSource);
-
-    return () => {
-      mediaQuery.removeEventListener("change", updateSource);
-    };
-  }, []);
-
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) {
-      return;
-    }
-
-    setIsVideoReady(false);
-    setPlayBlocked(false);
-    setHasError(false);
-    setVideoLoadProgress(0);
-    video.load();
-  }, [disclaimerSrc]);
-
-  useEffect(() => {
     if (!isVisible || hasError || !isVideoReady || !isPageLoaded) {
       return;
     }
-    void tryPlay();
+
+    const timeoutId = window.setTimeout(() => {
+      void tryPlay();
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
   }, [hasError, isPageLoaded, isVideoReady, isVisible, tryPlay]);
 
   if (!isVisible) {
@@ -182,21 +140,12 @@ export default function DisclaimerOverlay() {
         }`}
         muted
         playsInline
-        preload="auto"
+        preload="metadata"
         disablePictureInPicture
         controlsList="nodownload noplaybackrate noremoteplayback nofullscreen"
-        onLoadedMetadata={(event) => {
-          setVideoLoadProgress(getVideoBufferedProgress(event.currentTarget));
-        }}
-        onProgress={(event) => {
-          setVideoLoadProgress(getVideoBufferedProgress(event.currentTarget));
-        }}
         onLoadedData={(event) => {
-          setVideoLoadProgress(getVideoBufferedProgress(event.currentTarget));
-        }}
-        onCanPlay={() => {
           setIsVideoReady(true);
-          setVideoLoadProgress(1);
+          event.currentTarget.pause();
         }}
         onEnded={() => {
           setIsVisible(false);
@@ -207,7 +156,8 @@ export default function DisclaimerOverlay() {
           setPlayBlocked(false);
         }}
       >
-        <source src={disclaimerSrc} type={disclaimerType} />
+        <source src={mobileDisclaimerSrc} type={mobileDisclaimerType} media={MOBILE_QUERY} />
+        <source src={desktopDisclaimerSrc} type={desktopDisclaimerType} />
       </video>
 
       {playBlocked && !hasError ? (
@@ -231,7 +181,7 @@ export default function DisclaimerOverlay() {
               }
               setIsVideoReady(false);
               setHasError(false);
-              setVideoLoadProgress(0);
+              setPlayBlocked(false);
               video.load();
             }}
           >
