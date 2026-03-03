@@ -121,6 +121,9 @@ The template is now a fully functional personal business card website for the st
 - [x] Excluded oversized local disclaimer sources (`дис2.mp4`, `дисклеймер4к.mp4`) from git via `.gitignore` and removed `дис2.mp4` from tracked files
 - [x] Disclaimer video source is now configurable via `NEXT_PUBLIC_DISCLAIMER_VIDEO_URL` with local fallback `alert_orig.mp4`
 - [x] Removed broken `<link rel="preload" as="video">` hint from root layout and fixed hydration mismatch in `DisclaimerOverlay`
+- [x] Updated startup disclaimer default asset to local `дисклеймер_final.webm` with dynamic MIME type handling (`webm`/`mp4`) in `DisclaimerOverlay`
+- [x] Removed Next Image CDN dependency for Twitch previews/avatars: VOD/clip cards now use unoptimized image loading and `watch-also` API returns local avatar proxy routes
+- [x] Removed `static-cdn.jtvnw.net` from Next Image remote patterns to avoid CDN optimizer path
 
 ## Current Structure
 
@@ -277,3 +280,5 @@ To personalize the template, update:
 | 2026-03-02 | Reworked non-hero background glow to a stronger visible `main` layer (`.site-dark-glow::before`) with dark red animated blur so sections no longer look flat black |
 | 2026-03-02 | Tuned global section background from heavy dark glow to frosted-window look: layered matte haze + soft condensation highlights with subtle motion, keeping palette muted and non-bright |
 | 2026-03-03 | Fixed media loading on production: removed LFS from public logo videos, deleted tracked `дис2.mp4` (kept local), moved disclaimer source to `NEXT_PUBLIC_DISCLAIMER_VIDEO_URL` fallback, removed invalid video preload hint, and resolved disclaimer hydration mismatch (`React #418`) |
+| 2026-03-03 | Switched default startup disclaimer to `public/assets/logo/дисклеймер_final.webm` and made `<source type>` dynamic based on file extension to keep env override compatibility |
+| 2026-03-03 | Disabled Next Image optimization for Twitch media cards, switched `watch-also` dynamic avatars to local `/api/*/avatar` routes, and removed `static-cdn.jtvnw.net` from `next.config.ts` image allowlist |

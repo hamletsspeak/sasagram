@@ -185,7 +185,7 @@ export default function TwitchVods() {
                 <div className="grid h-full min-h-[205px] gap-3" style={{ gridTemplateColumns: `repeat(${itemsPerPage}, minmax(0, 1fr))` }}>
                   {visibleVods.map((vod) => (
                     <a key={vod.id} href={vod.url} target="_blank" rel="noopener noreferrer" className="group relative h-full overflow-hidden rounded-2xl border border-red-400/25 bg-black/35">
-                      <Image src={getThumbnailUrl(vod.thumbnail_url, 960, 540)} alt={vod.title} fill className="object-cover transition-transform duration-500 group-hover:scale-105" sizes="(max-width: 768px) 100vw, 25vw" />
+                      <Image src={getThumbnailUrl(vod.thumbnail_url, 960, 540)} alt={vod.title} fill className="object-cover transition-transform duration-500 group-hover:scale-105" sizes="(max-width: 768px) 100vw, 25vw" unoptimized />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/45 to-black/20" />
                       <div className="absolute right-3 top-3 rounded-lg bg-black/80 px-2 py-1 text-xs font-mono text-white">{formatDuration(vod.duration)}</div>
                       <div className="absolute inset-x-0 bottom-0 p-4">
@@ -247,7 +247,7 @@ export default function TwitchVods() {
                   ) : (
                     visibleClips.map((clip) => (
                       <a key={clip.id} href={clip.url} target="_blank" rel="noopener noreferrer" className="group relative h-full overflow-hidden rounded-2xl border border-rose-400/25 bg-black/30">
-                        <Image src={clip.thumbnail_url} alt={clip.title} fill className="object-cover transition-transform duration-500 group-hover:scale-105" sizes="(max-width: 768px) 100vw, 25vw" />
+                        <Image src={clip.thumbnail_url} alt={clip.title} fill className="object-cover transition-transform duration-500 group-hover:scale-105" sizes="(max-width: 768px) 100vw, 25vw" unoptimized />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/10" />
                         <div className="absolute right-3 top-3 rounded-lg bg-black/80 px-2 py-1 text-xs font-mono text-white">{formatClipDuration(clip.duration)}</div>
                         <div className="absolute inset-x-0 bottom-0 p-4">

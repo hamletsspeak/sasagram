@@ -3,22 +3,26 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 const DISCLAIMER_SRC = encodeURI(
-  process.env.NEXT_PUBLIC_DISCLAIMER_VIDEO_URL ?? "/assets/logo/alert_orig.mp4",
+  process.env.NEXT_PUBLIC_DISCLAIMER_VIDEO_URL ?? "/assets/logo/дисклеймер_final.webm",
 );
+const DISCLAIMER_TYPE = DISCLAIMER_SRC.toLowerCase().endsWith(".webm")
+  ? "video/webm"
+  : "video/mp4";
 
 export default function DisclaimerOverlay() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const [isVisible, setIsVisible] = useState(false);
-  const [isVideoReady, setIsVideoReady] = useState(false);
-  const [playBlocked, setPlayBlocked] = useState(false);
-  const [hasError, setHasError] = useState(false);
-
-  useEffect(() => {
+  const [isVisible, setIsVisible] = useState(() => {
+    if (typeof performance === "undefined") {
+      return true;
+    }
     const navigationEntry = performance.getEntriesByType("navigation")[0] as
       | PerformanceNavigationTiming
       | undefined;
-    setIsVisible(navigationEntry?.type !== "reload");
-  }, []);
+    return navigationEntry?.type !== "reload";
+  });
+  const [isVideoReady, setIsVideoReady] = useState(false);
+  const [playBlocked, setPlayBlocked] = useState(false);
+  const [hasError, setHasError] = useState(false);
 
   const tryPlay = useCallback(async () => {
     const video = videoRef.current;
@@ -105,7 +109,7 @@ export default function DisclaimerOverlay() {
           setPlayBlocked(false);
         }}
       >
-        <source src={DISCLAIMER_SRC} type="video/mp4" />
+        <source src={DISCLAIMER_SRC} type={DISCLAIMER_TYPE} />
       </video>
 
       {playBlocked && !hasError ? (

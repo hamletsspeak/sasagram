@@ -37,56 +37,6 @@ async function getTwitchAccessToken(): Promise<string | null> {
   }
 }
 
-function findAvatarUrl(value: unknown, depth = 0): string | null {
-  if (!value || depth > 4) return null;
-
-  if (typeof value === "string") {
-    const lower = value.toLowerCase();
-    if (
-      (lower.startsWith("http://") || lower.startsWith("https://")) &&
-      (lower.includes("avatar") || lower.includes("profile") || lower.includes("picture") || lower.includes("photo"))
-    ) {
-      return value;
-    }
-    return null;
-  }
-
-  if (Array.isArray(value)) {
-    for (const entry of value) {
-      const found = findAvatarUrl(entry, depth + 1);
-      if (found) return found;
-    }
-    return null;
-  }
-
-  if (typeof value === "object") {
-    const obj = value as Record<string, unknown>;
-    const candidates = [
-      obj.profile_picture,
-      obj.profile_picture_url,
-      obj.profile_image,
-      obj.profile_image_url,
-      obj.avatar,
-      obj.avatar_url,
-      obj.picture,
-      obj.photo,
-      obj.user_profile_picture,
-    ];
-
-    for (const candidate of candidates) {
-      const found = findAvatarUrl(candidate, depth + 1);
-      if (found) return found;
-    }
-
-    for (const entry of Object.values(obj)) {
-      const found = findAvatarUrl(entry, depth + 1);
-      if (found) return found;
-    }
-  }
-
-  return null;
-}
-
 function findLiveFlag(value: unknown, depth = 0): boolean | null {
   if (!value || depth > 4) return null;
 
@@ -157,14 +107,6 @@ async function fetchKickJson(url: string): Promise<unknown | null> {
 
   if (!response.ok) return null;
   return response.json();
-}
-
-function getFirstDataItem(payload: unknown): Record<string, unknown> | null {
-  if (!payload || typeof payload !== "object") return null;
-  const data = (payload as { data?: unknown }).data;
-  if (!Array.isArray(data) || data.length === 0) return null;
-  const first = data[0];
-  return first && typeof first === "object" ? (first as Record<string, unknown>) : null;
 }
 
 async function getKickAccessToken(): Promise<string | null> {
@@ -286,7 +228,7 @@ export async function GET() {
         creators[login.toLowerCase()] = {
           platform: "Twitch",
           isLive: liveLogins.has(login.toLowerCase()),
-          avatarUrl: user?.profile_image_url,
+          avatarUrl: `/api/twitch/avatar/${encodeURIComponent(login.toLowerCase())}`,
           displayName: user?.display_name ?? login,
         };
       }
@@ -300,26 +242,12 @@ export async function GET() {
       const channelPayload = await fetchKickJson(
         `https://api.kick.com/public/v1/channels?slug=${encodeURIComponent(slug)}`
       );
-      const channel = getFirstDataItem(channelPayload);
-
-      const broadcasterUserId =
-        typeof channel?.broadcaster_user_id === "number" || typeof channel?.broadcaster_user_id === "string"
-          ? String(channel.broadcaster_user_id)
-          : null;
-
-      const userPayload = broadcasterUserId
-        ? await fetchKickJson(
-            `https://api.kick.com/public/v1/users?id=${encodeURIComponent(broadcasterUserId)}`
-          )
-        : null;
-
-      const avatar = findAvatarUrl(userPayload) ?? findAvatarUrl(channelPayload) ?? undefined;
       const live = findLiveFlag(channelPayload);
 
       creators[slug.toLowerCase()] = {
         platform: "Kick",
         isLive: live ?? false,
-        avatarUrl: avatar,
+        avatarUrl: `/api/kick/avatar/${encodeURIComponent(slug.toLowerCase())}`,
         displayName: slug,
       };
     }
