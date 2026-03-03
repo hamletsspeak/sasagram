@@ -7,7 +7,7 @@ const stats = [
 
 export default function About() {
   return (
-    <section id="about" className="blood-divider min-h-screen py-24 bg-black/35 flex items-center">
+    <section id="about" className="blood-divider min-h-screen py-24 bg-black/45 flex items-center">
       <div className="max-w-6xl mx-auto px-6">
         <div className="max-w-3xl">
           <p className="text-red-300 font-semibold text-sm uppercase tracking-widest mb-3">О стримере</p>

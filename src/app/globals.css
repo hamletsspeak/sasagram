@@ -58,13 +58,7 @@ body {
 }
 
 .blood-divider::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -1px;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(229, 59, 79, 0.55), transparent);
+  content: none;
 }
 
 .native-glass {

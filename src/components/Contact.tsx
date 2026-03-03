@@ -147,7 +147,8 @@ interface WatchAlsoResponse {
 
 export default function Contact() {
   const [creatorStates, setCreatorStates] = useState<Record<string, CreatorLiveState>>({});
-  const isRemoteUrl = (url: string) => url.startsWith("http://") || url.startsWith("https://");
+  const shouldBypassNextImage = (url: string) =>
+    url.startsWith("http://") || url.startsWith("https://") || url.startsWith("/api/");
 
   useEffect(() => {
     let isActive = true;
@@ -218,7 +219,7 @@ export default function Contact() {
                     width={128}
                     height={128}
                     className="h-full w-full rounded-full object-cover"
-                    unoptimized={isRemoteUrl(item.avatarUrl)}
+                    unoptimized={shouldBypassNextImage(item.avatarUrl)}
                   />
                 ) : (
                   <span className="text-xl font-black tracking-wide text-white sm:text-2xl">{item.avatar}</span>
@@ -255,7 +256,7 @@ export default function Contact() {
                     width={80}
                     height={80}
                     className="h-14 w-14 rounded-full border border-gray-700/80 object-cover shadow-lg transition-transform duration-200 group-hover:-translate-y-1 sm:h-16 sm:w-16"
-                    unoptimized={isRemoteUrl(creatorStates[item.key]?.avatarUrl ?? item.avatarUrl)}
+                    unoptimized={shouldBypassNextImage(creatorStates[item.key]?.avatarUrl ?? item.avatarUrl)}
                   />
                   <span className="absolute bottom-0 right-0 drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)]">
                     {item.platform === "Kick" ? (

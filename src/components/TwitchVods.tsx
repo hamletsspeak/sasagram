@@ -124,7 +124,7 @@ export default function TwitchVods() {
   }, [clips, safeClipsPage, itemsPerPage]);
 
   return (
-    <section id="vods" className="relative z-10 min-h-screen scroll-mt-0 overflow-hidden border-t border-red-950/45 bg-[radial-gradient(75%_90%_at_50%_0%,rgba(128,16,32,0.36),transparent_65%),#070708] py-20 md:py-24">
+    <section id="vods" className="relative z-10 min-h-screen scroll-mt-0 overflow-hidden bg-black/45 py-20 md:py-24">
       <div className="mx-auto flex min-h-[calc(100vh-10rem)] w-full max-w-[1680px] flex-col justify-center px-6">
         {loading ? (
           <div className="grid h-[calc(100vh-14rem)] min-h-[440px] grid-rows-2 gap-3">

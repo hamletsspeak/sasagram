@@ -83,13 +83,6 @@ export default function Hero() {
   const [showFloatingPlayer, setShowFloatingPlayer] = useState(false);
   const [chatHidden, setChatHidden] = useState(false);
   const [pipHidden, setPipHidden] = useState(false);
-  const [isDisclaimerVisible, setIsDisclaimerVisible] = useState(() => {
-    if (typeof window === "undefined") return false;
-    const navigationEntry = performance.getEntriesByType("navigation")[0] as
-      | PerformanceNavigationTiming
-      | undefined;
-    return navigationEntry?.type !== "reload";
-  });
   const [isHeroInView, setIsHeroInView] = useState(true);
   const [avatarShouldDock, setAvatarShouldDock] = useState(false);
   const [avatarInNavbar, setAvatarInNavbar] = useState(false);
@@ -297,11 +290,6 @@ export default function Hero() {
   }, []);
 
   useEffect(() => {
-    const onVisibility = (event: Event) => {
-      const customEvent = event as CustomEvent<boolean>;
-      setIsDisclaimerVisible(Boolean(customEvent.detail));
-    };
-
     const onFinished = () => {
       const onlineVideo = onlineBackgroundRef.current;
       const offlineVideo = offlineBackgroundRef.current;
@@ -321,11 +309,9 @@ export default function Hero() {
       }
     };
 
-    window.addEventListener("sasagram:disclaimer-visibility", onVisibility as EventListener);
     window.addEventListener("sasagram:disclaimer-finished", onFinished);
 
     return () => {
-      window.removeEventListener("sasagram:disclaimer-visibility", onVisibility as EventListener);
       window.removeEventListener("sasagram:disclaimer-finished", onFinished);
     };
   }, [isLive, isHeroInView]);
@@ -333,11 +319,6 @@ export default function Hero() {
   useEffect(() => {
     const onlineVideo = onlineBackgroundRef.current;
     const offlineVideo = offlineBackgroundRef.current;
-    if (isDisclaimerVisible) {
-      if (onlineVideo) onlineVideo.pause();
-      if (offlineVideo) offlineVideo.pause();
-      return;
-    }
 
     if (isLive) {
       if (offlineVideo) {
@@ -365,7 +346,7 @@ export default function Hero() {
       return;
     }
     void offlineVideo.play().catch(() => {});
-  }, [isLive, isHeroInView, isDisclaimerVisible]);
+  }, [isLive, isHeroInView]);
 
   useEffect(() => {
     setAvatarInNavbar(avatarShouldDock);
@@ -440,7 +421,7 @@ export default function Hero() {
               className="h-full w-full object-cover rotate-180"
               muted
               playsInline
-              preload="metadata"
+              preload="auto"
               aria-hidden="true"
             >
               <source src={encodeURI("/assets/logo/фон_сайт_онлайн.webm")} type="video/webm" />
@@ -452,7 +433,7 @@ export default function Hero() {
               muted
               loop
               playsInline
-              preload="metadata"
+              preload="auto"
               aria-hidden="true"
             >
               <source src={encodeURI("/assets/logo/фон_сайт_онлайн.webm")} type="video/webm" />

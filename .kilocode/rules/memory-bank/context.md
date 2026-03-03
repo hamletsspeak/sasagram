@@ -131,6 +131,10 @@ The template is now a fully functional personal business card website for the st
 - [x] Reworked VOD section viewport sizing and stacking: `#vods` now uses fixed viewport-aligned container heights, stronger top separator, and raised stacking context to prevent visual overlap with schedule section
 - [x] Fixed `#vods` top anchor offset by removing scroll margin (`scroll-mt-0`) so recordings section starts from the very top edge without exposing previous section
 - [x] Adjusted Hero vertical layout: replaced center alignment with top alignment and set explicit navbar-to-content spacing of 20px for text/avatar block
+- [x] Updated Hero background playback during disclaimer: removed disclaimer-visibility pause gate so Hero background video can render/load while disclaimer is playing; switched Hero background preload to `auto`
+- [x] Removed section divider lines: disabled `blood-divider` pseudo-line and removed top/between-section borders from Schedule, VODs, and Footer wrappers
+- [x] Unified post-Hero section darkening: About, Schedule, VODs, Contact, and Footer now use consistent overlay `bg-black/45` to eliminate visible tone shifts between sections
+- [x] Fixed Kick avatar rendering in "Смотреть также": `next/image` optimization is now bypassed for `/api/*` avatar sources (same as remote URLs) to avoid optimizer issues with redirecting API image endpoints
 
 ## Current Structure
 
@@ -296,3 +300,7 @@ To personalize the template, update:
 | 2026-03-03 | Fixed recordings section intersection with schedule by resizing `#vods` to viewport-based heights (`calc(100vh - offset)`), increasing section paddings, adding a top border divider, and setting explicit `z-index` layering |
 | 2026-03-03 | Removed top anchor offset for recordings (`scroll-mt-0` on `#vods`) to eliminate visible bleed of previous section when navigating to "Записи" |
 | 2026-03-03 | Hero section top spacing recalibrated: switched to top-aligned layout and applied a 20px gap between navbar and the title/avatar content block |
+| 2026-03-03 | Hero background video now preloads and can play behind the disclaimer overlay (no pause tied to disclaimer visibility), reducing the visual delay when disclaimer ends |
+| 2026-03-03 | Removed visible horizontal separators between sections by disabling global divider pseudo-element and dropping section-level top/between borders on Schedule/VODs/Footer |
+| 2026-03-03 | Standardized section backdrop opacity across all non-hero sections by aligning wrappers to `bg-black/45`, including replacing the custom radial VOD backdrop and dark Footer tone |
+| 2026-03-03 | Resolved missing Kick avatar tile by bypassing Next image optimizer for local `/api/*` avatar URLs in `Contact` (direct browser fetch now handles API redirects consistently) |
