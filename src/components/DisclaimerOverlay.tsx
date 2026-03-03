@@ -2,22 +2,23 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-const DISCLAIMER_SRC = encodeURI("/assets/logo/дис2.mp4");
+const DISCLAIMER_SRC = encodeURI(
+  process.env.NEXT_PUBLIC_DISCLAIMER_VIDEO_URL ?? "/assets/logo/alert_orig.mp4",
+);
 
 export default function DisclaimerOverlay() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const [isVisible, setIsVisible] = useState(() => {
-    if (typeof window === "undefined") {
-      return false;
-    }
-    const navigationEntry = performance.getEntriesByType("navigation")[0] as
-      | PerformanceNavigationTiming
-      | undefined;
-    return navigationEntry?.type !== "reload";
-  });
+  const [isVisible, setIsVisible] = useState(false);
   const [isVideoReady, setIsVideoReady] = useState(false);
   const [playBlocked, setPlayBlocked] = useState(false);
   const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    const navigationEntry = performance.getEntriesByType("navigation")[0] as
+      | PerformanceNavigationTiming
+      | undefined;
+    setIsVisible(navigationEntry?.type !== "reload");
+  }, []);
 
   const tryPlay = useCallback(async () => {
     const video = videoRef.current;

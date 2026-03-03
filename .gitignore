@@ -40,3 +40,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .env*.local
+
+# large local media (served from external storage/CDN)
+public/assets/logo/дис2.mp4
+public/assets/logo/дисклеймер4к.mp4

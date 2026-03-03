@@ -34,14 +34,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru" className="scroll-smooth">
-      <head>
-        <link
-          rel="preload"
-          href="/assets/logo/%D0%B4%D0%B8%D1%812.mp4"
-          as="video"
-          type="video/mp4"
-        />
-      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >

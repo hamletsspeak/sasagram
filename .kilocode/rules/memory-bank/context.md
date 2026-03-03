@@ -117,6 +117,10 @@ The template is now a fully functional personal business card website for the st
 - [x] Cleaned local env keys: removed legacy Neon/Vercel-only variables and kept active Supabase + API credentials only
 - [x] Hardened DB connection parsing: auto-enforces `sslmode=require` for Supabase/Neon URLs when missing
 - [x] Fixed false-positive Kick live status in `/api/watch-also` by removing object-truthy live detection and relying on nested `is_live`/status values
+- [x] Fixed production video decode failures by removing Git LFS tracking for `public/assets/logo` static media
+- [x] Excluded oversized local disclaimer sources (`дис2.mp4`, `дисклеймер4к.mp4`) from git via `.gitignore` and removed `дис2.mp4` from tracked files
+- [x] Disclaimer video source is now configurable via `NEXT_PUBLIC_DISCLAIMER_VIDEO_URL` with local fallback `alert_orig.mp4`
+- [x] Removed broken `<link rel="preload" as="video">` hint from root layout and fixed hydration mismatch in `DisclaimerOverlay`
 
 ## Current Structure
 
@@ -272,3 +276,4 @@ To personalize the template, update:
 | 2026-03-02 | Added global dark animated glow layer on page background (`body::after`) with blurred red/burgundy gradients and low brightness for non-hero sections |
 | 2026-03-02 | Reworked non-hero background glow to a stronger visible `main` layer (`.site-dark-glow::before`) with dark red animated blur so sections no longer look flat black |
 | 2026-03-02 | Tuned global section background from heavy dark glow to frosted-window look: layered matte haze + soft condensation highlights with subtle motion, keeping palette muted and non-bright |
+| 2026-03-03 | Fixed media loading on production: removed LFS from public logo videos, deleted tracked `дис2.mp4` (kept local), moved disclaimer source to `NEXT_PUBLIC_DISCLAIMER_VIDEO_URL` fallback, removed invalid video preload hint, and resolved disclaimer hydration mismatch (`React #418`) |
