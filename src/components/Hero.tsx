@@ -83,7 +83,12 @@ export default function Hero() {
   const [showFloatingPlayer, setShowFloatingPlayer] = useState(false);
   const [chatHidden, setChatHidden] = useState(false);
   const [pipHidden, setPipHidden] = useState(false);
-  const [isDisclaimerVisible, setIsDisclaimerVisible] = useState(true);
+  const [isDisclaimerVisible, setIsDisclaimerVisible] = useState(() => {
+    if (typeof document === "undefined") {
+      return false;
+    }
+    return document.documentElement.dataset.disclaimerVisible === "true";
+  });
   const [isHeroInView, setIsHeroInView] = useState(true);
   const [avatarShouldDock, setAvatarShouldDock] = useState(false);
   const [avatarInNavbar, setAvatarInNavbar] = useState(false);
@@ -299,6 +304,8 @@ export default function Hero() {
     const onFinished = () => {
       setIsDisclaimerVisible(false);
     };
+
+    setIsDisclaimerVisible(document.documentElement.dataset.disclaimerVisible === "true");
 
     window.addEventListener("sasagram:disclaimer-visibility", onVisibility as EventListener);
     window.addEventListener("sasagram:disclaimer-finished", onFinished);

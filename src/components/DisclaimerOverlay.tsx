@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 const MOBILE_QUERY = "(max-width: 767px)";
 const DESKTOP_DISCLAIMER_SRC =
@@ -8,18 +8,19 @@ const DESKTOP_DISCLAIMER_SRC =
 const MOBILE_DISCLAIMER_SRC =
   process.env.NEXT_PUBLIC_DISCLAIMER_VIDEO_URL_MOBILE ??
   "/assets/logo/дисклеймен_final_mob.webm";
-const desktopDisclaimerSrc = encodeURI(DESKTOP_DISCLAIMER_SRC);
-const mobileDisclaimerSrc = encodeURI(MOBILE_DISCLAIMER_SRC);
-const desktopDisclaimerType = desktopDisclaimerSrc.toLowerCase().endsWith(".webm")
-  ? "video/webm"
-  : "video/mp4";
-const mobileDisclaimerType = mobileDisclaimerSrc.toLowerCase().endsWith(".webm")
-  ? "video/webm"
-  : "video/mp4";
+
+type DeviceType = "mobile" | "desktop" | null;
+
+function getMimeType(src: string): string {
+  return src.toLowerCase().endsWith(".webm") ? "video/webm" : "video/mp4";
+}
 
 export default function DisclaimerOverlay() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const startupTimeoutRef = useRef<number | null>(null);
+  const objectUrlRef = useRef<string | null>(null);
+  const xhrRef = useRef<XMLHttpRequest | null>(null);
+  const introStartTimeoutRef = useRef<number | null>(null);
+  const introFinishTimeoutRef = useRef<number | null>(null);
   const [isVisible, setIsVisible] = useState(() => {
     if (typeof performance === "undefined") {
       return true;
@@ -29,18 +30,50 @@ export default function DisclaimerOverlay() {
       | undefined;
     return navigationEntry?.type !== "reload";
   });
-  const [isVideoReady, setIsVideoReady] = useState(false);
-  const [isPageReady, setIsPageReady] = useState(() => {
-    if (typeof document === "undefined") {
-      return false;
-    }
-    return document.readyState !== "loading";
-  });
+  const [deviceType, setDeviceType] = useState<DeviceType>(null);
+  const [downloadProgress, setDownloadProgress] = useState(0);
+  const [videoObjectUrl, setVideoObjectUrl] = useState<string | null>(null);
+  const [isVideoDownloaded, setIsVideoDownloaded] = useState(false);
+  const [isVideoPrepared, setIsVideoPrepared] = useState(false);
+  const [hasStarted, setHasStarted] = useState(false);
+  const [isStarting, setIsStarting] = useState(false);
+  const [isFinishing, setIsFinishing] = useState(false);
   const [playBlocked, setPlayBlocked] = useState(false);
   const [hasError, setHasError] = useState(false);
-  const pageLoadProgress = isPageReady ? 1 : 0;
-  const videoLoadProgress = isVideoReady ? 1 : 0;
-  const loadingProgress = Math.round((pageLoadProgress * 0.4 + videoLoadProgress * 0.6) * 100);
+
+  const selectedSrc = useMemo(() => {
+    if (deviceType === "mobile") {
+      return encodeURI(MOBILE_DISCLAIMER_SRC);
+    }
+    if (deviceType === "desktop") {
+      return encodeURI(DESKTOP_DISCLAIMER_SRC);
+    }
+    return null;
+  }, [deviceType]);
+
+  const selectedMimeType = useMemo(() => {
+    if (!selectedSrc) {
+      return null;
+    }
+    return getMimeType(selectedSrc);
+  }, [selectedSrc]);
+
+  const isReadyToStart = deviceType !== null && isVideoDownloaded && isVideoPrepared && !hasError;
+
+  const cleanupObjectUrl = useCallback(() => {
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current);
+      objectUrlRef.current = null;
+    }
+    setVideoObjectUrl(null);
+  }, []);
+
+  const cleanupRequest = useCallback(() => {
+    if (xhrRef.current) {
+      xhrRef.current.abort();
+      xhrRef.current = null;
+    }
+  }, []);
 
   const tryPlay = useCallback(async () => {
     const video = videoRef.current;
@@ -57,31 +90,73 @@ export default function DisclaimerOverlay() {
     }
   }, []);
 
-  useEffect(() => {
-    if (isPageReady) {
-      return;
-    }
+  const startLoadingSelectedVideo = useCallback((src: string) => {
+    cleanupRequest();
+    cleanupObjectUrl();
+    setDownloadProgress(0);
+    setIsVideoDownloaded(false);
+    setIsVideoPrepared(false);
+    setHasStarted(false);
+    setIsStarting(false);
+    setIsFinishing(false);
+    setPlayBlocked(false);
+    setHasError(false);
 
-    const onReady = () => {
-      setIsPageReady(true);
+    const xhr = new XMLHttpRequest();
+    xhrRef.current = xhr;
+    xhr.open("GET", src, true);
+    xhr.responseType = "blob";
+
+    xhr.onprogress = (event) => {
+      if (!event.lengthComputable || event.total <= 0) {
+        return;
+      }
+      setDownloadProgress(Math.min(100, Math.round((event.loaded / event.total) * 100)));
     };
 
-    document.addEventListener("DOMContentLoaded", onReady);
+    xhr.onload = () => {
+      if (xhr.status < 200 || xhr.status >= 300) {
+        setHasError(true);
+        return;
+      }
 
-    startupTimeoutRef.current = window.setTimeout(() => {
-      setIsPageReady(true);
-    }, 1500);
+      cleanupObjectUrl();
+      objectUrlRef.current = URL.createObjectURL(xhr.response);
+      setVideoObjectUrl(objectUrlRef.current);
+      setDownloadProgress(100);
+      setIsVideoDownloaded(true);
+      xhrRef.current = null;
+    };
+
+    xhr.onerror = () => {
+      setHasError(true);
+      xhrRef.current = null;
+    };
+
+    xhr.onabort = () => {
+      xhrRef.current = null;
+    };
+
+    xhr.send();
+  }, [cleanupObjectUrl, cleanupRequest]);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia(MOBILE_QUERY);
+    const updateDeviceType = () => {
+      setDeviceType(mediaQuery.matches ? "mobile" : "desktop");
+    };
+
+    updateDeviceType();
+    mediaQuery.addEventListener("change", updateDeviceType);
 
     return () => {
-      document.removeEventListener("DOMContentLoaded", onReady);
-      if (startupTimeoutRef.current !== null) {
-        window.clearTimeout(startupTimeoutRef.current);
-      }
+      mediaQuery.removeEventListener("change", updateDeviceType);
     };
-  }, [isPageReady]);
+  }, []);
 
   useEffect(() => {
     const html = document.documentElement;
+    html.dataset.disclaimerVisible = isVisible ? "true" : "false";
     window.dispatchEvent(new CustomEvent("sasagram:disclaimer-visibility", { detail: isVisible }));
 
     if (!isVisible) {
@@ -98,22 +173,36 @@ export default function DisclaimerOverlay() {
     return () => {
       html.style.overflow = prevHtmlOverflow;
       body.style.overflow = prevBodyOverflow;
+      html.dataset.disclaimerVisible = "false";
     };
   }, [isVisible]);
 
   useEffect(() => {
-    if (!isVisible || hasError || !isVideoReady || !isPageReady) {
+    if (!selectedSrc || hasStarted) {
       return;
     }
 
     const timeoutId = window.setTimeout(() => {
-      void tryPlay();
+      startLoadingSelectedVideo(selectedSrc);
     }, 0);
 
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [hasError, isPageReady, isVideoReady, isVisible, tryPlay]);
+  }, [hasStarted, selectedSrc, startLoadingSelectedVideo]);
+
+  useEffect(() => {
+    return () => {
+      if (introStartTimeoutRef.current !== null) {
+        window.clearTimeout(introStartTimeoutRef.current);
+      }
+      if (introFinishTimeoutRef.current !== null) {
+        window.clearTimeout(introFinishTimeoutRef.current);
+      }
+      cleanupRequest();
+      cleanupObjectUrl();
+    };
+  }, [cleanupObjectUrl, cleanupRequest]);
 
   if (!isVisible) {
     return null;
@@ -121,84 +210,114 @@ export default function DisclaimerOverlay() {
 
   return (
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black"
+      className={`fixed inset-0 z-[9999] flex items-center justify-center bg-black transition-opacity duration-700 ease-out ${
+        isFinishing ? "opacity-0" : "opacity-100"
+      }`}
       role="dialog"
       aria-modal="true"
       aria-label="Обязательный дисклеймер"
       onClick={playBlocked ? () => void tryPlay() : undefined}
     >
-      {(!isVideoReady || !isPageReady) && !hasError ? (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-black text-zinc-300">
-          <div className="flex flex-col items-center gap-4">
-            <p className="text-sm uppercase tracking-[0.3em]">Загрузка</p>
-            <div className="h-1 w-44 overflow-hidden rounded-full bg-zinc-800">
-              <div
-                className="h-full rounded-full bg-zinc-300 transition-[width] duration-200 ease-out"
-                style={{ width: `${loadingProgress}%` }}
-              />
+      {!hasStarted ? (
+        <div
+          className={`absolute inset-0 z-10 flex items-center justify-center bg-[radial-gradient(120%_120%_at_50%_100%,rgba(132,16,29,0.2),transparent_42%),radial-gradient(90%_90%_at_50%_0%,rgba(255,255,255,0.06),transparent_55%),#000] px-6 text-zinc-300 transition-opacity duration-500 ease-out ${
+            isStarting ? "opacity-0" : "opacity-100"
+          }`}
+        >
+          <div className="flex w-full max-w-md flex-col items-center gap-6 rounded-[32px] border border-white/10 bg-white/[0.03] px-7 py-9 text-center shadow-[0_0_80px_rgba(120,12,24,0.16)] backdrop-blur-[10px]">
+            <div className="space-y-3">
+              <p className="text-[11px] uppercase tracking-[0.5em] text-zinc-500">INTRO</p>
+              <h2 className="text-xl font-light uppercase tracking-[0.28em] text-zinc-100">
+                Загрузка
+              </h2>
             </div>
-            <p className="text-xs tabular-nums text-zinc-400">{loadingProgress}%</p>
+
+            <div className="w-full space-y-3">
+              <div className="h-2 overflow-hidden rounded-full bg-white/10 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]">
+                <div
+                  className="h-full rounded-full bg-[linear-gradient(90deg,rgba(255,255,255,0.72),rgba(255,255,255,1))] transition-[width] duration-150 ease-out"
+                  style={{ width: `${downloadProgress}%` }}
+                />
+              </div>
+              <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.22em] text-zinc-500">
+                <span>Подготовка</span>
+                <span className="tabular-nums text-zinc-300">{downloadProgress}%</span>
+              </div>
+            </div>
+
+            {isReadyToStart ? (
+              <button
+                type="button"
+                className="font-type-light-sans min-w-40 rounded-full border border-white/20 bg-[linear-gradient(180deg,#ffffff,#d8d8d8)] px-8 py-3.5 text-sm uppercase tracking-[0.34em] text-black shadow-[0_10px_30px_rgba(255,255,255,0.16)] transition hover:scale-[1.02] hover:bg-white"
+                onClick={() => {
+                  setIsStarting(true);
+                  introStartTimeoutRef.current = window.setTimeout(() => {
+                    setHasStarted(true);
+                    void tryPlay();
+                  }, 420);
+                }}
+              >
+                Start
+              </button>
+            ) : (
+              <div className="h-[50px] flex items-center text-[11px] uppercase tracking-[0.24em] text-zinc-600">
+                Подождите, пока файл загрузится полностью
+              </div>
+            )}
+
+            {hasError ? (
+              <button
+                type="button"
+                className="rounded-full border border-zinc-500 bg-zinc-900 px-5 py-2.5 text-xs uppercase tracking-[0.22em] text-zinc-100 transition hover:bg-zinc-800"
+                onClick={() => {
+                  if (!selectedSrc) {
+                    return;
+                  }
+                  startLoadingSelectedVideo(selectedSrc);
+                }}
+              >
+                Повторить загрузку
+              </button>
+            ) : null}
           </div>
         </div>
       ) : null}
 
       <video
         ref={videoRef}
-        className={`h-full w-full max-w-full object-contain transition-opacity duration-200 md:object-cover ${
-          isVideoReady ? "opacity-100" : "opacity-0"
+        className={`h-full w-full max-w-full object-contain transition-opacity duration-500 md:object-cover ${
+          hasStarted ? "opacity-100" : "opacity-0"
         }`}
         muted
         playsInline
-        preload="metadata"
+        preload="auto"
         disablePictureInPicture
         controlsList="nodownload noplaybackrate noremoteplayback nofullscreen"
-        onLoadedData={(event) => {
-          setIsVideoReady(true);
-          event.currentTarget.pause();
-        }}
-        onCanPlay={() => {
-          setIsVideoReady(true);
+        onLoadedData={() => {
+          setIsVideoPrepared(true);
         }}
         onEnded={() => {
-          setIsVisible(false);
+          setIsFinishing(true);
           window.dispatchEvent(new Event("sasagram:disclaimer-finished"));
+          introFinishTimeoutRef.current = window.setTimeout(() => {
+            setIsVisible(false);
+          }, 900);
         }}
         onError={() => {
           setHasError(true);
           setPlayBlocked(false);
+          setHasStarted(false);
+          setIsStarting(false);
         }}
       >
-        <source src={mobileDisclaimerSrc} type={mobileDisclaimerType} media={MOBILE_QUERY} />
-        <source src={desktopDisclaimerSrc} type={desktopDisclaimerType} />
+        {videoObjectUrl && selectedMimeType ? (
+          <source src={videoObjectUrl} type={selectedMimeType} />
+        ) : null}
       </video>
 
-      {playBlocked && !hasError ? (
+      {playBlocked && !hasError && hasStarted ? (
         <div className="pointer-events-none absolute bottom-6 left-1/2 -translate-x-1/2 rounded-full border border-zinc-600 bg-black/70 px-4 py-2 text-center text-xs text-zinc-200">
           Нажмите в любое место для запуска видео
-        </div>
-      ) : null}
-
-      {hasError ? (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black/90 px-6 text-center text-zinc-100">
-          <p className="text-sm uppercase tracking-[0.22em]">
-            Не удалось загрузить дисклеймер
-          </p>
-          <button
-            type="button"
-            className="rounded-md border border-zinc-500 bg-zinc-900 px-4 py-2 text-sm hover:bg-zinc-800"
-            onClick={() => {
-              const video = videoRef.current;
-              if (!video) {
-                return;
-              }
-              setIsVideoReady(false);
-              setHasError(false);
-              setPlayBlocked(false);
-              video.load();
-            }}
-          >
-            Повторить
-          </button>
         </div>
       ) : null}
     </div>
