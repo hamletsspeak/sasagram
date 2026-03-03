@@ -1,0 +1,2 @@
+public/assets/logo/*.mp4 filter=lfs diff=lfs merge=lfs -text
+public/assets/logo/*.webm filter=lfs diff=lfs merge=lfs -text

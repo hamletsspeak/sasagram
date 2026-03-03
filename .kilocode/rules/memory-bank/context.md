@@ -252,3 +252,23 @@ To personalize the template, update:
 | 2026-03-01 | Removed unused keys from `.env.local`; dropped legacy Neon and Vercel-only tokens, leaving Supabase DB URL + active Twitch/Kick credentials |
 | 2026-03-01 | Updated `src/lib/db.ts` to normalize env connection strings and append `sslmode=require` for Supabase/Neon hosts when absent |
 | 2026-03-01 | Corrected Kick online/offline detection in `/api/watch-also`: nested stream objects no longer auto-mark channels as live without explicit live flag |
+| 2026-03-02 | Added mandatory fullscreen disclaimer pre-roll (`/assets/logo/дисклеймер.mp4`) on homepage start: blocks page interaction, has no skip action, and closes only after video end; includes autoplay fallback prompt and retry handling on load error |
+| 2026-03-02 | Switched startup disclaimer source to 4K asset (`/assets/logo/дисклеймер4к.mp4`) |
+| 2026-03-02 | Added dedicated preloader screen for startup disclaimer and `<link rel="preload" as="video">` hint in root layout so disclaimer video is rendered only after readiness |
+| 2026-03-02 | Hero background now uses video assets by live state: `фон_сайт_онлайн.webm` plays once when live, `фон_сайт.webm` loops when offline, and background playback pauses when Hero section is out of viewport |
+| 2026-03-02 | Replaced startup disclaimer asset with `дис2.mp4` and rotated Hero live/offline background videos by 180 degrees |
+| 2026-03-02 | Updated disclaimer behavior to skip playback on browser page reload (`navigation.type === reload`), so disclaimer runs only on normal page entry |
+| 2026-03-02 | Replaced Hero avatar with local circular video `Кружок_сасыч.webm` (autoplay loop, muted) |
+| 2026-03-02 | Adjusted navbar avatar sizing/cropping to fit circular outline and hid left logo on initial page view (shows only after scroll) |
+| 2026-03-02 | Improved avatar transition stability: navbar avatar now fully fills the circle, and Hero-to-navbar avatar flight uses rAF throttling with smoother scroll behavior and no visible jump |
+| 2026-03-02 | Navbar transparency made native: added reusable glass classes with `backdrop-filter`/`-webkit-backdrop-filter` and applied them to nav island + mobile menu |
+| 2026-03-02 | Aligned navbar vertical offset with left logo: header top and nav top margin now match logo top spacing on mobile and desktop |
+| 2026-03-02 | Added centered Hero title "Глеб Борисович Орлов" above avatar with typewriter reveal animation and custom local font (`public/assets/font/Audex`) |
+| 2026-03-02 | Reworked Hero title into looping typewriter cycle with accurate inline cursor: text now types and erases per-char, then switches to slow dark-blood `SASAVOT` using `Them People` font |
+| 2026-03-02 | Updated Hero typewriter timing: both title slides now stay visible for 10 seconds each before erase phase starts |
+| 2026-03-02 | Fixed `SASAVOT` cursor vertical alignment by adding font-specific cursor metrics/offset for `Them People` in typewriter header |
+| 2026-03-02 | Prevented Hero avatar shift during `SASAVOT` render by fixing the typewriter title block height across text states |
+| 2026-03-02 | Optimized Hero typewriter workload: animation state now pauses during active page scroll and while Hero is outside viewport, then resumes from current progress |
+| 2026-03-02 | Added global dark animated glow layer on page background (`body::after`) with blurred red/burgundy gradients and low brightness for non-hero sections |
+| 2026-03-02 | Reworked non-hero background glow to a stronger visible `main` layer (`.site-dark-glow::before`) with dark red animated blur so sections no longer look flat black |
+| 2026-03-02 | Tuned global section background from heavy dark glow to frosted-window look: layered matte haze + soft condensation highlights with subtle motion, keeping palette muted and non-bright |

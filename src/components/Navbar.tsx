@@ -1,6 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, type MouseEvent } from "react";
+import { useState, useEffect } from "react";
+import { AVATAR_TRIGGER_LINE_Y } from "@/lib/avatar-transition";
+
+const NAVBAR_AVATAR_SRC = encodeURI("/assets/logo/Кружок_сасыч.webm");
 
 const navLinks = [
   { label: "Главная", href: "#home" },
@@ -12,88 +15,80 @@ const navLinks = [
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
+  const [heroPassed, setHeroPassed] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const logoVideoRef = useRef<HTMLVideoElement | null>(null);
-  const logoIntervalRef = useRef<number | null>(null);
-
-  const clearLogoInterval = useCallback(() => {
-    if (logoIntervalRef.current !== null) {
-      window.clearInterval(logoIntervalRef.current);
-      logoIntervalRef.current = null;
-    }
-  }, []);
-
-  const playLogo = useCallback(() => {
-    const video = logoVideoRef.current;
-    if (!video) return;
-    video.currentTime = 0;
-    video.play().catch(() => {});
-  }, []);
-
-  const restartLogoInterval = useCallback(() => {
-    clearLogoInterval();
-    logoIntervalRef.current = window.setInterval(() => {
-      playLogo();
-    }, 8000);
-  }, [clearLogoInterval, playLogo]);
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 20);
+    const handleScroll = () => setScrolled(window.scrollY > 0);
+    handleScroll();
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   useEffect(() => {
-    restartLogoInterval();
-    return () => clearLogoInterval();
-  }, [clearLogoInterval, restartLogoInterval]);
+    let frame = 0;
 
-  const handleLogoClick = (event: MouseEvent<HTMLAnchorElement>) => {
-    event.preventDefault();
-    const video = logoVideoRef.current;
-    if (!video) return;
-    video.currentTime = 0;
-    video.play().catch(() => {});
-    restartLogoInterval();
-  };
+    const updateHeroPassed = () => {
+      frame = 0;
+      const heroAvatar = document.querySelector<HTMLElement>("[data-hero-avatar-point='true']");
+      if (!heroAvatar) return;
+      const rect = heroAvatar.getBoundingClientRect();
+      const triggerPointY = rect.top + rect.height / 2;
+      const shouldPass = triggerPointY <= AVATAR_TRIGGER_LINE_Y;
+      setHeroPassed((prev) => (prev === shouldPass ? prev : shouldPass));
+    };
+
+    const onScrollOrResize = () => {
+      if (frame) return;
+      frame = window.requestAnimationFrame(updateHeroPassed);
+    };
+
+    onScrollOrResize();
+    window.addEventListener("scroll", onScrollOrResize, { passive: true });
+    window.addEventListener("resize", onScrollOrResize);
+
+    return () => {
+      if (frame) window.cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", onScrollOrResize);
+      window.removeEventListener("resize", onScrollOrResize);
+    };
+  }, []);
 
   return (
-    <header className="fixed top-1 left-0 right-0 z-50 px-4 pointer-events-none md:top-2 md:px-6">
+    <header className="fixed top-2 left-0 right-0 z-50 px-4 pointer-events-none md:top-3 md:px-6">
       <a
+        id="navbar-logo-anchor"
         href="#home"
-        className="fixed top-2 left-3 z-[60] flex items-center cursor-pointer pointer-events-auto md:top-3 md:left-6"
-        onClick={handleLogoClick}
+        className={`fixed top-2 left-3 z-[60] flex items-center cursor-pointer md:top-3 md:left-6 ${
+          heroPassed
+            ? "opacity-100 pointer-events-auto"
+            : "opacity-0 pointer-events-none"
+        }`}
       >
-        <video
-          ref={logoVideoRef}
-          className="h-20 w-auto md:h-28"
-          muted
-          playsInline
-          preload="metadata"
-          aria-label="SASAVOT"
+        <div
+          id="navbar-logo-visual"
+          className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border-2 border-red-700/80 bg-black/35 shadow-[0_10px_28px_rgba(122,8,24,0.55)] md:h-16 md:w-16"
         >
-          <source src="/assets/logo/sasavot_logo_v3.webm" type="video/webm" />
-          <source src="/assets/logo/sasavot_logo_v2.webm" type="video/webm" />
-          <source src="/assets/logo/sasavot_logo.webm" type="video/webm" />
-        </video>
+          <video
+            className="h-full w-full rounded-full scale-[1.34] object-cover object-[center_38%]"
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="metadata"
+            aria-label="SASAVOT"
+          >
+            <source src={NAVBAR_AVATAR_SRC} type="video/webm" />
+          </video>
+        </div>
         <span className="sr-only">SASAVOT</span>
       </a>
 
-      <a
-        href="https://www.twitch.tv/sasavot"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="pointer-events-auto fixed top-8 right-6 z-[60] hidden items-center gap-2 rounded-full border border-rose-500/55 bg-gradient-to-r from-rose-800 to-red-800 px-4 py-1.5 text-sm font-semibold text-white shadow-[0_8px_28px_rgba(122,8,24,0.45)] transition-colors duration-200 hover:from-rose-700 hover:to-red-700 md:flex"
-      >
-        <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
-        Смотреть
-      </a>
-
       <nav
-        className={`pointer-events-auto mx-auto mt-5 flex w-fit items-center rounded-full border px-5 py-2 shadow-2xl backdrop-blur-xl transition-all duration-300 md:mt-6 md:px-8 md:py-3 ${
+        className={`pointer-events-auto mx-auto mt-0 flex w-fit items-center rounded-full border px-5 py-2 shadow-2xl transition-all duration-300 md:mt-0 md:px-8 md:py-3 ${
           scrolled
-            ? "border-rose-900/65 bg-black/85 shadow-[0_14px_40px_rgba(0,0,0,0.7)]"
-            : "border-zinc-800/90 bg-zinc-950/70 shadow-[0_12px_34px_rgba(0,0,0,0.56)]"
+            ? "native-glass--strong shadow-[0_14px_40px_rgba(0,0,0,0.62)]"
+            : "native-glass shadow-[0_12px_34px_rgba(0,0,0,0.5)]"
         }`}
       >
         {/* Desktop nav */}
@@ -128,7 +123,7 @@ export default function Navbar() {
 
       {/* Mobile menu */}
       {menuOpen && (
-        <div className="pointer-events-auto mx-auto mt-3 w-[min(94vw,880px)] rounded-3xl border border-rose-900/50 bg-zinc-950/95 px-6 py-5 shadow-[0_20px_55px_rgba(0,0,0,0.7)] backdrop-blur-xl md:hidden">
+        <div className="native-glass--strong pointer-events-auto mx-auto mt-3 w-[min(94vw,880px)] rounded-3xl border px-6 py-5 shadow-[0_20px_55px_rgba(0,0,0,0.65)] md:hidden">
           <ul className="flex flex-col gap-4">
             {navLinks.map((link) => (
               <li key={link.href}>
