@@ -125,6 +125,12 @@ The template is now a fully functional personal business card website for the st
 - [x] Removed Next Image CDN dependency for Twitch previews/avatars: VOD/clip cards now use unoptimized image loading and `watch-also` API returns local avatar proxy routes
 - [x] Removed `static-cdn.jtvnw.net` from Next Image remote patterns to avoid CDN optimizer path
 - [x] Unified Hero background video source: both live and offline states now use `фон_сайт_онлайн.webm`; legacy `фон_сайт.webm` removed from runtime usage
+- [x] Added fixed/sticky video background for all post-Hero sections using `фон_остальные_разделы.webm`; on scroll only section content moves
+- [x] Increased fill contrast for VOD/Clips shelf controls (arrows + action buttons) to improve visibility on red patterned backgrounds
+- [x] Removed heavy global background glow layers/animations (`site-dark-glow` pseudo-elements with blur/animation) to reduce render/GPU load and improve scroll smoothness
+- [x] Reworked VOD section viewport sizing and stacking: `#vods` now uses fixed viewport-aligned container heights, stronger top separator, and raised stacking context to prevent visual overlap with schedule section
+- [x] Fixed `#vods` top anchor offset by removing scroll margin (`scroll-mt-0`) so recordings section starts from the very top edge without exposing previous section
+- [x] Adjusted Hero vertical layout: replaced center alignment with top alignment and set explicit navbar-to-content spacing of 20px for text/avatar block
 
 ## Current Structure
 
@@ -284,3 +290,9 @@ To personalize the template, update:
 | 2026-03-03 | Switched default startup disclaimer to `public/assets/logo/дисклеймер_final.webm` and made `<source type>` dynamic based on file extension to keep env override compatibility |
 | 2026-03-03 | Disabled Next Image optimization for Twitch media cards, switched `watch-also` dynamic avatars to local `/api/*/avatar` routes, and removed `static-cdn.jtvnw.net` from `next.config.ts` image allowlist |
 | 2026-03-03 | Hero background switched to single asset `фон_сайт_онлайн.webm` for both live/offline branches; `фон_сайт.webm` no longer referenced in app code |
+| 2026-03-03 | Wrapped sections after Hero in a sticky video background layer (`фон_остальные_разделы.webm`) so background stays fixed while About/Schedule/VODs/Contact/Footer content scrolls on top |
+| 2026-03-03 | Updated TwitchVods control styles: stronger solid fill and brighter border/text for prev/next arrows and `Все видео`/`Все клипы` buttons to improve readability |
+| 2026-03-03 | Simplified global background rendering: removed animated glow/noise overlays and related keyframes from `globals.css`, keeping a lightweight static gradient backdrop |
+| 2026-03-03 | Fixed recordings section intersection with schedule by resizing `#vods` to viewport-based heights (`calc(100vh - offset)`), increasing section paddings, adding a top border divider, and setting explicit `z-index` layering |
+| 2026-03-03 | Removed top anchor offset for recordings (`scroll-mt-0` on `#vods`) to eliminate visible bleed of previous section when navigating to "Записи" |
+| 2026-03-03 | Hero section top spacing recalibrated: switched to top-aligned layout and applied a 20px gap between navbar and the title/avatar content block |

@@ -124,15 +124,15 @@ export default function TwitchVods() {
   }, [clips, safeClipsPage, itemsPerPage]);
 
   return (
-    <section id="vods" className="min-h-screen scroll-mt-12 md:scroll-mt-16 overflow-hidden bg-[radial-gradient(75%_90%_at_50%_0%,rgba(128,16,32,0.36),transparent_65%),#070708] py-10">
-      <div className="mx-auto flex min-h-[76vh] w-full max-w-[1680px] flex-col justify-center px-6">
+    <section id="vods" className="relative z-10 min-h-screen scroll-mt-0 overflow-hidden border-t border-red-950/45 bg-[radial-gradient(75%_90%_at_50%_0%,rgba(128,16,32,0.36),transparent_65%),#070708] py-20 md:py-24">
+      <div className="mx-auto flex min-h-[calc(100vh-10rem)] w-full max-w-[1680px] flex-col justify-center px-6">
         {loading ? (
-          <div className="grid h-[min(72vh,760px)] min-h-[440px] grid-rows-2 gap-3">
+          <div className="grid h-[calc(100vh-14rem)] min-h-[440px] grid-rows-2 gap-3">
             <div className="rounded-3xl border border-white/10 bg-white/[0.04] animate-pulse" />
             <div className="rounded-3xl border border-white/10 bg-white/[0.04] animate-pulse" />
           </div>
         ) : error || !data ? (
-          <div className="flex h-[min(72vh,760px)] min-h-[440px] items-center justify-center text-center">
+          <div className="flex h-[calc(100vh-14rem)] min-h-[440px] items-center justify-center text-center">
             <div>
               <p className="mb-3 text-lg text-gray-200">Не удалось загрузить Twitch данные</p>
               <a href="https://www.twitch.tv/sasavot/videos" target="_blank" rel="noopener noreferrer" className="text-red-300 underline hover:text-red-200">
@@ -141,7 +141,7 @@ export default function TwitchVods() {
             </div>
           </div>
         ) : (
-          <div className="grid h-[min(72vh,760px)] min-h-[440px] grid-rows-2 gap-3">
+          <div className="grid h-[calc(100vh-14rem)] min-h-[440px] grid-rows-2 gap-3">
             <div className="flex min-h-0 flex-col">
               <div className="mb-3 flex items-center justify-between">
                 <div>
@@ -152,7 +152,7 @@ export default function TwitchVods() {
                     type="button"
                     onClick={() => setVodPage((prev) => Math.max(0, Math.min(prev, totalVodPages - 1) - 1))}
                     disabled={safeVodPage === 0}
-                    className={`${arrowButtonBaseClass} border border-red-500/40 bg-red-900/25 text-red-100 shadow-[0_3px_0_rgba(104,11,24,0.5)] hover:bg-red-900/40 active:shadow-[0_1px_0_rgba(104,11,24,0.5)]`}
+                    className={`${arrowButtonBaseClass} border border-red-300/70 bg-red-700/80 text-white shadow-[0_3px_0_rgba(104,11,24,0.5)] hover:bg-red-600/90 active:shadow-[0_1px_0_rgba(104,11,24,0.5)]`}
                     aria-label="Предыдущая страница записей"
                   >
                     <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none">
@@ -163,7 +163,7 @@ export default function TwitchVods() {
                     type="button"
                     onClick={() => setVodPage((prev) => Math.min(totalVodPages - 1, Math.min(prev, totalVodPages - 1) + 1))}
                     disabled={safeVodPage >= totalVodPages - 1}
-                    className={`${arrowButtonBaseClass} border border-red-500/40 bg-red-900/25 text-red-100 shadow-[0_3px_0_rgba(104,11,24,0.5)] hover:bg-red-900/40 active:shadow-[0_1px_0_rgba(104,11,24,0.5)]`}
+                    className={`${arrowButtonBaseClass} border border-red-300/70 bg-red-700/80 text-white shadow-[0_3px_0_rgba(104,11,24,0.5)] hover:bg-red-600/90 active:shadow-[0_1px_0_rgba(104,11,24,0.5)]`}
                     aria-label="Следующая страница записей"
                   >
                     <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none">
@@ -174,7 +174,7 @@ export default function TwitchVods() {
                     href="https://www.twitch.tv/sasavot/videos?filter=all&sort=time"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={`${actionButtonBaseClass} border border-red-500/40 bg-red-900/25 text-red-100 shadow-[0_3px_0_rgba(104,11,24,0.5)] hover:bg-red-900/40 active:shadow-[0_1px_0_rgba(104,11,24,0.5)]`}
+                    className={`${actionButtonBaseClass} border border-red-300/70 bg-red-700/80 text-white shadow-[0_3px_0_rgba(104,11,24,0.5)] hover:bg-red-600/90 active:shadow-[0_1px_0_rgba(104,11,24,0.5)]`}
                   >
                     Все видео
                   </a>
@@ -209,7 +209,7 @@ export default function TwitchVods() {
                     type="button"
                     onClick={() => setClipsPage((prev) => Math.max(0, Math.min(prev, totalClipPages - 1) - 1))}
                     disabled={safeClipsPage === 0}
-                    className={`${arrowButtonBaseClass} border border-rose-500/40 bg-rose-900/25 text-rose-100 shadow-[0_3px_0_rgba(122,16,44,0.5)] hover:bg-rose-900/40 active:shadow-[0_1px_0_rgba(122,16,44,0.5)]`}
+                    className={`${arrowButtonBaseClass} border border-rose-300/70 bg-rose-700/80 text-white shadow-[0_3px_0_rgba(122,16,44,0.5)] hover:bg-rose-600/90 active:shadow-[0_1px_0_rgba(122,16,44,0.5)]`}
                     aria-label="Предыдущая страница клипов"
                   >
                     <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none">
@@ -220,7 +220,7 @@ export default function TwitchVods() {
                     type="button"
                     onClick={() => setClipsPage((prev) => Math.min(totalClipPages - 1, Math.min(prev, totalClipPages - 1) + 1))}
                     disabled={safeClipsPage >= totalClipPages - 1}
-                    className={`${arrowButtonBaseClass} border border-rose-500/40 bg-rose-900/25 text-rose-100 shadow-[0_3px_0_rgba(122,16,44,0.5)] hover:bg-rose-900/40 active:shadow-[0_1px_0_rgba(122,16,44,0.5)]`}
+                    className={`${arrowButtonBaseClass} border border-rose-300/70 bg-rose-700/80 text-white shadow-[0_3px_0_rgba(122,16,44,0.5)] hover:bg-rose-600/90 active:shadow-[0_1px_0_rgba(122,16,44,0.5)]`}
                     aria-label="Следующая страница клипов"
                   >
                     <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none">
@@ -231,7 +231,7 @@ export default function TwitchVods() {
                     href="https://www.twitch.tv/sasavot/videos?featured=true&filter=clips&range=all"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={`${actionButtonBaseClass} border border-rose-500/40 bg-rose-900/25 text-rose-100 shadow-[0_3px_0_rgba(122,16,44,0.5)] hover:bg-rose-900/40 active:shadow-[0_1px_0_rgba(122,16,44,0.5)]`}
+                    className={`${actionButtonBaseClass} border border-rose-300/70 bg-rose-700/80 text-white shadow-[0_3px_0_rgba(122,16,44,0.5)] hover:bg-rose-600/90 active:shadow-[0_1px_0_rgba(122,16,44,0.5)]`}
                   >
                     Все клипы
                   </a>

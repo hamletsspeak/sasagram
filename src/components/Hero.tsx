@@ -431,7 +431,7 @@ export default function Hero() {
       <section
         id="home"
         ref={heroRef}
-        className="relative blood-divider flex min-h-screen items-center justify-center overflow-hidden bg-transparent pt-20 md:pt-24"
+        className="relative blood-divider flex min-h-screen items-start justify-center overflow-hidden bg-transparent pt-[66px] md:pt-[78px]"
       >
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           {isLive ? (
@@ -462,7 +462,7 @@ export default function Hero() {
           <div className="absolute inset-0 bg-[radial-gradient(120%_80%_at_10%_-10%,rgba(151,17,34,0.3),transparent_55%),radial-gradient(90%_75%_at_92%_8%,rgba(99,8,22,0.26),transparent_50%)]" />
         </div>
 
-        <div className="relative z-10 flex w-full flex-col items-center justify-center gap-6 px-6 pb-10">
+        <div className="relative z-10 mt-5 flex w-full flex-col items-center justify-start gap-6 px-6 pb-10">
           <h1
             className={`hero-typewriter-line flex h-[64px] items-center justify-center text-center text-3xl sm:h-[82px] sm:text-4xl md:h-[112px] md:text-5xl ${HERO_TYPEWRITER_SLIDES[titleSlideIndex].className}`}
             aria-live="polite"
