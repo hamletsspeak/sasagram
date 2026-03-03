@@ -455,7 +455,7 @@ export default function Hero() {
               preload="metadata"
               aria-hidden="true"
             >
-              <source src={encodeURI("/assets/logo/фон_сайт.webm")} type="video/webm" />
+              <source src={encodeURI("/assets/logo/фон_сайт_онлайн.webm")} type="video/webm" />
             </video>
           )}
           <div className="absolute inset-0 bg-black/45" />
