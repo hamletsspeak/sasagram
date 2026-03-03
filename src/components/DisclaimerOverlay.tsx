@@ -2,15 +2,24 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-const DISCLAIMER_SRC = encodeURI(
-  process.env.NEXT_PUBLIC_DISCLAIMER_VIDEO_URL ?? "/assets/logo/дисклеймер_final.webm",
-);
-const DISCLAIMER_TYPE = DISCLAIMER_SRC.toLowerCase().endsWith(".webm")
-  ? "video/webm"
-  : "video/mp4";
+const MOBILE_QUERY = "(max-width: 767px)";
+const DESKTOP_DISCLAIMER_SRC =
+  process.env.NEXT_PUBLIC_DISCLAIMER_VIDEO_URL ?? "/assets/logo/дисклеймер_final.webm";
+const MOBILE_DISCLAIMER_SRC =
+  process.env.NEXT_PUBLIC_DISCLAIMER_VIDEO_URL_MOBILE ??
+  "/assets/logo/дисклеймен_final_mob.webm";
+
+const getDisclaimerSrc = (isMobile: boolean) =>
+  encodeURI(isMobile ? MOBILE_DISCLAIMER_SRC : DESKTOP_DISCLAIMER_SRC);
 
 export default function DisclaimerOverlay() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [disclaimerSrc, setDisclaimerSrc] = useState(() => {
+    if (typeof window === "undefined") {
+      return getDisclaimerSrc(false);
+    }
+    return getDisclaimerSrc(window.matchMedia(MOBILE_QUERY).matches);
+  });
   const [isVisible, setIsVisible] = useState(() => {
     if (typeof performance === "undefined") {
       return true;
@@ -21,8 +30,17 @@ export default function DisclaimerOverlay() {
     return navigationEntry?.type !== "reload";
   });
   const [isVideoReady, setIsVideoReady] = useState(false);
+  const [isPageLoaded, setIsPageLoaded] = useState(() => {
+    if (typeof document === "undefined") {
+      return false;
+    }
+    return document.readyState === "complete";
+  });
   const [playBlocked, setPlayBlocked] = useState(false);
   const [hasError, setHasError] = useState(false);
+  const disclaimerType = disclaimerSrc.toLowerCase().endsWith(".webm")
+    ? "video/webm"
+    : "video/mp4";
 
   const tryPlay = useCallback(async () => {
     const video = videoRef.current;
@@ -38,6 +56,21 @@ export default function DisclaimerOverlay() {
       setPlayBlocked(true);
     }
   }, []);
+
+  useEffect(() => {
+    if (isPageLoaded) {
+      return;
+    }
+
+    const onLoad = () => {
+      setIsPageLoaded(true);
+    };
+
+    window.addEventListener("load", onLoad);
+    return () => {
+      window.removeEventListener("load", onLoad);
+    };
+  }, [isPageLoaded]);
 
   useEffect(() => {
     const html = document.documentElement;
@@ -60,6 +93,39 @@ export default function DisclaimerOverlay() {
     };
   }, [isVisible]);
 
+  useEffect(() => {
+    const mediaQuery = window.matchMedia(MOBILE_QUERY);
+    const updateSource = () => {
+      setDisclaimerSrc(getDisclaimerSrc(mediaQuery.matches));
+    };
+
+    updateSource();
+    mediaQuery.addEventListener("change", updateSource);
+
+    return () => {
+      mediaQuery.removeEventListener("change", updateSource);
+    };
+  }, []);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) {
+      return;
+    }
+
+    setIsVideoReady(false);
+    setPlayBlocked(false);
+    setHasError(false);
+    video.load();
+  }, [disclaimerSrc]);
+
+  useEffect(() => {
+    if (!isVisible || hasError || !isVideoReady || !isPageLoaded) {
+      return;
+    }
+    void tryPlay();
+  }, [hasError, isPageLoaded, isVideoReady, isVisible, tryPlay]);
+
   if (!isVisible) {
     return null;
   }
@@ -72,10 +138,10 @@ export default function DisclaimerOverlay() {
       aria-label="Обязательный дисклеймер"
       onClick={playBlocked ? () => void tryPlay() : undefined}
     >
-      {!isVideoReady && !hasError ? (
+      {(!isVideoReady || !isPageLoaded) && !hasError ? (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-black text-zinc-300">
           <div className="flex flex-col items-center gap-4">
-            <p className="text-sm uppercase tracking-[0.3em]">Подготовка видео...</p>
+            <p className="text-sm uppercase tracking-[0.3em]">Загрузка</p>
             <div className="h-1 w-44 overflow-hidden rounded-full bg-zinc-800">
               <div className="h-full w-1/2 animate-pulse rounded-full bg-zinc-300" />
             </div>
@@ -96,9 +162,6 @@ export default function DisclaimerOverlay() {
         controlsList="nodownload noplaybackrate noremoteplayback nofullscreen"
         onCanPlay={() => {
           setIsVideoReady(true);
-          requestAnimationFrame(() => {
-            void tryPlay();
-          });
         }}
         onEnded={() => {
           setIsVisible(false);
@@ -109,7 +172,7 @@ export default function DisclaimerOverlay() {
           setPlayBlocked(false);
         }}
       >
-        <source src={DISCLAIMER_SRC} type={DISCLAIMER_TYPE} />
+        <source src={disclaimerSrc} type={disclaimerType} />
       </video>
 
       {playBlocked && !hasError ? (
