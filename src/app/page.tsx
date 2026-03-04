@@ -1,11 +1,11 @@
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
 import About from "@/components/About";
-import StreamSchedule from "@/components/StreamSchedule";
-import TwitchVods from "@/components/TwitchVods";
 import Contact from "@/components/Contact";
 import Footer from "@/components/Footer";
 import DisclaimerOverlay from "@/components/DisclaimerOverlay";
+import StreamSchedule from "@/features/schedule/components/StreamSchedule";
+import TwitchVods from "@/features/twitch/components/TwitchVods";
 
 export default function Home() {
   return (

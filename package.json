@@ -1,13 +1,16 @@
 {
-  "name": "nextjs-template",
+  "name": "sasagram",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "npm@11.6.2",
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --webpack",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
+    "deps:check": "depcruise --config .dependency-cruiser.cjs src",
+    "deps:graph": "node scripts/generate-dependency-graph.mjs",
     "db:setup": "node --env-file=.env.local scripts/setup-db.mjs",
     "db:import-2026": "node --env-file=.env.local scripts/import-streams-2026.mjs",
     "db:migrate-to-supabase": "node --env-file=.env.local scripts/migrate-to-supabase.mjs"
@@ -27,6 +30,7 @@
     "@types/pg": "^8.16.0",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
+    "dependency-cruiser": "^17.3.8",
     "eslint": "^9.39.1",
     "eslint-config-next": "^16.0.0",
     "tailwindcss": "^4.1.17",

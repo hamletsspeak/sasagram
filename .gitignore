@@ -23,6 +23,9 @@
 # misc
 .DS_Store
 *.pem
+.idea/
+.ai/
+.next-dev-check.log
 
 # debug
 npm-debug.log*

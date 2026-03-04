@@ -9,27 +9,26 @@
 | TypeScript   | 5.9.x   | Type-safe JavaScript            |
 | Tailwind CSS | 4.x     | Utility-first CSS               |
 | PostgreSQL   | 14+     | Persistent storage for streams + cached Twitch media |
-| Bun          | Latest  | Package manager & runtime       |
+| npm          | 11.6.2  | Package manager                 |
 
 ## Development Environment
 
 ### Prerequisites
 
-- Bun installed (`curl -fsSL https://bun.sh/install | bash`)
 - Node.js 20+ (for compatibility)
 
 ### Commands
 
 ```bash
-bun install        # Install dependencies
-bun dev            # Start dev server (http://localhost:3000)
-bun build          # Production build
-bun start          # Start production server
-bun lint           # Run ESLint
-bun typecheck      # Run TypeScript type checking
-npm run db:setup   # Create DB tables (streams, twitch_vods, twitch_clips, app_cache_state)
-npm run db:import-2026 # Import Twitch archive streams since 2026-01-01
-npm run db:migrate-to-supabase # Copy streams/media/cache data into Supabase Postgres
+npm install
+npm run dev
+npm run build
+npm run start
+npm run lint
+npm run typecheck
+npm run db:setup
+npm run db:import-2026
+npm run db:migrate-to-supabase
 ```
 
 ## Project Configuration
@@ -37,7 +36,8 @@ npm run db:migrate-to-supabase # Copy streams/media/cache data into Supabase Pos
 ### Next.js Config (`next.config.ts`)
 
 - App Router enabled
-- Default settings for flexibility
+- `turbopack.root` pinned to the repository root to avoid false workspace detection from lockfiles outside the repo
+- Development server uses Webpack (`next dev --webpack`) because Turbopack produced unstable module resolution for `tailwindcss` in this Windows environment
 
 ### TypeScript Config (`tsconfig.json`)
 
@@ -86,23 +86,19 @@ npm run db:migrate-to-supabase # Copy streams/media/cache data into Supabase Pos
 
 ## File Structure
 
-```
+```text
 /
-├── .gitignore              # Git ignore rules
-├── package.json            # Dependencies and scripts
-├── bun.lock                # Bun lockfile
-├── next.config.ts          # Next.js configuration
-├── tsconfig.json           # TypeScript configuration
-├── postcss.config.mjs      # PostCSS (Tailwind) config
-├── eslint.config.mjs       # ESLint configuration
-├── public/                 # Static assets
-│   └── .gitkeep
-└── src/                    # Source code
-    └── app/                # Next.js App Router
-        ├── layout.tsx      # Root layout
-        ├── page.tsx        # Home page
-        ├── globals.css     # Global styles
-        └── favicon.ico     # Site icon
+├── package.json
+├── package-lock.json
+├── next.config.ts
+├── src/
+│   ├── app/                # App Router pages + API routes
+│   ├── components/         # Legacy-compatible entry components
+│   ├── features/           # Feature UI modules (schedule, twitch)
+│   ├── server/             # Server-side services/repositories
+│   ├── shared/             # Shared client utilities
+│   └── db/                 # SQL and migrations
+└── scripts/
 ```
 
 ## Technical Constraints

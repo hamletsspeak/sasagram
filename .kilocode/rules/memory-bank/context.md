@@ -8,6 +8,14 @@ The template is now a fully functional personal business card website for the st
 
 ## Recently Completed
 
+- [x] 2026-03-04: Added `dependency-cruiser` project dependency map with `.dependency-cruiser.cjs`, `npm run deps:check`, and Windows-safe `npm run deps:graph` generation of `dependency-graph.svg` using Graphviz; baseline rules now flag UI imports of `src/server` and `src/db`, while current code passes the check
+- [x] 2026-03-04: Normalized project root to real package identity `sasagram`, switched documented package manager to `npm`, removed in-repo `bun.lock`, added project README, and expanded `.gitignore` for local IDE/agent artifacts
+- [x] 2026-03-04: Refactored `StreamSchedule` into `src/features/schedule/` modules (`components`, `lib`, `types`) while preserving the public component contract and visual behavior; kept `src/components/StreamSchedule.tsx` as a compatibility re-export
+- [x] 2026-03-04: Refactored `TwitchVods` into `src/features/twitch/` modules (`components`, `lib`, `types`) while preserving pagination/UI behavior; kept `src/components/TwitchVods.tsx` as a compatibility re-export
+- [x] 2026-03-04: Introduced `src/server/` layering for DB pool, stream repository/service, Twitch auth/media cache service, Kick helpers, and watch-also aggregation; `/api/streams`, `/api/twitch`, and `/api/watch-also` are now thin adapters
+- [x] 2026-03-04: Moved shared browser fetch cache helper to `src/shared/lib/client-api-cache.ts` and left `src/lib/*` as compatibility re-exports for incremental migration safety
+- [x] 2026-03-04: Updated `src/app/page.tsx` to consume feature entrypoints directly and pinned `turbopack.root` in `next.config.ts` to the repo root to avoid false workspace-root detection from lockfiles outside the repository
+- [x] 2026-03-04: Verified refactor with `npm run lint`, `npm run typecheck`, and `npm run build`
 - [x] 2026-03-04: Reviewed project structure; confirmed clear top-level split (`app` / `components` / `lib` / `db` / `scripts`) and identified main cleanup targets: oversized UI/API files, stale template metadata/docs, and mixed package-manager/tooling artifacts in repo root
 - [x] Base Next.js 16 setup with App Router
 - [x] TypeScript configuration with strict mode

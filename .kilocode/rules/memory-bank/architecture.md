@@ -1,18 +1,24 @@
-# System Patterns: Next.js Starter Template
+# System Patterns: SASAGRAM
 
 ## Architecture Overview
 
-```
+```text
 src/
-├── app/                    # Next.js App Router
-│   ├── layout.tsx          # Root layout + metadata
-│   ├── page.tsx            # Home page
-│   ├── globals.css         # Tailwind imports + global styles
-│   └── favicon.ico         # Site icon
-└── (expand as needed)
-    ├── components/         # React components (add when needed)
-    ├── lib/                # Utilities and helpers (add when needed)
-    └── db/                 # Database files (add via recipe)
+├── app/                    # Next.js App Router pages and route handlers
+│   └── api/                # Thin HTTP adapters
+├── components/             # Backward-compatible entry components and page sections
+├── features/
+│   ├── schedule/           # Schedule UI, date utils, client sync/fetch logic
+│   └── twitch/             # VOD/clip UI, formatting, client fetch logic
+├── server/
+│   ├── db/                 # DB pool/config helpers
+│   ├── streams/            # Stream repository + validation/service layer
+│   ├── twitch/             # Twitch auth, media cache repository, orchestration
+│   ├── kick/               # Kick auth/fetch helpers
+│   └── watch-also/         # Twitch/Kick aggregation service
+├── shared/
+│   └── lib/                # Shared client utilities safe for browser bundle
+└── db/                     # SQL init/migrations
 ```
 
 ## Key Design Patterns
@@ -31,17 +37,19 @@ src/app/
     └── route.ts       # API Route: /api
 ```
 
-### 2. Component Organization Pattern (When Expanding)
+### 2. Feature-First UI Pattern
 
-```
-src/components/
-├── ui/                # Reusable UI components (Button, Card, etc.)
-├── layout/            # Layout components (Header, Footer)
-├── sections/          # Page sections (Hero, Features, etc.)
-└── forms/             # Form components
-```
+- Large interactive sections are split into `features/<feature>/components`, `features/<feature>/lib`, and `features/<feature>/types`.
+- `src/components/*` may stay as compatibility wrappers while imports are migrated safely.
+- Shared browser utilities live under `src/shared/lib`.
 
-### 3. Server Components by Default
+### 3. Thin Route Handler Pattern
+
+- `src/app/api/**/route.ts` keeps request/response shaping and cache headers only.
+- Business logic, validation, and orchestration move to `src/server/**`.
+- DB access is isolated in repository modules where possible.
+
+### 4. Server Components by Default
 
 All components are Server Components unless marked with `"use client"`:
 ```tsx
@@ -58,7 +66,7 @@ export default function Counter() {
 }
 ```
 
-### 4. Layout Pattern
+### 5. Layout Pattern
 
 Layouts wrap pages and can be nested:
 ```tsx
