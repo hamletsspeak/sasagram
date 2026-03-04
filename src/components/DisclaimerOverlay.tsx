@@ -8,6 +8,7 @@ const DESKTOP_DISCLAIMER_SRC =
 const MOBILE_DISCLAIMER_SRC =
   process.env.NEXT_PUBLIC_DISCLAIMER_VIDEO_URL_MOBILE ??
   "/assets/logo/дисклеймен_final_mob.webm";
+const DOWNLOAD_PROGRESS_MAX = 95;
 
 type DeviceType = "mobile" | "desktop" | null;
 
@@ -111,7 +112,9 @@ export default function DisclaimerOverlay() {
       if (!event.lengthComputable || event.total <= 0) {
         return;
       }
-      setDownloadProgress(Math.min(100, Math.round((event.loaded / event.total) * 100)));
+      setDownloadProgress(
+        Math.min(DOWNLOAD_PROGRESS_MAX, Math.round((event.loaded / event.total) * DOWNLOAD_PROGRESS_MAX)),
+      );
     };
 
     xhr.onload = () => {
@@ -123,7 +126,7 @@ export default function DisclaimerOverlay() {
       cleanupObjectUrl();
       objectUrlRef.current = URL.createObjectURL(xhr.response);
       setVideoObjectUrl(objectUrlRef.current);
-      setDownloadProgress(100);
+      setDownloadProgress(DOWNLOAD_PROGRESS_MAX);
       setIsVideoDownloaded(true);
       xhrRef.current = null;
     };
@@ -227,21 +230,27 @@ export default function DisclaimerOverlay() {
           <div className="flex w-full max-w-md flex-col items-center gap-6 rounded-[32px] border border-white/10 bg-white/[0.03] px-7 py-9 text-center shadow-[0_0_80px_rgba(120,12,24,0.16)] backdrop-blur-[10px]">
             <div className="space-y-3">
               <p className="text-[11px] uppercase tracking-[0.5em] text-zinc-500">INTRO</p>
-              <h2 className="text-xl font-light uppercase tracking-[0.28em] text-zinc-100">
-                Загрузка
-              </h2>
+              <div className="flex items-baseline justify-center gap-3">
+                <h2 className="text-xl font-semibold uppercase tracking-[0.28em] text-zinc-100">
+                  Загрузка
+                </h2>
+                <span className="font-audex relative top-[1px] text-[1.35rem] uppercase tracking-[0.18em] text-zinc-300 tabular-nums leading-none">
+                  {downloadProgress}%
+                </span>
+              </div>
             </div>
 
             <div className="w-full space-y-3">
-              <div className="h-2 overflow-hidden rounded-full bg-white/10 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]">
+              <div className="relative h-2 overflow-hidden rounded-full bg-white/10 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]">
                 <div
                   className="h-full rounded-full bg-[linear-gradient(90deg,rgba(255,255,255,0.72),rgba(255,255,255,1))] transition-[width] duration-150 ease-out"
                   style={{ width: `${downloadProgress}%` }}
                 />
+                <div className="disclaimer-progress-sheen absolute inset-y-0 left-0 w-20 rounded-full" />
               </div>
-              <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.22em] text-zinc-500">
-                <span>Подготовка</span>
-                <span className="tabular-nums text-zinc-300">{downloadProgress}%</span>
+              <div className="flex items-center justify-center gap-2 text-[10px] uppercase tracking-[0.22em] text-zinc-500">
+                <span className="disclaimer-status-pulse">Идет загрузка</span>
+                <span className="disclaimer-loading-dots" aria-hidden="true" />
               </div>
             </div>
 
@@ -260,8 +269,13 @@ export default function DisclaimerOverlay() {
                 Start
               </button>
             ) : (
-              <div className="h-[50px] flex items-center text-[11px] uppercase tracking-[0.24em] text-zinc-600">
-                Подождите, пока файл загрузится полностью
+              <div className="flex h-[50px] flex-col items-center justify-center gap-1 text-center">
+                <div className="text-[11px] uppercase tracking-[0.24em] text-zinc-600">
+                  Пожалуйста, подождите.
+                </div>
+                <div className="text-[10px] uppercase tracking-[0.22em] text-zinc-500">
+                  Не обновляйте страницу во время загрузки
+                </div>
               </div>
             )}
 
@@ -294,6 +308,7 @@ export default function DisclaimerOverlay() {
         disablePictureInPicture
         controlsList="nodownload noplaybackrate noremoteplayback nofullscreen"
         onLoadedData={() => {
+          setDownloadProgress(100);
           setIsVideoPrepared(true);
         }}
         onEnded={() => {

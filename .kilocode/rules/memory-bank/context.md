@@ -8,6 +8,7 @@ The template is now a fully functional personal business card website for the st
 
 ## Recently Completed
 
+- [x] 2026-03-04: Reviewed project structure; confirmed clear top-level split (`app` / `components` / `lib` / `db` / `scripts`) and identified main cleanup targets: oversized UI/API files, stale template metadata/docs, and mixed package-manager/tooling artifacts in repo root
 - [x] Base Next.js 16 setup with App Router
 - [x] TypeScript configuration with strict mode
 - [x] Tailwind CSS 4 integration
@@ -340,8 +341,11 @@ To personalize the template, update:
 | 2026-03-03 | Improved disclaimer UX: mobile rendering now uses adaptive fit (`object-contain` on phones), loading bar reflects real progress (page + video), and autoplay is disabled so playback begins only after full readiness |
 - [x] 2026-03-03: Fixed phone disclaimer mismatch by exporting viewport metadata (`device-width`, `initialScale=1`, `viewportFit=cover`) from `src/app/layout.tsx`, preventing mobile browsers from resolving the startup disclaimer breakpoint in desktop mode
 - [x] 2026-03-03: Optimized disclaimer startup loading by moving mobile/desktop source selection into native `<source media>` rules and reducing preload from `auto` to `metadata`, with readiness based on the first loaded frame instead of buffer-depth tracking
+ - [x] 2026-03-04: Refined disclaimer preload UX in `DisclaimerOverlay`: waiting text changed to `Пожалуйста, подождите.`, the progress bar now reserves the final 5% for browser-side video preparation so `100%` appears only when playback can actually start, the `Загрузка` label has a soft pulse animation, and a warning now tells users not to refresh the page during loading
+- [x] 2026-03-04: Simplified the About section in `src/components/About.tsx` by removing all streamer bio content, stats, and CTA buttons; section now shows a temporary `Раздел в разработке` placeholder
 | 2026-03-03 | Fixed phone disclaimer mismatch by exporting Next.js viewport metadata (`device-width`, `initialScale=1`, `viewportFit=cover`) from `src/app/layout.tsx`, preventing mobile browsers from evaluating the disclaimer breakpoint in desktop mode |
 | 2026-03-03 | Reduced disclaimer startup cost in `DisclaimerOverlay`: browser now picks the mobile/desktop asset through `<source media>`, video preload is `metadata` instead of `auto`, and readiness is based on `loadeddata` rather than buffered-duration tracking |
 | 2026-03-03 | Hardened startup disclaimer stability: replaced `window.load` gating with DOM readiness (`DOMContentLoaded` / `document.readyState`) plus a 1.5s fallback timer, so the overlay cannot freeze waiting for unrelated late resources |
 | 2026-03-03 | Reduced startup media contention: Hero background videos now stay paused while the disclaimer is visible and use `preload="metadata"`, preventing desktop/mobile stalls caused by concurrent heavy video loading |
 | 2026-03-03 | Reworked startup disclaimer flow into explicit staged UX: device type is detected first, the selected video is downloaded via XHR with exact byte-based percentage progress, and playback starts only after the user presses `Start` |
+| 2026-03-04 | Reviewed repository structure: top-level layering is sound for a small Next.js app, but future maintainability is constrained by oversized components/routes, outdated template naming/documentation, and duplicated package-manager/build artifacts at the repo root |
