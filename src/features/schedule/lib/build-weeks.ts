@@ -12,6 +12,7 @@ import {
   timeRu,
   weekLabel,
 } from "@/features/schedule/lib/date";
+import { getGlebActivity } from "@/features/schedule/lib/gleb-activities";
 
 export function buildCalendarWeeks(monthStart: Date): CalendarWeek[] {
   const firstDay = new Date(monthStart.getFullYear(), monthStart.getMonth(), 1);
@@ -43,7 +44,7 @@ export function buildWeeks(dbStreams: DbStream[], liveActualStart: LiveActualSta
   for (const stream of dbStreams) {
     const startedAt = new Date(stream.started_at);
     if (Number.isNaN(startedAt.getTime())) continue;
-    if (startedAt > today) continue;
+    if (startedAt > now) continue;
 
     const key = dateKey(startedAt);
     const existing = dbStreamByDate.get(key);
@@ -70,14 +71,17 @@ export function buildWeeks(dbStreams: DbStream[], liveActualStart: LiveActualSta
       const isFuture = current > today;
       const isLiveForDate = Boolean(liveActualStart && liveActualStart.key === key);
       const dbStream = isFuture ? undefined : dbStreamByDate.get(key);
+      const isPendingToday = isToday && !isLiveForDate && !dbStream;
 
-      let timeRange = "--:-- - --:--";
+      let timeRange = "";
       let durationLabel = "—";
-      let title = "—";
+      let title = "";
       let streamUrl: string | null = null;
       let startMinutes: number | null = null;
       let endMinutes: number | null = null;
       let isLive = false;
+      let ratingAvg: number | null = null;
+      let ratingCount = 0;
 
       if (isLiveForDate && liveActualStart) {
         timeRange = timeRu(liveActualStart.startedAt);
@@ -90,6 +94,10 @@ export function buildWeeks(dbStreams: DbStream[], liveActualStart: LiveActualSta
           minutesSinceDayStart(new Date().toISOString(), current) ?? BASE_VIEW_END_MINUTES
         );
         isLive = true;
+        if (dbStream) {
+          ratingAvg = typeof dbStream.ratingAvg === "number" ? dbStream.ratingAvg : null;
+          ratingCount = typeof dbStream.ratingCount === "number" ? dbStream.ratingCount : 0;
+        }
       } else if (dbStream) {
         const durationHours = Number(dbStream.duration_hours);
         const hasDuration = Number.isFinite(durationHours) && durationHours > 0;
@@ -97,7 +105,7 @@ export function buildWeeks(dbStreams: DbStream[], liveActualStart: LiveActualSta
 
         if (hasDuration && endAt) {
           timeRange = `${timeRu(dbStream.started_at)} - ${timeRu(endAt)}`;
-          durationLabel = `Шел ${formatDurationHours(durationHours)}`;
+          durationLabel = formatDurationHours(durationHours);
         } else {
           timeRange = timeRu(dbStream.started_at);
           durationLabel = "Длительность неизвестна";
@@ -107,6 +115,14 @@ export function buildWeeks(dbStreams: DbStream[], liveActualStart: LiveActualSta
         streamUrl = dbStream.stream_url?.trim() || null;
         startMinutes = minutesSinceDayStart(dbStream.started_at, current);
         endMinutes = endAt ? minutesSinceDayStart(endAt, current) : null;
+        ratingAvg = typeof dbStream.ratingAvg === "number" ? dbStream.ratingAvg : null;
+        ratingCount = typeof dbStream.ratingCount === "number" ? dbStream.ratingCount : 0;
+      } else if (isPendingToday) {
+        title = "Стрим еще не начался";
+        timeRange = "До конца дня";
+      } else if (!isFuture) {
+        title = getGlebActivity(key);
+        timeRange = "Стрима не было";
       }
 
       cards.push({
@@ -118,10 +134,14 @@ export function buildWeeks(dbStreams: DbStream[], liveActualStart: LiveActualSta
         title,
         streamUrl,
         isToday,
+        isFuture,
+        isPendingToday,
         isActive: Boolean(dbStream) || isLiveForDate,
         isLive,
         startMinutes,
         endMinutes,
+        ratingAvg,
+        ratingCount,
       });
     }
 

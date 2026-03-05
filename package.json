@@ -13,6 +13,7 @@
     "deps:graph": "node scripts/generate-dependency-graph.mjs",
     "db:setup": "node --env-file=.env.local scripts/setup-db.mjs",
     "db:import-2026": "node --env-file=.env.local scripts/import-streams-2026.mjs",
+    "db:import-vods-2026": "node --env-file=.env.local scripts/import-twitch-vods-2026.mjs",
     "db:migrate-to-supabase": "node --env-file=.env.local scripts/migrate-to-supabase.mjs"
   },
   "dependencies": {
@@ -22,7 +23,8 @@
     "next": "^16.1.3",
     "pg": "^8.19.0",
     "react": "^19.2.3",
-    "react-dom": "^19.2.3"
+    "react-dom": "^19.2.3",
+    "swiper": "^12.1.2"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.17",

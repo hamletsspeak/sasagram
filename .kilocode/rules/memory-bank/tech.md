@@ -8,7 +8,7 @@
 | React        | 19.x    | UI library                      |
 | TypeScript   | 5.9.x   | Type-safe JavaScript            |
 | Tailwind CSS | 4.x     | Utility-first CSS               |
-| PostgreSQL   | 14+     | Persistent storage for streams + cached Twitch media |
+| PostgreSQL   | 14+     | Persistent storage for streams, anonymous stream ratings, and cached Twitch media |
 | npm          | 11.6.2  | Package manager                 |
 
 ## Development Environment
@@ -94,7 +94,7 @@ npm run db:migrate-to-supabase
 ├── src/
 │   ├── app/                # App Router pages + API routes
 │   ├── components/         # Legacy-compatible entry components
-│   ├── features/           # Feature UI modules (schedule, twitch)
+│   ├── features/           # Feature UI modules (schedule, ratings, twitch)
 │   ├── server/             # Server-side services/repositories
 │   ├── shared/             # Shared client utilities
 │   └── db/                 # SQL and migrations
@@ -106,8 +106,14 @@ npm run db:migrate-to-supabase
 ### Starting Point
 
 - Minimal structure - expand as needed
-- Database already integrated (PostgreSQL) for stream sessions and Twitch media caching
+- Database already integrated (PostgreSQL) for stream sessions, anonymous ratings, and Twitch media caching
 - No authentication by default (add when needed)
+
+### Anonymous Ratings
+
+- Route handlers use Next.js 16 App Router APIs with `NextResponse.cookies.set(...)` to manage a long-lived `HttpOnly` viewer token cookie
+- The raw cookie token is never stored in the database; `src/server/streams/rating-cookie.ts` hashes it with SHA-256 before repository writes
+- Rating policy is intentionally `single-vote-no-update`: one browser/device can rate one stream once, but clearing cookies or switching browsers/devices creates a new anonymous voter identity
 
 ### Browser Support
 

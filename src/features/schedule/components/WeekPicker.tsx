@@ -57,7 +57,7 @@ export function WeekPicker({
       </button>
 
       {calendarOpen ? (
-        <div className="absolute left-0 top-[calc(100%+8px)] z-20 w-[286px] rounded-2xl border border-red-950/45 bg-[#141116] p-3 shadow-2xl">
+        <div className="absolute left-1/2 top-[calc(100%+8px)] z-20 w-[286px] -translate-x-1/2 rounded-2xl border border-red-950/45 bg-[#141116] p-3 shadow-2xl md:left-0 md:translate-x-0">
           <div className="mb-3 flex items-center justify-between text-white">
             <p className="text-2xl font-semibold capitalize">{monthLabelRu(calendarMonthStart)}</p>
             <div className="flex items-center gap-2">

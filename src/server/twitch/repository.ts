@@ -11,7 +11,6 @@ export async function getCachedMediaState(ttlMs: number) {
         SELECT id, title, url, thumbnail_url, view_count, duration, created_at, description
         FROM twitch_vods
         ORDER BY created_at DESC
-        LIMIT 20
       `
     ),
     pool.query(
@@ -19,7 +18,6 @@ export async function getCachedMediaState(ttlMs: number) {
         SELECT id, title, url, thumbnail_url, view_count, created_at, duration_seconds AS duration, creator_name
         FROM twitch_clips
         ORDER BY created_at DESC
-        LIMIT 20
       `
     ),
     pool.query(

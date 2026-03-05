@@ -231,7 +231,7 @@ export default function DisclaimerOverlay() {
             <div className="space-y-3">
               <p className="text-[11px] uppercase tracking-[0.5em] text-zinc-500">INTRO</p>
               <div className="flex items-baseline justify-center gap-3">
-                <h2 className="text-xl font-semibold uppercase tracking-[0.28em] text-zinc-100">
+                <h2 className="font-fontick text-xl font-semibold uppercase tracking-[0.28em] text-zinc-100">
                   Загрузка
                 </h2>
                 <span className="font-audex relative top-[1px] text-[1.35rem] uppercase tracking-[0.18em] text-zinc-300 tabular-nums leading-none">

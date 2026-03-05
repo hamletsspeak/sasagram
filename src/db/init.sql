@@ -45,3 +45,15 @@ CREATE TABLE IF NOT EXISTS app_cache_state (
   value_text TEXT,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS stream_ratings (
+  id BIGSERIAL PRIMARY KEY,
+  stream_id BIGINT NOT NULL REFERENCES streams(id) ON DELETE CASCADE,
+  viewer_token_hash TEXT NOT NULL,
+  rating SMALLINT NOT NULL CHECK (rating BETWEEN 1 AND 5),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (stream_id, viewer_token_hash)
+);
+
+CREATE INDEX IF NOT EXISTS stream_ratings_stream_id_idx
+ON stream_ratings (stream_id);

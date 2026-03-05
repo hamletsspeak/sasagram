@@ -1,4 +1,5 @@
 import type { RefObject } from "react";
+import Image from "next/image";
 import { CalendarWeek, WeekGroup } from "@/features/schedule/types";
 import { WeekPicker } from "@/features/schedule/components/WeekPicker";
 import { streamBlockStyle } from "@/features/schedule/lib/build-weeks";
@@ -29,6 +30,11 @@ type ScheduleDesktopProps = {
   onSelectWeek: (key: string) => void;
   onJumpToday: () => void;
 };
+
+function formatRatingValue(ratingAvg: number | null, ratingCount: number) {
+  if (ratingCount <= 0 || ratingAvg === null) return "—";
+  return ratingAvg.toFixed(2);
+}
 
 export function ScheduleDesktop({
   axisTicks,
@@ -147,7 +153,20 @@ export function ScheduleDesktop({
                   }}
                 />
                 {!style ? (
-                  <div className="h-[58px] rounded-xl border border-dashed border-zinc-700/70 flex items-center px-3 text-gray-500 text-sm">--:-- - --:--</div>
+                  <div
+                    className={`h-[58px] rounded-xl border border-dashed px-3 ${
+                      item.isFuture
+                        ? "border-zinc-800/60"
+                        : "flex items-center justify-between border-zinc-700/70"
+                    }`}
+                  >
+                    {!item.isFuture ? (
+                      <>
+                        <p className="line-clamp-1 text-sm font-semibold text-zinc-200">{item.title}</p>
+                        <p className="line-clamp-1 text-[11px] text-right text-gray-500">{item.timeRange}</p>
+                      </>
+                    ) : null}
+                  </div>
                 ) : item.streamUrl ? (
                   <a
                     href={item.streamUrl}
@@ -170,20 +189,62 @@ export function ScheduleDesktop({
                         <div className="pointer-events-none absolute inset-0 rounded-xl bg-gradient-to-r from-red-500/8 via-rose-400/18 to-red-500/8" style={{ animation: "liveBreath 2.8s ease-in-out infinite" }} />
                       </>
                     ) : null}
-                    <p className="text-xs font-semibold text-white line-clamp-1">{item.title}</p>
-                    <p className="text-[11px] text-gray-200 line-clamp-1">{item.timeRange}</p>
-                    <p className={`text-[11px] line-clamp-1 ${item.isLive ? "text-red-300" : "text-emerald-300"}`}>
-                      {item.isLive ? "В эфире" : item.durationLabel}
-                    </p>
+                    <div className="relative flex h-full items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="line-clamp-1 text-[clamp(13px,1.05vw,24px)] font-black uppercase leading-none tracking-tight text-white">
+                          {item.title}
+                        </p>
+                        <div className="mt-1 flex items-end gap-2">
+                          <p className="line-clamp-1 text-[clamp(10px,0.8vw,14px)] font-bold leading-none text-zinc-100">{item.timeRange}</p>
+                          <p className={`line-clamp-1 text-[clamp(11px,0.9vw,15px)] font-black leading-none ${item.isLive ? "text-red-300" : "text-emerald-400"}`}>
+                            {item.isLive ? "LIVE" : item.durationLabel}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="shrink-0 text-right pl-2">
+                        <div className="flex items-center justify-end gap-1 text-zinc-300">
+                          <span className="text-[20px] font-black leading-none">{formatRatingValue(item.ratingAvg, item.ratingCount)}</span>
+                          <Image
+                            src="/assets/icons/star_rait.png"
+                            alt=""
+                            width={20}
+                            height={20}
+                            className="h-5 w-5"
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </a>
                 ) : (
                   <div
                     className={`absolute top-2 h-[58px] rounded-xl border px-3 py-2 overflow-hidden ${item.isLive ? "border-rose-400/55 bg-rose-900/30" : "border-zinc-600/70 bg-zinc-800/70"}`}
                     style={style}
                   >
-                    <p className="text-xs font-semibold text-white line-clamp-1">{item.title}</p>
-                    <p className="text-[11px] text-gray-200 line-clamp-1">{item.timeRange}</p>
-                    <p className="text-[11px] text-emerald-300 line-clamp-1">{item.isLive ? "В эфире" : item.durationLabel}</p>
+                    <div className="relative flex h-full items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="line-clamp-1 text-[clamp(13px,1.05vw,24px)] font-black uppercase leading-none tracking-tight text-white">
+                          {item.title}
+                        </p>
+                        <div className="mt-1 flex items-end gap-2">
+                          <p className="line-clamp-1 text-[clamp(10px,0.8vw,14px)] font-bold leading-none text-zinc-100">{item.timeRange}</p>
+                          <p className={`line-clamp-1 text-[clamp(11px,0.9vw,15px)] font-black leading-none ${item.isLive ? "text-red-300" : "text-emerald-400"}`}>
+                            {item.isLive ? "LIVE" : item.durationLabel}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="shrink-0 text-right pl-2">
+                        <div className="flex items-center justify-end gap-1 text-zinc-300">
+                          <span className="text-[20px] font-black leading-none">{formatRatingValue(item.ratingAvg, item.ratingCount)}</span>
+                          <Image
+                            src="/assets/icons/star_rait.png"
+                            alt=""
+                            width={20}
+                            height={20}
+                            className="h-5 w-5"
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>

@@ -9,10 +9,11 @@ src/
 ├── components/             # Backward-compatible entry components and page sections
 ├── features/
 │   ├── schedule/           # Schedule UI, date utils, client sync/fetch logic
+│   ├── ratings/            # Dedicated stream rating page UI and client API helpers
 │   └── twitch/             # VOD/clip UI, formatting, client fetch logic
 ├── server/
 │   ├── db/                 # DB pool/config helpers
-│   ├── streams/            # Stream repository + validation/service layer
+│   ├── streams/            # Stream repository + validation/service layer + anonymous rating services
 │   ├── twitch/             # Twitch auth, media cache repository, orchestration
 │   ├── kick/               # Kick auth/fetch helpers
 │   └── watch-also/         # Twitch/Kick aggregation service
@@ -48,6 +49,7 @@ src/app/
 - `src/app/api/**/route.ts` keeps request/response shaping and cache headers only.
 - Business logic, validation, and orchestration move to `src/server/**`.
 - DB access is isolated in repository modules where possible.
+- Anonymous stream voting is handled in dedicated route handlers (`/api/streams/ratings`, `/api/streams/[id]/rating`) that delegate cookie hashing and one-vote enforcement to `src/server/streams/*`.
 
 ### 4. Server Components by Default
 

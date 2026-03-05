@@ -8,7 +8,14 @@ import { dateKey, elapsedHours, parseTwitchDurationToHours } from "@/features/sc
 function mergeDbStreams(prev: DbStream[], incoming: DbStream): DbStream[] {
   const next = [...prev];
   const index = next.findIndex((item) => item.started_at === incoming.started_at);
-  if (index >= 0) next[index] = incoming;
+  if (index >= 0) {
+    next[index] = {
+      ...next[index],
+      ...incoming,
+      ratingAvg: incoming.ratingAvg ?? next[index].ratingAvg ?? null,
+      ratingCount: incoming.ratingCount ?? next[index].ratingCount ?? 0,
+    };
+  }
   else next.push(incoming);
   return next;
 }

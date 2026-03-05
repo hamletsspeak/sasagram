@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { ScheduleDesktop } from "@/features/schedule/components/ScheduleDesktop";
 import { ScheduleMobile } from "@/features/schedule/components/ScheduleMobile";
 import { buildCalendarWeeks, buildWeeks } from "@/features/schedule/lib/build-weeks";
@@ -92,11 +93,20 @@ export default function StreamSchedule() {
     <section id="schedule" className="min-h-screen py-20 bg-black/45">
       <div className="max-w-6xl mx-auto px-6">
         <div className="flex items-center justify-between mb-4 gap-3">
-          <h2 className="text-2xl md:text-3xl font-bold text-white">Расписание стримов</h2>
+          <h2 className="font-fontick text-2xl md:text-3xl font-bold text-white">Расписание стримов</h2>
+          <Link
+            href="/rating"
+            className="inline-flex items-center rounded-full border border-red-400/35 bg-red-500/12 px-4 py-2 text-sm font-medium text-red-100 transition hover:border-red-300/60 hover:bg-red-500/18 hover:text-white"
+          >
+            Оценить стримы
+          </Link>
         </div>
 
         {loading ? (
-          <div className="h-80 rounded-2xl bg-zinc-900/80 animate-pulse" />
+          <div className="space-y-3 rounded-2xl border border-white/10 bg-zinc-900/60 p-4">
+            <div className="h-10 w-56 animate-pulse rounded-xl bg-zinc-700/70" />
+            <div className="h-64 animate-pulse rounded-xl bg-zinc-800/80" />
+          </div>
         ) : error ? (
           <div className="text-center text-gray-400 text-sm py-8">Не удалось загрузить расписание</div>
         ) : (

@@ -14,9 +14,26 @@ const UPSERT_STREAM_SQL = `
 export async function listStreams(pool: Pool) {
   const result = await pool.query(
     `
-      SELECT id, started_at, duration_hours, created_at, title, stream_url
-      FROM streams
-      ORDER BY started_at DESC
+      SELECT
+        s.id,
+        s.started_at,
+        s.duration_hours,
+        s.created_at,
+        s.title,
+        s.stream_url,
+        stats.rating_avg AS "ratingAvg",
+        COALESCE(stats.rating_count, 0)::int AS "ratingCount"
+      FROM streams AS s
+      LEFT JOIN (
+        SELECT
+          stream_id,
+          ROUND(AVG(rating)::numeric, 2)::float8 AS rating_avg,
+          COUNT(*)::int AS rating_count
+        FROM stream_ratings
+        GROUP BY stream_id
+      ) AS stats
+        ON stats.stream_id = s.id
+      ORDER BY s.started_at DESC
     `
   );
 

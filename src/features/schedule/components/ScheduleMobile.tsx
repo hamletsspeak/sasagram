@@ -10,6 +10,11 @@ type ScheduleMobileProps = {
   onJumpToday: () => void;
 };
 
+function formatRatingLabel(ratingAvg: number | null, ratingCount: number) {
+  if (ratingCount <= 0 || ratingAvg === null) return "Рейтинг: без оценок";
+  return `Рейтинг: ★ ${ratingAvg.toFixed(2)} (${ratingCount})`;
+}
+
 export function ScheduleMobile({
   selectedWeek,
   selectedWeekRangeLabel,
@@ -69,33 +74,60 @@ export function ScheduleMobile({
               ? "border-zinc-600/70 bg-zinc-800/70"
               : "border-zinc-800/70 bg-zinc-900/45";
 
+          const badgeLabel = item.isLive
+            ? "LIVE"
+            : item.isActive
+              ? "Был эфир"
+              : item.isPendingToday
+                ? "Сегодня"
+                : item.isFuture
+                  ? ""
+                  : "Пусто";
+
+          const badgeClass = item.isLive
+            ? "bg-red-500/90 text-white"
+            : item.isActive
+              ? "bg-emerald-500/20 text-emerald-300"
+              : item.isPendingToday
+                ? "bg-amber-500/15 text-amber-300"
+                : "bg-gray-800/90 text-gray-300";
+
           const content = (
             <div className={`rounded-lg border px-2.5 py-2 ${cardClass}`}>
               <div className="mb-1 flex items-center justify-between gap-2">
                 <p className="text-[11px] uppercase text-gray-300">
                   {item.dayLabel}, {item.dateLabel}
                 </p>
-                <span
-                  className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
-                    item.isLive
-                      ? "bg-red-500/90 text-white"
-                      : item.isActive
-                        ? "bg-emerald-500/20 text-emerald-300"
-                        : "bg-gray-800/90 text-gray-300"
-                  }`}
-                >
-                  {item.isLive ? "LIVE" : item.isActive ? "Был эфир" : "Пусто"}
-                </span>
+                {badgeLabel ? (
+                  <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${badgeClass}`}>
+                    {badgeLabel}
+                  </span>
+                ) : null}
               </div>
-              <p className="text-xs font-semibold text-white line-clamp-1">
-                {item.isActive ? item.title : "В этот день нет эфира"}
-              </p>
-              <div className="mt-1 flex items-center justify-between gap-2">
-                <p className="text-[11px] text-gray-300 line-clamp-1">{item.timeRange}</p>
-                <p className={`text-[11px] ${item.isLive ? "text-red-300" : item.isActive ? "text-emerald-300" : "text-gray-500"}`}>
-                  {item.isLive ? "В эфире" : item.isActive ? item.durationLabel : "—"}
-                </p>
-              </div>
+              {!item.isFuture ? (
+                <>
+                  <p className="text-xs font-semibold text-white line-clamp-1">{item.title}</p>
+                  <div className="mt-1 flex items-center justify-between gap-2">
+                    <p className="text-[11px] text-gray-300 line-clamp-1">{item.timeRange}</p>
+                    <p
+                      className={`text-[11px] ${
+                        item.isLive
+                          ? "text-red-300"
+                          : item.isActive
+                            ? "text-emerald-300"
+                            : item.isPendingToday
+                              ? "text-amber-300"
+                              : "text-gray-500"
+                      }`}
+                    >
+                      {item.isLive ? "В эфире" : item.isActive ? item.durationLabel : "—"}
+                    </p>
+                  </div>
+                  {item.isActive && !item.isLive ? (
+                    <p className="mt-0.5 text-[11px] text-zinc-400 line-clamp-1">{formatRatingLabel(item.ratingAvg, item.ratingCount)}</p>
+                  ) : null}
+                </>
+              ) : null}
             </div>
           );
 

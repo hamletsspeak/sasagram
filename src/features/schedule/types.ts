@@ -11,6 +11,8 @@ export interface DbStream {
   title: string | null;
   stream_url: string | null;
   created_at: string;
+  ratingAvg?: number | null;
+  ratingCount?: number;
 }
 
 export interface StreamsResponse {
@@ -26,10 +28,14 @@ export interface TimelineCard {
   title: string;
   streamUrl: string | null;
   isToday: boolean;
+  isFuture: boolean;
+  isPendingToday: boolean;
   isActive: boolean;
   isLive: boolean;
   startMinutes: number | null;
   endMinutes: number | null;
+  ratingAvg: number | null;
+  ratingCount: number;
 }
 
 export interface WeekGroup {

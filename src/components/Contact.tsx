@@ -149,6 +149,7 @@ export default function Contact() {
   const [creatorStates, setCreatorStates] = useState<Record<string, CreatorLiveState>>({});
   const shouldBypassNextImage = (url: string) =>
     url.startsWith("http://") || url.startsWith("https://") || url.startsWith("/api/");
+  const canHover = () => (typeof window !== "undefined" ? window.matchMedia("(hover: hover)").matches : false);
 
   useEffect(() => {
     let isActive = true;
@@ -186,6 +187,7 @@ export default function Contact() {
               className="group flex flex-col items-center text-center"
               onMouseEnter={(event) => {
                 if (!item.avatarVideoUrl) return;
+                if (!canHover()) return;
                 const video = event.currentTarget.querySelector("video");
                 if (!video) return;
                 video.currentTime = 0;
@@ -193,6 +195,7 @@ export default function Contact() {
               }}
               onMouseLeave={(event) => {
                 if (!item.avatarVideoUrl) return;
+                if (!canHover()) return;
                 const video = event.currentTarget.querySelector("video");
                 if (!video) return;
                 video.pause();
@@ -206,6 +209,7 @@ export default function Contact() {
                   <video
                     src={item.avatarVideoUrl}
                     className="h-full w-full rounded-full object-cover"
+                    autoPlay
                     muted
                     loop
                     playsInline

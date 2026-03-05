@@ -76,7 +76,7 @@ export default function Portfolio() {
           <p className="text-purple-400 font-semibold text-sm uppercase tracking-widest mb-3">
             Клипы и хайлайты
           </p>
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
+          <h2 className="font-fontick text-4xl md:text-5xl font-bold text-white mb-4">
             Лучшие моменты
           </h2>
           <p className="text-gray-500 max-w-xl mx-auto">
@@ -94,7 +94,7 @@ export default function Portfolio() {
               {/* Emoji icon */}
               <div className="text-4xl mb-4">{clip.emoji}</div>
 
-              <h3 className="text-white font-bold text-lg mb-2">{clip.title}</h3>
+              <h3 className="font-fontick text-white font-bold text-lg mb-2">{clip.title}</h3>
               <p className="text-gray-400 text-sm leading-relaxed mb-4">{clip.description}</p>
 
               {/* Tags */}

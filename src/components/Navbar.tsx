@@ -1,22 +1,32 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { AVATAR_TRIGGER_LINE_Y } from "@/lib/avatar-transition";
 
 const NAVBAR_AVATAR_SRC = encodeURI("/assets/logo/Кружок_сасыч.webm");
 
-const navLinks = [
-  { label: "Главная", href: "#home" },
-  { label: "О стримере", href: "#about" },
-  { label: "Расписание", href: "#schedule" },
-  { label: "Записи", href: "#vods" },
-  { label: "Контакты", href: "#contact" },
+type NavLink = {
+  label: string;
+  href: string;
+  section: boolean;
+};
+
+const navLinks: NavLink[] = [
+  { label: "Главная", href: "#home", section: true },
+  { label: "О стримере", href: "#about", section: true },
+  { label: "Расписание", href: "#schedule", section: true },
+  { label: "Оценки", href: "/rating", section: false },
+  { label: "Записи", href: "#vods", section: true },
+  { label: "Контакты", href: "#contact", section: true },
 ];
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [heroPassed, setHeroPassed] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 0);
@@ -53,6 +63,11 @@ export default function Navbar() {
       window.removeEventListener("resize", onScrollOrResize);
     };
   }, []);
+
+  const resolveHref = (href: string, section: boolean) => {
+    if (!section) return href;
+    return pathname === "/" ? href : `/${href}`;
+  };
 
   return (
     <header className="fixed top-2 left-0 right-0 z-50 px-4 pointer-events-none md:top-3 md:px-6">
@@ -95,12 +110,12 @@ export default function Navbar() {
         <ul className="hidden items-center gap-7 md:flex">
           {navLinks.map((link) => (
             <li key={link.href}>
-              <a
-                href={link.href}
+              <Link
+                href={resolveHref(link.href, link.section)}
                 className="text-zinc-400 hover:text-rose-200 text-sm font-medium transition-colors duration-200"
               >
                 {link.label}
-              </a>
+              </Link>
             </li>
           ))}
         </ul>
@@ -127,13 +142,13 @@ export default function Navbar() {
           <ul className="flex flex-col gap-4">
             {navLinks.map((link) => (
               <li key={link.href}>
-                <a
-                  href={link.href}
+                <Link
+                  href={resolveHref(link.href, link.section)}
                   className="text-zinc-300 hover:text-rose-200 text-sm font-medium transition-colors"
                   onClick={() => setMenuOpen(false)}
                 >
                   {link.label}
-                </a>
+                </Link>
               </li>
             ))}
           </ul>

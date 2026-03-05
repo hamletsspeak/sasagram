@@ -57,7 +57,7 @@ export default function Skills() {
           <p className="text-purple-400 font-semibold text-sm uppercase tracking-widest mb-3">
             Контент
           </p>
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
+          <h2 className="font-fontick text-4xl md:text-5xl font-bold text-white mb-4">
             Что я стримлю
           </h2>
           <p className="text-gray-500 max-w-xl mx-auto">
@@ -73,7 +73,7 @@ export default function Skills() {
               className="bg-gray-900 border border-gray-800 rounded-2xl p-8 hover:border-purple-500/40 transition-colors duration-300"
             >
               <div className="text-3xl mb-3">{category.icon}</div>
-              <h3 className="text-white font-bold text-xl mb-6">{category.title}</h3>
+              <h3 className="font-fontick text-white font-bold text-xl mb-6">{category.title}</h3>
               <div className="flex flex-col gap-5">
                 {category.items.map((item) => (
                   <ContentBar key={item.name} name={item.name} level={item.level} />
