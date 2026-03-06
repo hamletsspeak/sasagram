@@ -8,6 +8,8 @@ The template is now a fully functional personal business card website for the st
 
 ## Recently Completed
 
+- [x] 2026-03-06: Physically removed duplicate rows from `streams` via `scripts/dedupe-streams.mjs` (1 duplicate row deleted, duplicate minute groups reduced from 1 to 0), merged ratings from duplicate stream IDs, and enforced minute precision with DB check constraint `streams_started_at_minute_precision_check`
+- [x] 2026-03-06: Added duplicate-prevention normalization for `started_at` to minute precision in ingest paths (`src/server/streams/service.ts`, `scripts/import-streams-2026.mjs`, `scripts/migrate-to-supabase.mjs`)
 - [x] 2026-03-06: Fixed missing current live rating in schedule cards by correcting same-day stream filtering in `buildWeeks` (`startedAt > now` instead of `startedAt > today`) and by reusing DB rating fields (`ratingAvg`, `ratingCount`) in the live-card branch when a persisted stream exists
 - [x] 2026-03-05: Extended rating-card video preview to side edges on mobile by adding horizontal negative margins (`-mx-5`) with top flush alignment, while keeping desktop layout unchanged (`lg:mx-0 lg:rounded-2xl`) in `src/features/ratings/components/RatingCard.tsx`
 - [x] 2026-03-05: Removed top gap above video preview banner in rating cards on mobile by applying `-mt-5` to preview container (`lg:mt-0` preserved desktop layout) in `src/features/ratings/components/RatingCard.tsx`

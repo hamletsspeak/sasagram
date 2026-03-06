@@ -80,6 +80,22 @@ async function ensureStreamsTable() {
   `);
 
   await appClient.query(`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'streams_started_at_minute_precision_check'
+      ) THEN
+        ALTER TABLE streams
+        ADD CONSTRAINT streams_started_at_minute_precision_check
+        CHECK (started_at = date_trunc('minute', started_at));
+      END IF;
+    END
+    $$;
+  `);
+
+  await appClient.query(`
     CREATE TABLE IF NOT EXISTS twitch_vods (
       id TEXT PRIMARY KEY,
       title TEXT NOT NULL,

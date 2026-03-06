@@ -28,6 +28,15 @@ function parseTwitchDurationToHours(raw) {
   return Math.round((hours + minutes / 60 + seconds / 3600) * 100) / 100;
 }
 
+function toMinuteIso(isoLike) {
+  const parsed = new Date(isoLike);
+  if (Number.isNaN(parsed.getTime())) {
+    throw new Error(`Invalid date: ${isoLike}`);
+  }
+  parsed.setSeconds(0, 0);
+  return parsed.toISOString();
+}
+
 async function getAccessToken() {
   if (!TWITCH_CLIENT_ID || !TWITCH_CLIENT_SECRET) {
     throw new Error("TWITCH_CLIENT_ID/TWITCH_CLIENT_SECRET не заданы");
@@ -147,7 +156,7 @@ async function main() {
           title = COALESCE(EXCLUDED.title, streams.title),
           stream_url = COALESCE(EXCLUDED.stream_url, streams.stream_url)
       `,
-      [vod.created_at, durationHours, vod.title ?? null, vod.url ?? null]
+      [toMinuteIso(vod.created_at), durationHours, vod.title ?? null, vod.url ?? null]
     );
 
     inserted += 1;

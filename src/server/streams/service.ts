@@ -2,6 +2,11 @@ import { getDbPool } from "@/server/db/pool";
 import { listStreams, upsertStream, upsertStreams } from "@/server/streams/repository";
 import { CreateStreamBody, NormalizedStreamInput } from "@/server/streams/types";
 
+function toMinutePrecision(date: Date): Date {
+  date.setSeconds(0, 0);
+  return date;
+}
+
 export function normalizeStreamInput(body: CreateStreamBody):
   | { ok: true; value: NormalizedStreamInput }
   | { ok: false; error: string } {
@@ -21,7 +26,7 @@ export function normalizeStreamInput(body: CreateStreamBody):
   return {
     ok: true,
     value: {
-      startedAtIso: startedAt.toISOString(),
+      startedAtIso: toMinutePrecision(startedAt).toISOString(),
       durationHours: body.durationHours,
       title: typeof body.title === "string" ? body.title.trim() || null : null,
       streamUrl: typeof body.streamUrl === "string" ? body.streamUrl.trim() || null : null,

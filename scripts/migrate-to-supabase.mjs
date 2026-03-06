@@ -66,7 +66,17 @@ async function run() {
       const insertSql = `INSERT INTO ${table} (${quotedColumns}) VALUES (${placeholders})${conflictClause}`;
 
       for (const row of rows) {
-        const values = columns.map((column) => row[column]);
+        const values = columns.map((column) => {
+          if (table === "streams" && column === "started_at") {
+            const parsed = new Date(row[column]);
+            if (!Number.isNaN(parsed.getTime())) {
+              parsed.setSeconds(0, 0);
+              return parsed.toISOString();
+            }
+          }
+
+          return row[column];
+        });
         await target.query(insertSql, values);
       }
 
