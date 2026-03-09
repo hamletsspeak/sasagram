@@ -5,7 +5,6 @@ import { memo, Suspense, startTransition, useEffect, useMemo, useRef, useState }
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Lenis from "lenis";
-import SlotCounter from "react-slot-counter";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, useGLTF } from "@react-three/drei";
 import { Box3, MathUtils, Vector3, type Group } from "three";
@@ -42,7 +41,6 @@ const SCENE_TWO_TO_THREE_TRANSITION_OVERLAP = 0;
 const SCENE_TWO_TO_THREE_FADE_IN_START_ALPHA = 1;
 const PROGRESS_STATE_EPSILON = 0.002;
 const PROGRESS_STATE_PRECISION = 1000;
-const SLOT_SEPARATOR_CHARACTERS = [",", " ", "\u00A0"];
 const SCENE_THREE_POEM_LINES = [
   "Тихий аквариум.",
   "Медленно движется вода.",
@@ -268,27 +266,67 @@ useGLTF.preload("/assets/3d/brain_hologram.glb");
 const SceneFourFollowersCounter = memo(function SceneFourFollowersCounter({
   value,
 }: {
-  value: string | null;
+  value: number | null;
 }) {
+  const formatter = useMemo(() => new Intl.NumberFormat("ru-RU"), []);
+  const [animatedValue, setAnimatedValue] = useState<number | null>(value);
+  const previousTargetRef = useRef<number | null>(value);
+
+  useEffect(() => {
+    if (value === null) {
+      setAnimatedValue(null);
+      previousTargetRef.current = null;
+      return;
+    }
+
+    const from = previousTargetRef.current ?? value;
+    if (from === value) {
+      setAnimatedValue(value);
+      previousTargetRef.current = value;
+      return;
+    }
+
+    const durationMs = 1100;
+    const startAt = performance.now();
+    let rafId = 0;
+
+    const frame = (now: number) => {
+      const progress = clamp01((now - startAt) / durationMs);
+      const eased = 1 - (1 - progress) ** 3;
+      const nextValue = Math.round(from + (value - from) * eased);
+      setAnimatedValue(nextValue);
+      if (progress < 1) {
+        rafId = window.requestAnimationFrame(frame);
+        return;
+      }
+      previousTargetRef.current = value;
+    };
+
+    rafId = window.requestAnimationFrame(frame);
+    return () => {
+      if (rafId) {
+        window.cancelAnimationFrame(rafId);
+      }
+    };
+  }, [value]);
+
+  const renderedValue = animatedValue === null ? null : formatter.format(animatedValue);
+
   return (
     <p className={styles.sceneFourFollowersValue}>
-      {value === null ? (
+      {renderedValue === null ? (
         "..."
       ) : (
-        <SlotCounter
-          value={value}
-          direction="bottom-up"
-          duration={1.1}
-          speed={1.5}
-          delay={0.08}
-          animateUnchanged={false}
-          sequentialAnimationMode
-          useMonospaceWidth
-          separatorCharacters={SLOT_SEPARATOR_CHARACTERS}
-          containerClassName={styles.sceneFourFollowersCounter}
-          charClassName={styles.sceneFourFollowersCounterChar}
-          separatorClassName={styles.sceneFourFollowersCounterSeparator}
-        />
+        <span className={styles.sceneFourFollowersCounter} aria-label={`${renderedValue}`}>
+          {Array.from(renderedValue).map((char, index) => (
+            <span
+              key={`followers-char-${index}`}
+              className={/\d/u.test(char) ? styles.sceneFourFollowersCounterChar : styles.sceneFourFollowersCounterSeparator}
+            >
+              {char}
+            </span>
+          ))}
+        </span>
       )}
     </p>
   );
@@ -322,10 +360,6 @@ export default function CinematicStorytelling() {
   const [sceneFourFollowersCount, setSceneFourFollowersCount] = useState<number | null>(null);
   const progressRef = useRef(progress);
   const activeSceneRef = useRef(activeScene);
-  const sceneFourFollowersDisplay = useMemo(() => {
-    if (sceneFourFollowersCount === null) return null;
-    return new Intl.NumberFormat("ru-RU").format(sceneFourFollowersCount);
-  }, [sceneFourFollowersCount]);
   const sceneTwoTerminalLinesRef = useRef<string[]>([]);
   const sceneTwoLoggedCommandsRef = useRef<Set<string>>(new Set());
   const terminalTimersRef = useRef<number[]>([]);
@@ -1190,7 +1224,7 @@ export default function CinematicStorytelling() {
                   {index === 3 ? (
                     <div className={styles.sceneFourFollowers} aria-live="polite">
                       <p className={styles.sceneFourFollowersLabel}>Фолловеры Twitch</p>
-                      <SceneFourFollowersCounter value={sceneFourFollowersDisplay} />
+                      <SceneFourFollowersCounter value={sceneFourFollowersCount} />
                     </div>
                   ) : null}
                   {index === 3 ? (

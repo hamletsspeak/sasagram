@@ -8,6 +8,7 @@ The template is now a fully functional personal business card website for the st
 
 ## Recently Completed
 
+- [x] 2026-03-09: Fixed client-side crash in Scene 4 followers animation in `src/features/storytelling/components/CinematicStorytelling.tsx`: removed `react-slot-counter` usage from Story counter rendering and replaced it with a local `requestAnimationFrame`-driven animated numeric counter (cubic ease-out) that formats digits with `Intl.NumberFormat("ru-RU")`, preserving visual increment behavior while eliminating third-party runtime instability.
 - [x] 2026-03-09: Refined contacts text hierarchy and live badge colors in `src/components/Contact.tsx`: removed all descriptive subtitle lines under top contact headings (keeping only link/value line), restored email value under the heading (`VOTVOPROS.13@yandex.ru`), and changed `LIVE` status badge color in `Смотреть также` cards to red.
 - [x] 2026-03-09: Updated new contacts assets/text in `src/components/Contact.tsx`: Instagram card now uses local icon `/assets/logo/inst_logo.jpg`, email card now uses `/assets/icons/yandex_logo.png`, and email title changed to `Почта для жалоб или серьезных вопросов` with no subtext rendered under that heading.
 - [x] 2026-03-09: Added two new contact links in `src/components/Contact.tsx`: Instagram (`https://www.instagram.com/gleb0413`) and complaint/serious-questions email (`mailto:VOTVOPROS.13@yandex.ru`), and updated the top contacts layout to a 6-card adaptive grid (`2 cols mobile / 3 cols desktop`) as part of a refreshed design.
