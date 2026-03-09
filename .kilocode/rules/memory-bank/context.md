@@ -8,6 +8,7 @@ The template is now a fully functional personal business card website for the st
 
 ## Recently Completed
 
+- [x] 2026-03-09: Fixed tab branding update in `src/app/layout.tsx` and app icon assets: tab title changed to `SASASITE`; favicon sources now point to app-level `src/app/icon.png` and `src/app/apple-icon.png` (copied from `public/assets/logo/лого_сайт.png`) with explicit `<head>` icon links and version query to bypass browser cache.
 - [x] 2026-03-09: Refined footer support CTA visual weight in `src/components/Footer.tsx`: moved Telegram support/proposals link to the right edge and simplified it to low-contrast plain text (no border/background) so it does not draw attention.
 - [x] 2026-03-09: Updated footer CTA wording in `src/components/Footer.tsx`: the only footer button now explicitly says `Telegram тех. поддержки и предложки для сайта`.
 - [x] 2026-03-09: Reworked footer to a minimal contact-only layout in `src/components/Footer.tsx`: removed all branding/copyright/tag text and left only a single clickable Telegram button linking to `https://t.me/haworking`.

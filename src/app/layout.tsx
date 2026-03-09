@@ -11,20 +11,20 @@ const ubuntu = Ubuntu({
 });
 
 export const metadata: Metadata = {
-  title: "SASAVOT — Стример & Контент-мейкер",
+  title: "SASASITE",
   description:
     "Официальный сайт стримера SASAVOT. Прямые эфиры на Twitch и YouTube, игровой контент, коллаборации и многое другое.",
   keywords: ["SASAVOT", "стример", "twitch", "youtube", "стрим", "игры", "контент"],
   authors: [{ name: "SASAVOT" }],
   openGraph: {
-    title: "SASAVOT — Стример & Контент-мейкер",
+    title: "SASASITE",
     description: "Официальный сайт стримера SASAVOT. Прямые эфиры, игровой контент и коллаборации.",
     type: "website",
   },
   icons: {
-    icon: "/assets/logo/%D0%BB%D0%BE%D0%B3%D0%BE_%D1%81%D0%B0%D0%B9%D1%82.png",
-    shortcut: "/assets/logo/%D0%BB%D0%BE%D0%B3%D0%BE_%D1%81%D0%B0%D0%B9%D1%82.png",
-    apple: "/assets/logo/%D0%BB%D0%BE%D0%B3%D0%BE_%D1%81%D0%B0%D0%B9%D1%82.png",
+    icon: "/icon.png",
+    shortcut: "/icon.png",
+    apple: "/apple-icon.png",
   },
 };
 
@@ -41,6 +41,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru" className="scroll-smooth">
+      <head>
+        <link rel="icon" type="image/png" href="/icon.png?v=2" />
+        <link rel="shortcut icon" type="image/png" href="/icon.png?v=2" />
+        <link rel="apple-touch-icon" href="/apple-icon.png?v=2" />
+      </head>
       <body
         className={`${ubuntu.variable} antialiased`}
       >
