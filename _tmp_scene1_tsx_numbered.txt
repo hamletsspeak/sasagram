@@ -1,0 +1,667 @@
+1	"use client";
+2	
+3	import Link from "next/link";
+4	import { useEffect, useRef, useState } from "react";
+5	import gsap from "gsap";
+6	import { ScrollTrigger } from "gsap/ScrollTrigger";
+7	import Lenis from "lenis";
+8	import { STORY_SCENES } from "@/features/storytelling/data/scenes";
+9	import styles from "./CinematicStorytelling.module.css";
+10	
+11	gsap.registerPlugin(ScrollTrigger);
+12	
+13	const SCENE_SCROLL_LENGTH_MULTIPLIER = 2;
+14	const SCENE_SCROLL_WEIGHTS = [3.6, 1, 1, 1];
+15	const SCENE_TEXT_TRAVEL_DURATION = 1;
+16	const SCENE_TEXT_EDGE_PADDING = 36;
+17	const SCENE_TEXT_UNDER_MEDIA_SHIFT_Y = 150;
+18	const SCENE_CUP_HOLD_DURATION = 0.75;
+19	const SCENE_SWAP_MEDIA_HOLD_DURATION = 0.45;
+20	const SCENE_TEXT_EDGE_EXIT_LEAD = 0.12;
+21	const SCENE_PARALLAX_START_SCALE = 1.06;
+22	const SCENE_PARALLAX_END_SCALE = 1;
+23	const SCENE_PARALLAX_START_Y = 1.5;
+24	const SCENE_PARALLAX_END_Y = -1.5;
+25	const SCENE_PARALLAX_SCRUB = 1.35;
+26	
+27	function getNumericStylePx(node: HTMLElement, prop: "left" | "right"): number {
+28	  if (typeof window === "undefined") return 0;
+29	  const raw = window.getComputedStyle(node).getPropertyValue(prop).trim();
+30	  const value = Number.parseFloat(raw);
+31	  return Number.isNaN(value) ? 0 : value;
+32	}
+33	
+34	export default function CinematicStorytelling() {
+35	  const rootRef = useRef<HTMLElement | null>(null);
+36	  const viewportRef = useRef<HTMLDivElement | null>(null);
+37	  const sceneRefs = useRef<Array<HTMLElement | null>>([]);
+38	  const contentRefs = useRef<Array<HTMLDivElement | null>>([]);
+39	  const keywordRefs = useRef<Array<HTMLParagraphElement | null>>([]);
+40	  const bgRefs = useRef<Array<HTMLDivElement | null>>([]);
+41	  const bannerRefs = useRef<Array<HTMLParagraphElement | null>>([]);
+42	  const secondaryBannerRefs = useRef<Array<HTMLParagraphElement | null>>([]);
+43	  const tertiaryBannerRefs = useRef<Array<HTMLParagraphElement | null>>([]);
+44	  const quaternaryBannerRefs = useRef<Array<HTMLParagraphElement | null>>([]);
+45	  const cupRefs = useRef<Array<HTMLImageElement | null>>([]);
+46	  const cupSwapVideoRefs = useRef<Array<HTMLVideoElement | null>>([]);
+47	  const cupSwapDimRefs = useRef<Array<HTMLDivElement | null>>([]);
+48	
+49	  const [progress, setProgress] = useState(0);
+50	  const [activeScene, setActiveScene] = useState(0);
+51	  const [isStoryActive, setIsStoryActive] = useState(false);
+52	  const sceneStepPositions = (() => {
+53	    const sceneWeights = STORY_SCENES.map((_, index) => SCENE_SCROLL_WEIGHTS[index] ?? 1);
+54	    if (sceneWeights.length <= 1) return [0];
+55	    const startPositions = sceneWeights.reduce<number[]>((acc, _, index) => {
+56	      if (index === 0) {
+57	        acc.push(0);
+58	        return acc;
+59	      }
+60	      acc.push(acc[index - 1] + sceneWeights[index - 1]);
+61	      return acc;
+62	    }, []);
+63	    const maxStart = startPositions[startPositions.length - 1] || 1;
+64	    return startPositions.map((start, index) => {
+65	      if (index === startPositions.length - 1) return 100;
+66	      return (start / maxStart) * 100;
+67	    });
+68	  })();
+69	
+70	  useEffect(() => {
+71	    const root = rootRef.current;
+72	    const viewport = viewportRef.current;
+73	    if (!root || !viewport) return;
+74	
+75	    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+76	    if (reduceMotion) {
+77	      return;
+78	    }
+79	
+80	    const mm = gsap.matchMedia();
+81	    let lenis: Lenis | null = null;
+82	    let rafId = 0;
+83	
+84	    mm.add("(min-width: 1024px)", () => {
+85	      const scenes = sceneRefs.current.filter(Boolean) as HTMLElement[];
+86	      const contents = contentRefs.current;
+87	      const keywords = keywordRefs.current;
+88	      const bgs = bgRefs.current;
+89	      const banners = bannerRefs.current;
+90	      const secondaryBanners = secondaryBannerRefs.current;
+91	      const tertiaryBanners = tertiaryBannerRefs.current;
+92	      const quaternaryBanners = quaternaryBannerRefs.current;
+93	      const cups = cupRefs.current;
+94	      const cupSwapVideos = cupSwapVideoRefs.current;
+95	      const cupSwapDims = cupSwapDimRefs.current;
+96	      const contentNodes = contents.filter(Boolean) as HTMLDivElement[];
+97	      const keywordNodes = keywords.filter(Boolean) as HTMLParagraphElement[];
+98	      const bgNodes = bgs.filter(Boolean) as HTMLDivElement[];
+99	      const bannerNodes = banners.filter(Boolean) as HTMLParagraphElement[];
+100	      const secondaryBannerNodes = secondaryBanners.filter(Boolean) as HTMLParagraphElement[];
+101	      const tertiaryBannerNodes = tertiaryBanners.filter(Boolean) as HTMLParagraphElement[];
+102	      const quaternaryBannerNodes = quaternaryBanners.filter(Boolean) as HTMLParagraphElement[];
+103	      const cupNodes = cups.filter(Boolean) as HTMLImageElement[];
+104	      const cupSwapVideoNodes = cupSwapVideos.filter(Boolean) as HTMLVideoElement[];
+105	      const cupSwapDimNodes = cupSwapDims.filter(Boolean) as HTMLDivElement[];
+106	      if (!scenes.length) return undefined;
+107	
+108	      lenis = new Lenis({
+109	        duration: 1.15,
+110	        smoothWheel: true,
+111	        wheelMultiplier: 0.95,
+112	        touchMultiplier: 1,
+113	      });
+114	
+115	      const updateOnLenis = () => ScrollTrigger.update();
+116	      lenis.on("scroll", updateOnLenis);
+117	
+118	      const raf = (time: number) => {
+119	        lenis?.raf(time);
+120	        rafId = window.requestAnimationFrame(raf);
+121	      };
+122	      rafId = window.requestAnimationFrame(raf);
+123	
+124	      const ctx = gsap.context(() => {
+125	        gsap.set(scenes, { autoAlpha: 0, yPercent: 0, scale: 1, transformOrigin: "center center" });
+126	        gsap.set(contentNodes, { autoAlpha: 0, y: 34 });
+127	        gsap.set(keywordNodes, { autoAlpha: 0, y: 26, scale: 1.05 });
+128	        gsap.set(bgNodes, {
+129	          scale: SCENE_PARALLAX_START_SCALE,
+130	          yPercent: SCENE_PARALLAX_START_Y,
+131	          transformOrigin: "center center",
+132	          force3D: true,
+133	        });
+134	        gsap.set(bannerNodes, { autoAlpha: 1, xPercent: 0, x: -2000 });
+135	        gsap.set(secondaryBannerNodes, { autoAlpha: 0, x: 2000 });
+136	        gsap.set(tertiaryBannerNodes, { autoAlpha: 0 });
+137	        gsap.set(quaternaryBannerNodes, { autoAlpha: 0, y: 16 });
+138	        gsap.set(cupNodes, { autoAlpha: 0, scale: 0.9, y: 20 });
+139	        gsap.set(cupSwapVideoNodes, { autoAlpha: 0, scale: 0.9, y: 20 });
+140	        gsap.set(cupSwapDimNodes, { autoAlpha: 0 });
+141	        gsap.set(scenes[0], { autoAlpha: 1, yPercent: 0, scale: 1 });
+142	
+143	        const sceneWeights = STORY_SCENES.map((_, index) => SCENE_SCROLL_WEIGHTS[index] ?? 1);
+144	        const totalWeight = sceneWeights.reduce((sum, weight) => sum + weight, 0);
+145	        const sceneThresholds = sceneWeights.map((_, index) => {
+146	          const completedWeight = sceneWeights.slice(0, index + 1).reduce((sum, weight) => sum + weight, 0);
+147	          return completedWeight / totalWeight;
+148	        });
+149	
+150	        const sceneStartAt = sceneWeights.reduce<number[]>((acc, weight, index) => {
+151	          if (index === 0) {
+152	            acc.push(0);
+153	            return acc;
+154	          }
+155	          acc.push(acc[index - 1] + sceneWeights[index - 1]);
+156	          return acc;
+157	        }, []);
+158	
+159	        const timeline = gsap.timeline({
+160	          defaults: { ease: "none", autoRound: false },
+161	          scrollTrigger: {
+162	            trigger: root,
+163	            pin: viewport,
+164	            start: "top top",
+165	            // Main pacing control: increase multiplier for longer cinematic storytelling.
+166	            end: `+=${window.innerHeight * STORY_SCENES.length * SCENE_SCROLL_LENGTH_MULTIPLIER}`,
+167	            // Scrub smoothing controls how "inertial" scene transitions feel.
+168	            scrub: SCENE_PARALLAX_SCRUB,
+169	            anticipatePin: 1,
+170	            invalidateOnRefresh: true,
+171	            onToggle: (self) => setIsStoryActive(self.isActive),
+172	            onUpdate: (self) => {
+173	              const nextProgress = self.progress;
+174	              const nextActive = sceneThresholds.findIndex((threshold) => self.progress < threshold);
+175	              setProgress(nextProgress);
+176	              setActiveScene((prev) =>
+177	                prev === (nextActive === -1 ? STORY_SCENES.length - 1 : nextActive)
+178	                  ? prev
+179	                  : nextActive === -1
+180	                    ? STORY_SCENES.length - 1
+181	                    : nextActive,
+182	              );
+183	            },
+184	          },
+185	        });
+186	
+187	        const transitionDuration = 0.34;
+188	        for (let i = 0; i < scenes.length; i += 1) {
+189	          const scene = scenes[i];
+190	          const content = contents[i];
+191	          const keyword = keywords[i];
+192	          const bg = bgs[i];
+193	          const banner = banners[i];
+194	          const secondaryBanner = secondaryBanners[i];
+195	          const tertiaryBanner = tertiaryBanners[i];
+196	          const quaternaryBanner = quaternaryBanners[i];
+197	          const cup = cups[i];
+198	          const cupSwapVideo = cupSwapVideos[i];
+199	          const cupSwapDim = cupSwapDims[i];
+200	          const at = sceneStartAt[i];
+201	
+202	          if (i > 0) {
+203	            const prevScene = scenes[i - 1];
+204	            const prevContent = contents[i - 1];
+205	            const prevKeyword = keywords[i - 1];
+206	            const prevBanner = banners[i - 1];
+207	            const prevSecondaryBanner = secondaryBanners[i - 1];
+208	            const prevTertiaryBanner = tertiaryBanners[i - 1];
+209	            const prevQuaternaryBanner = quaternaryBanners[i - 1];
+210	            const prevCup = cups[i - 1];
+211	            const prevCupSwapVideo = cupSwapVideos[i - 1];
+212	            const prevCupSwapDim = cupSwapDims[i - 1];
+213	
+214	            timeline.to(
+215	              prevScene,
+216	              {
+217	                autoAlpha: 0,
+218	                yPercent: -102,
+219	                duration: transitionDuration,
+220	              },
+221	              at,
+222	            );
+223	
+224	            if (prevContent) {
+225	              timeline.to(
+226	                prevContent,
+227	                {
+228	                  autoAlpha: 0,
+229	                  y: -26,
+230	                  duration: transitionDuration * 0.7,
+231	                },
+232	                at,
+233	              );
+234	            }
+235	
+236	            if (prevKeyword) {
+237	              timeline.to(
+238	                prevKeyword,
+239	                {
+240	                  autoAlpha: 0,
+241	                  y: -18,
+242	                  duration: transitionDuration * 0.7,
+243	                },
+244	                at,
+245	              );
+246	            }
+247	
+248	            if (prevBanner) {
+249	              timeline.to(
+250	                prevBanner,
+251	                {
+252	                  autoAlpha: 1,
+253	                  x: () => prevScene.clientWidth + prevBanner.offsetWidth + 80,
+254	                  duration: transitionDuration * 0.75,
+255	                },
+256	                at - SCENE_TEXT_EDGE_EXIT_LEAD,
+257	              );
+258	            }
+259	
+260	            if (prevSecondaryBanner) {
+261	              timeline.to(
+262	                prevSecondaryBanner,
+263	                {
+264	                  autoAlpha: 1,
+265	                  x: () => -(prevSecondaryBanner.offsetWidth + 80),
+266	                  duration: transitionDuration * 0.75,
+267	                },
+268	                at - SCENE_TEXT_EDGE_EXIT_LEAD,
+269	              );
+270	            }
+271	
+272	            if (prevTertiaryBanner) {
+273	              timeline.to(
+274	                prevTertiaryBanner,
+275	                {
+276	                  autoAlpha: 0,
+277	                  duration: transitionDuration * 0.45,
+278	                },
+279	                at - SCENE_TEXT_EDGE_EXIT_LEAD,
+280	              );
+281	            }
+282	
+283	            if (prevQuaternaryBanner) {
+284	              timeline.to(
+285	                prevQuaternaryBanner,
+286	                {
+287	                  autoAlpha: 0,
+288	                  duration: transitionDuration * 0.45,
+289	                },
+290	                at - SCENE_TEXT_EDGE_EXIT_LEAD,
+291	              );
+292	            }
+293	
+294	            if (prevCup) {
+295	              timeline.to(
+296	                prevCup,
+297	                {
+298	                  autoAlpha: 0,
+299	                  scale: 0.9,
+300	                  y: 20,
+301	                  duration: transitionDuration * 0.5,
+302	                },
+303	                at,
+304	              );
+305	            }
+306	
+307	            if (prevCupSwapVideo) {
+308	              timeline.to(
+309	                prevCupSwapVideo,
+310	                {
+311	                  autoAlpha: 0,
+312	                  scale: 0.9,
+313	                  y: 20,
+314	                  duration: transitionDuration * 0.5,
+315	                },
+316	                at,
+317	              );
+318	            }
+319	
+320	            if (prevCupSwapDim) {
+321	              timeline.to(
+322	                prevCupSwapDim,
+323	                {
+324	                  autoAlpha: 0,
+325	                  duration: transitionDuration * 0.5,
+326	                },
+327	                at,
+328	              );
+329	            }
+330	
+331	            timeline.fromTo(
+332	              scene,
+333	              { autoAlpha: 1, yPercent: 102, scale: 1 },
+334	              {
+335	                autoAlpha: 1,
+336	                yPercent: 0,
+337	                scale: 1,
+338	                duration: transitionDuration,
+339	                immediateRender: false,
+340	              },
+341	              at,
+342	            );
+343	          }
+344	
+345	          if (bg) {
+346	            timeline.fromTo(
+347	              bg,
+348	              {
+349	                scale: SCENE_PARALLAX_START_SCALE,
+350	                yPercent: SCENE_PARALLAX_START_Y,
+351	              },
+352	              {
+353	                scale: SCENE_PARALLAX_END_SCALE,
+354	                yPercent: SCENE_PARALLAX_END_Y,
+355	                duration: (sceneWeights[i] ?? 1) + 0.2,
+356	                immediateRender: false,
+357	                force3D: true,
+358	              },
+359	              at,
+360	            );
+361	          }
+362	
+363	          if (content) {
+364	            timeline.fromTo(
+365	              content,
+366	              { autoAlpha: 0, y: 36 },
+367	              { autoAlpha: 1, y: 0, duration: 0.35 },
+368	              at + 0.1,
+369	            );
+370	          }
+371	
+372	          if (keyword) {
+373	            timeline.fromTo(
+374	              keyword,
+375	              { autoAlpha: 0, y: 22, scale: 1.06 },
+376	              { autoAlpha: 0.2, y: 0, scale: 1, duration: 0.36 },
+377	              at + 0.14,
+378	            );
+379	          }
+380	
+381	          if (banner) {
+382	            timeline.fromTo(
+383	              banner,
+384	              {
+385	                autoAlpha: 1,
+386	                x: () => -(banner.offsetWidth + 120),
+387	              },
+388	              {
+389	                autoAlpha: 1,
+390	                x: () => {
+391	                  const sceneWidth = scene.clientWidth;
+392	                  const bannerLeft = getNumericStylePx(banner, "left");
+393	                  return Math.max(
+394	                    sceneWidth - banner.offsetWidth - bannerLeft - SCENE_TEXT_EDGE_PADDING,
+395	                    0,
+396	                  );
+397	                },
+398	                duration: SCENE_TEXT_TRAVEL_DURATION,
+399	              },
+400	              at,
+401	            );
+402	          }
+403	
+404	          if (secondaryBanner) {
+405	            timeline.fromTo(
+406	              secondaryBanner,
+407	              {
+408	                autoAlpha: 1,
+409	                x: () => scene.clientWidth + secondaryBanner.offsetWidth + 80,
+410	              },
+411	              {
+412	                autoAlpha: 1,
+413	                x: () => {
+414	                  const secondaryLeft = getNumericStylePx(secondaryBanner, "left");
+415	                  return Math.max(SCENE_TEXT_EDGE_PADDING - secondaryLeft, 0);
+416	                },
+417	                duration: SCENE_TEXT_TRAVEL_DURATION,
+418	              },
+419	              at,
+420	            );
+421	          }
+422	
+423	          if (tertiaryBanner && i === 0) {
+424	            timeline.fromTo(
+425	              tertiaryBanner,
+426	              { autoAlpha: 0 },
+427	              { autoAlpha: 1, duration: 0.28, immediateRender: false },
+428	              at + SCENE_TEXT_TRAVEL_DURATION + 0.02,
+429	            );
+430	          }
+431	
+432	          if (i === 0) {
+433	            const revealAt = at + SCENE_TEXT_TRAVEL_DURATION + 0.34;
+434	
+435	            if (cup) {
+436	              timeline.fromTo(
+437	                cup,
+438	                { autoAlpha: 0, scale: 0.9, y: 20 },
+439	                { autoAlpha: 0.92, scale: 1, y: 0, duration: 0.36, immediateRender: false },
+440	                revealAt,
+441	              );
+442	            }
+443	
+444	            if (quaternaryBanner) {
+445	              timeline.fromTo(
+446	                quaternaryBanner,
+447	                { autoAlpha: 0, y: 16 },
+448	                { autoAlpha: 1, y: 0, duration: 0.32, immediateRender: false },
+449	                revealAt + 0.04,
+450	              );
+451	            }
+452	
+453	            const swapAt = revealAt + 0.42 + SCENE_CUP_HOLD_DURATION;
+454	
+455	            if (cup) {
+456	              timeline.to(
+457	                cup,
+458	                { autoAlpha: 0, scale: 0.9, y: 20, duration: 0.34 },
+459	                swapAt,
+460	              );
+461	            }
+462	
+463	            if (cupSwapVideo) {
+464	              timeline.fromTo(
+465	                cupSwapVideo,
+466	                { autoAlpha: 0, scale: 0.9, y: 20 },
+467	                { autoAlpha: 0.94, scale: 1, y: 0, duration: 0.34, immediateRender: false },
+468	                swapAt,
+469	              );
+470	            }
+471	
+472	            if (cupSwapDim) {
+473	              timeline.fromTo(
+474	                cupSwapDim,
+475	                { autoAlpha: 0 },
+476	                { autoAlpha: 0.62, duration: 0.34, immediateRender: false },
+477	                swapAt,
+478	              );
+479	            }
+480	
+481	            if (tertiaryBanner) {
+482	              timeline.to(
+483	                tertiaryBanner,
+484	                { y: SCENE_TEXT_UNDER_MEDIA_SHIFT_Y, duration: 0.34 },
+485	                swapAt,
+486	              );
+487	            }
+488	
+489	            if (quaternaryBanner) {
+490	              timeline.to(
+491	                quaternaryBanner,
+492	                { y: SCENE_TEXT_UNDER_MEDIA_SHIFT_Y, duration: 0.34 },
+493	                swapAt,
+494	              );
+495	            }
+496	
+497	            if (cupSwapVideo) {
+498	              // Hold the second media on screen a bit longer before Scene 02 starts.
+499	              timeline.to(
+500	                {},
+501	                { duration: SCENE_SWAP_MEDIA_HOLD_DURATION },
+502	                swapAt + 0.34,
+503	              );
+504	            }
+505	          }
+506	        }
+507	      }, root);
+508	
+509	      if (typeof document !== "undefined" && "fonts" in document) {
+510	        void document.fonts.ready.then(() => {
+511	          ScrollTrigger.refresh();
+512	        });
+513	      }
+514	
+515	      return () => {
+516	        ctx.revert();
+517	        if (rafId) window.cancelAnimationFrame(rafId);
+518	        lenis?.destroy();
+519	        lenis = null;
+520	      };
+521	    });
+522	
+523	    return () => {
+524	      mm.revert();
+525	      if (rafId) window.cancelAnimationFrame(rafId);
+526	      lenis?.destroy();
+527	      lenis = null;
+528	    };
+529	  }, []);
+530	
+531	  return (
+532	    <section id="about" ref={rootRef} className={styles.root}>
+533	      <div ref={viewportRef} className={styles.viewport}>
+534	        <div className={styles.sceneStack}>
+535	          {STORY_SCENES.map((scene, index) => (
+536	            <article
+537	              key={scene.id}
+538	              ref={(node) => {
+539	                sceneRefs.current[index] = node;
+540	              }}
+541	              className={`${styles.scene} ${index === activeScene ? styles.sceneActive : ""}`}
+542	            >
+543	              <div
+544	                ref={(node) => {
+545	                  bgRefs.current[index] = node;
+546	                }}
+547	                className={styles.sceneBg}
+548	                style={{ background: scene.gradient }}
+549	                aria-hidden="true"
+550	              >
+551	                {scene.bgVideoSrc ? (
+552	                  <video className={styles.sceneVideo} autoPlay loop muted playsInline preload="metadata">
+553	                    <source src={encodeURI(scene.bgVideoSrc)} type="video/webm" />
+554	                  </video>
+555	                ) : null}
+556	              </div>
+557	              {index !== 0 ? (
+558	                <div
+559	                  ref={(node) => {
+560	                    contentRefs.current[index] = node;
+561	                  }}
+562	                  className={styles.content}
+563	                >
+564	                  <p className={styles.eyebrow}>{scene.eyebrow}</p>
+565	                  <h2 className={styles.title}>{scene.title}</h2>
+566	                  <p className={styles.description}>{scene.description}</p>
+567	                  {scene.cta ? (
+568	                    <Link className={styles.cta} href={scene.cta.href} prefetch={false}>
+569	                      {scene.cta.label}
+570	                    </Link>
+571	                  ) : null}
+572	                </div>
+573	              ) : null}
+574	              <p
+575	                ref={(node) => {
+576	                  keywordRefs.current[index] = node;
+577	                }}
+578	                className={styles.keyword}
+579	              >
+580	                {scene.keyword}
+581	              </p>
+582	              {index === 0 ? (
+583	                <>
+584	                  <p
+585	                    ref={(node) => {
+586	                      bannerRefs.current[index] = node;
+587	                    }}
+588	                    className={styles.scrollBanner}
+589	                  >
+590	                    ВЕЛИКИЙ ХОУБИСТ
+591	                  </p>
+592	                  <p
+593	                    ref={(node) => {
+594	                      secondaryBannerRefs.current[index] = node;
+595	                    }}
+596	                    className={styles.scrollBannerSecondary}
+597	                  >
+598	                    Мэр города Курска
+599	                  </p>
+600	                  <p
+601	                    ref={(node) => {
+602	                      tertiaryBannerRefs.current[index] = node;
+603	                    }}
+604	                    className={styles.scrollBannerTertiary}
+605	                  >
+606	                    SLAY KING
+607	                  </p>
+608	                  <img
+609	                    ref={(node) => {
+610	                      cupRefs.current[index] = node;
+611	                    }}
+612	                    className={styles.cupBackdrop}
+613	                    src={encodeURI("/assets/icons/cup.png")}
+614	                    alt=""
+615	                    aria-hidden="true"
+616	                  />
+617	                  <video
+618	                    ref={(node) => {
+619	                      cupSwapVideoRefs.current[index] = node;
+620	                    }}
+621	                    className={styles.cupBackdropSwap}
+622	                    autoPlay
+623	                    loop
+624	                    muted
+625	                    playsInline
+626	                    preload="metadata"
+627	                    aria-hidden="true"
+628	                  >
+629	                    <source src={encodeURI("/assets/bg/глеб_слей_сцена1.webm")} type="video/webm" />
+630	                  </video>
+631	                  <div
+632	                    ref={(node) => {
+633	                      cupSwapDimRefs.current[index] = node;
+634	                    }}
+635	                    className={styles.cupSwapDim}
+636	                    aria-hidden="true"
+637	                  />
+638	                  <p
+639	                    ref={(node) => {
+640	                      quaternaryBannerRefs.current[index] = node;
+641	                    }}
+642	                    className={styles.scrollBannerQuaternary}
+643	                  >
+644	                    2025
+645	                  </p>
+646	                </>
+647	              ) : null}
+648	            </article>
+649	          ))}
+650	        </div>
+651	      </div>
+652	
+653	      <div className={`${styles.progressDock} ${isStoryActive ? styles.progressDockVisible : ""}`} aria-hidden="true">
+654	        <div className={styles.progressTrack}>
+655	          <div className={styles.progressFill} style={{ width: `${progress * 100}%` }} />
+656	          {STORY_SCENES.map((scene, index) => (
+657	            <span
+658	              key={scene.id}
+659	              className={`${styles.progressStep} ${index <= activeScene ? styles.progressStepActive : ""}`}
+660	              style={{ left: `${sceneStepPositions[index] ?? 0}%` }}
+661	            />
+662	          ))}
+663	        </div>
+664	      </div>
+665	    </section>
+666	  );
+667	}

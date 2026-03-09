@@ -1,0 +1,409 @@
+1	.root {
+2	  position: relative;
+3	  min-height: 100vh;
+4	  --scene-text-3-size: calc(clamp(1rem, 5.6vw, 4.6rem) + 12px);
+5	  --scene-text-4-size: calc(clamp(0.82rem, 4.7vw, 3.9rem) + 8px);
+6	  --scene-text-3-4-gap: 0.5rem;
+7	}
+8	
+9	.viewport {
+10	  position: relative;
+11	  height: 100vh;
+12	  overflow: hidden;
+13	}
+14	
+15	.sceneStack {
+16	  position: relative;
+17	  width: 100%;
+18	  height: 100%;
+19	}
+20	
+21	.scene {
+22	  position: absolute;
+23	  inset: 0;
+24	  z-index: 1;
+25	  display: flex;
+26	  align-items: center;
+27	  justify-content: center;
+28	  overflow: hidden;
+29	  padding: clamp(5.5rem, 11vh, 8rem) clamp(1.25rem, 4vw, 3rem) clamp(3.2rem, 8vh, 5.8rem);
+30	  opacity: 0;
+31	  visibility: hidden;
+32	}
+33	
+34	.sceneActive {
+35	  z-index: 2;
+36	}
+37	
+38	.sceneBg {
+39	  position: absolute;
+40	  inset: 0;
+41	  pointer-events: none;
+42	  will-change: transform, opacity;
+43	  transform: translateZ(0);
+44	  backface-visibility: hidden;
+45	  overflow: hidden;
+46	}
+47	
+48	.sceneVideo {
+49	  width: 100%;
+50	  height: 100%;
+51	  object-fit: cover;
+52	  transform: translateZ(0);
+53	  backface-visibility: hidden;
+54	  will-change: transform;
+55	}
+56	
+57	.content {
+58	  position: relative;
+59	  z-index: 2;
+60	  width: min(1080px, 100%);
+61	  border-radius: 26px;
+62	  border: 1px solid rgba(255, 255, 255, 0.14);
+63	  background: rgba(8, 8, 10, 0.56);
+64	  backdrop-filter: blur(8px);
+65	  box-shadow:
+66	    inset 0 1px 0 rgba(255, 255, 255, 0.17),
+67	    0 28px 52px rgba(0, 0, 0, 0.48);
+68	  padding: clamp(1.3rem, 3.2vw, 3rem);
+69	  will-change: transform, opacity;
+70	}
+71	
+72	.eyebrow {
+73	  font-size: 0.7rem;
+74	  letter-spacing: 0.28em;
+75	  text-transform: uppercase;
+76	  color: rgba(228, 228, 231, 0.72);
+77	}
+78	
+79	.title {
+80	  margin-top: 0.85rem;
+81	  font-size: clamp(2rem, 8vw, 6.2rem);
+82	  line-height: 0.9;
+83	  text-transform: uppercase;
+84	  letter-spacing: -0.03em;
+85	  color: rgba(250, 250, 250, 0.98);
+86	}
+87	
+88	.description {
+89	  margin-top: 0.95rem;
+90	  max-width: 62ch;
+91	  font-size: clamp(1rem, 1.55vw, 1.2rem);
+92	  line-height: 1.55;
+93	  color: rgba(228, 228, 231, 0.88);
+94	}
+95	
+96	.cta {
+97	  margin-top: 1.25rem;
+98	  display: inline-flex;
+99	  align-items: center;
+100	  border-radius: 999px;
+101	  border: 1px solid rgba(255, 255, 255, 0.42);
+102	  padding: 0.56rem 1rem;
+103	  font-size: 0.74rem;
+104	  text-transform: uppercase;
+105	  letter-spacing: 0.12em;
+106	  color: #fff;
+107	  background: rgba(255, 255, 255, 0.08);
+108	  transition: border-color 180ms ease, background-color 180ms ease;
+109	}
+110	
+111	.cta:hover {
+112	  border-color: rgba(255, 255, 255, 0.88);
+113	  background: rgba(255, 255, 255, 0.2);
+114	}
+115	
+116	.keyword {
+117	  position: absolute;
+118	  right: clamp(1rem, 3.4vw, 2rem);
+119	  bottom: clamp(2.8rem, 8vh, 4.8rem);
+120	  margin: 0;
+121	  font-size: clamp(2.5rem, 11vw, 9.8rem);
+122	  letter-spacing: -0.05em;
+123	  line-height: 0.82;
+124	  color: rgba(255, 255, 255, 0.12);
+125	  user-select: none;
+126	  pointer-events: none;
+127	  z-index: 3;
+128	  will-change: transform, opacity;
+129	}
+130	
+131	.scrollBanner {
+132	  position: absolute;
+133	  left: clamp(0.75rem, 1.5vw, 1.5rem);
+134	  top: clamp(0.75rem, 1.5vw, 1.5rem);
+135	  margin: 0;
+136	  font-family: "Audex", "Type Light Sans", sans-serif;
+137	  font-size: calc(clamp(1rem, 5.6vw, 4.6rem) + 12px);
+138	  line-height: 1;
+139	  letter-spacing: -0.04em;
+140	  text-transform: uppercase;
+141	  white-space: nowrap;
+142	  max-width: calc(100% - 3.5rem);
+143	  color: rgba(255, 255, 255, 0.9);
+144	  text-shadow: 0 14px 40px rgba(0, 0, 0, 0.45);
+145	  user-select: none;
+146	  pointer-events: none;
+147	  z-index: 4;
+148	  will-change: transform, opacity;
+149	}
+150	
+151	.scrollBannerSecondary {
+152	  position: absolute;
+153	  left: clamp(0.75rem, 1.5vw, 1.5rem);
+154	  bottom: clamp(0.75rem, 1.8vw, 1.5rem);
+155	  margin: 0;
+156	  font-family: "Audex", "Type Light Sans", sans-serif;
+157	  font-size: calc(clamp(1rem, 5.6vw, 4.6rem) + 12px);
+158	  line-height: 1;
+159	  letter-spacing: -0.04em;
+160	  text-transform: uppercase;
+161	  white-space: nowrap;
+162	  max-width: calc(100% - 3.5rem);
+163	  color: rgba(255, 255, 255, 0.9);
+164	  text-shadow: 0 14px 40px rgba(0, 0, 0, 0.45);
+165	  user-select: none;
+166	  pointer-events: none;
+167	  z-index: 4;
+168	  will-change: transform, opacity;
+169	}
+170	
+171	.scrollBannerTertiary {
+172	  position: absolute;
+173	  left: 50%;
+174	  top: 50%;
+175	  margin: 0;
+176	  transform: translate(-50%, -50%);
+177	  font-family: "Hassian Uncial", "Type Light Sans", sans-serif;
+178	  font-size: var(--scene-text-3-size);
+179	  line-height: 1;
+180	  letter-spacing: -0.04em;
+181	  text-transform: uppercase;
+182	  white-space: nowrap;
+183	  max-width: calc(100% - 3.5rem);
+184	  color: rgba(255, 255, 255, 0.9);
+185	  text-shadow: 0 14px 40px rgba(0, 0, 0, 0.45);
+186	  user-select: none;
+187	  pointer-events: none;
+188	  z-index: 5;
+189	  will-change: transform, opacity;
+190	}
+191	
+192	.scrollBannerQuaternary {
+193	  position: absolute;
+194	  left: 50%;
+195	  top: calc(50% + (var(--scene-text-3-size) / 2) + var(--scene-text-3-4-gap) - 25px);
+196	  margin: 0;
+197	  transform: translateX(-50%);
+198	  font-family: "Hassian Uncial", "Type Light Sans", sans-serif;
+199	  font-size: var(--scene-text-4-size);
+200	  line-height: 1;
+201	  letter-spacing: -0.02em;
+202	  text-transform: uppercase;
+203	  white-space: nowrap;
+204	  color: rgba(255, 255, 255, 0.95);
+205	  text-shadow: 0 10px 26px rgba(0, 0, 0, 0.4);
+206	  user-select: none;
+207	  pointer-events: none;
+208	  z-index: 6;
+209	  will-change: transform, opacity;
+210	}
+211	
+212	.cupBackdrop {
+213	  position: absolute;
+214	  left: 50%;
+215	  top: calc(50% + clamp(-30rem, 1.6vw, -13rem));
+216	  width: clamp(120px, 20vw, 300px);
+217	  height: auto;
+218	  transform: translateX(-50%);
+219	  object-fit: contain;
+220	  filter: drop-shadow(0 14px 30px rgba(0, 0, 0, 0.45));
+221	  user-select: none;
+222	  pointer-events: none;
+223	  z-index: 4;
+224	  will-change: transform, opacity;
+225	}
+226	
+227	.cupBackdropSwap {
+228	  position: absolute;
+229	  left: 50%;
+230	  top: calc(50% + clamp(-30rem, 2.6vw, -30rem));
+231	  width: clamp(176px, 36vw, 590px);
+232	  height: auto;
+233	  transform: translateX(-50%);
+234	  object-fit: contain;
+235	  filter: drop-shadow(0 14px 30px rgba(0, 0, 0, 0.45));
+236	  user-select: none;
+237	  pointer-events: none;
+238	  z-index: 4;
+239	  will-change: transform, opacity;
+240	}
+241	
+242	.cupSwapDim {
+243	  position: absolute;
+244	  left: 50%;
+245	  top: calc(50% - 5.5rem);
+246	  width: clamp(420px, 64vw, 1060px);
+247	  height: clamp(420px, 68vh, 920px);
+248	  transform: translate(-50%, -50%);
+249	  background:
+250	    radial-gradient(
+251	      ellipse at center,
+252	      rgba(0, 0, 0, 0.78) 0%,
+253	      rgba(0, 0, 0, 0.58) 46%,
+254	      rgba(0, 0, 0, 0) 80%
+255	    );
+256	  pointer-events: none;
+257	  z-index: 3;
+258	  will-change: opacity;
+259	}
+260	
+261	.progressDock {
+262	  position: fixed;
+263	  left: 0;
+264	  right: 0;
+265	  bottom: 0;
+266	  z-index: 45;
+267	  pointer-events: none;
+268	  opacity: 0;
+269	  transition: opacity 220ms ease;
+270	}
+271	
+272	.progressDockVisible {
+273	  opacity: 1;
+274	}
+275	
+276	.progressTrack {
+277	  position: relative;
+278	  height: 14px;
+279	  border-radius: 0;
+280	  border: 1px solid rgba(255, 255, 255, 0.2);
+281	  background:
+282	    linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%),
+283	    rgba(6, 8, 14, 0.78);
+284	  box-shadow:
+285	    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+286	    0 10px 28px rgba(0, 0, 0, 0.45),
+287	    0 0 0 1px rgba(255, 255, 255, 0.06);
+288	  overflow: hidden;
+289	}
+290	
+291	.progressTrack::before {
+292	  content: "";
+293	  position: absolute;
+294	  inset: 1px;
+295	  border-radius: 0;
+296	  background: linear-gradient(90deg, rgba(255, 255, 255, 0.08), transparent 34%, rgba(255, 255, 255, 0.05) 68%, transparent 100%);
+297	  pointer-events: none;
+298	}
+299	
+300	.progressFill {
+301	  position: absolute;
+302	  inset: 1px auto 1px 1px;
+303	  width: 0;
+304	  border-radius: 0;
+305	  background:
+306	    linear-gradient(90deg, rgba(255, 255, 255, 0.95) 0%, rgba(196, 219, 255, 0.95) 42%, rgba(255, 255, 255, 0.88) 100%);
+307	  box-shadow:
+308	    0 0 14px rgba(195, 216, 255, 0.55),
+309	    0 0 28px rgba(255, 255, 255, 0.24);
+310	  transition: width 120ms linear;
+311	  will-change: width;
+312	}
+313	
+314	.progressStep {
+315	  position: absolute;
+316	  top: 0;
+317	  bottom: 0;
+318	  width: 1px;
+319	  transform: translateX(-0.5px);
+320	  background: rgba(255, 255, 255, 0.24);
+321	  z-index: 3;
+322	}
+323	
+324	.progressStepActive {
+325	  background: rgba(255, 255, 255, 0.86);
+326	}
+327	
+328	@media (max-width: 1023px) {
+329	  .root {
+330	    --scene-text-3-size: calc(clamp(0.9rem, 5.8vw, 2.2rem) + 12px);
+331	    --scene-text-4-size: calc(clamp(0.72rem, 4.6vw, 1.8rem) + 8px);
+332	    --scene-text-3-4-gap: 0.5rem;
+333	  }
+334	
+335	  .viewport {
+336	    height: auto;
+337	  }
+338	
+339	  .scene {
+340	    position: relative;
+341	    min-height: 100vh;
+342	    opacity: 1;
+343	    visibility: visible;
+344	  }
+345	
+346	  .scene + .scene {
+347	    border-top: 1px solid rgba(255, 255, 255, 0.1);
+348	  }
+349	
+350	  .keyword {
+351	    position: static;
+352	    margin-top: 1rem;
+353	  }
+354	
+355	  .scrollBanner {
+356	    left: 0.75rem;
+357	    top: 0.75rem;
+358	    max-width: calc(100% - 2rem);
+359	    font-size: calc(clamp(0.9rem, 5.8vw, 2.2rem) + 12px);
+360	  }
+361	
+362	  .scrollBannerSecondary {
+363	    left: 0.75rem;
+364	    bottom: 0.75rem;
+365	    max-width: calc(100% - 2rem);
+366	    font-size: calc(clamp(0.9rem, 5.8vw, 2.2rem) + 12px);
+367	  }
+368	
+369	  .scrollBannerTertiary {
+370	    font-size: var(--scene-text-3-size);
+371	  }
+372	
+373	  .scrollBannerQuaternary {
+374	    top: calc(50% + (var(--scene-text-3-size) / 2) + var(--scene-text-3-4-gap));
+375	    font-size: var(--scene-text-4-size);
+376	  }
+377	
+378	  .cupBackdrop {
+379	    top: calc(50% + clamp(0.8rem, 4.2vw, 1.5rem));
+380	    width: clamp(88px, 24vw, 160px);
+381	  }
+382	
+383	  .cupBackdropSwap {
+384	    top: calc(50% + clamp(0.8rem, 4.2vw, 1.5rem));
+385	    width: clamp(114px, 31vw, 208px);
+386	  }
+387	
+388	  .cupSwapDim {
+389	    top: calc(50% - 0.6rem);
+390	    width: clamp(260px, 92vw, 560px);
+391	    height: clamp(280px, 72vh, 620px);
+392	  }
+393	
+394	  .progressDock {
+395	    display: none;
+396	  }
+397	}
+398	
+399	@media (prefers-reduced-motion: reduce) {
+400	  .progressDock {
+401	    opacity: 1;
+402	  }
+403	
+404	  .content,
+405	  .sceneBg,
+406	  .keyword {
+407	    will-change: auto;
+408	  }
+409	}

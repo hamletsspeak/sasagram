@@ -1,0 +1,1244 @@
+    1: "use client";
+    2: 
+    3: import Link from "next/link";
+    4: import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+    5: import gsap from "gsap";
+    6: import { ScrollTrigger } from "gsap/ScrollTrigger";
+    7: import Lenis from "lenis";
+    8: import { Canvas, useFrame } from "@react-three/fiber";
+    9: import { Environment, OrbitControls, useGLTF } from "@react-three/drei";
+   10: import { Box3, MathUtils, Vector3, type Group } from "three";
+   11: import { STORY_SCENES } from "@/features/storytelling/data/scenes";
+   12: import styles from "./CinematicStorytelling.module.css";
+   13: 
+   14: gsap.registerPlugin(ScrollTrigger);
+   15: 
+   16: const SCENE_SCROLL_LENGTH_MULTIPLIER = 2;
+   17: const SCENE_SCROLL_WEIGHTS = [3.6, 2.2, 5, 1];
+   18: const SCENE_TEXT_TRAVEL_DURATION = 1;
+   19: const SCENE_TEXT_EDGE_PADDING = 36;
+   20: const SCENE_TEXT_UNDER_MEDIA_SHIFT_Y = 150;
+   21: const SCENE_CUP_HOLD_DURATION = 0.75;
+   22: const SCENE_SWAP_MEDIA_HOLD_DURATION = 0.45;
+   23: const SCENE_TEXT_EDGE_EXIT_LEAD = 0.12;
+   24: const SCENE_PARALLAX_START_SCALE = 1.06;
+   25: const SCENE_PARALLAX_END_SCALE = 1;
+   26: const SCENE_PARALLAX_START_Y = 1.5;
+   27: const SCENE_PARALLAX_END_Y = -1.5;
+   28: const SCENE_PARALLAX_SCRUB = 1.35;
+   29: const SCENE_THREE_POEM_LINES = [
+   30:   "Тихий аквариум.",
+   31:   "Медленно движется вода.",
+   32:   "Пузырьки поднимаются со дна.",
+   33:   "Свет дрожит на стекле.",
+   34:   "И среди этого плавает рыбка.",
+   35:   "Рыбку зовут Толик.",
+   36:   "Он никуда не спешит.",
+   37:   "Иногда он делает круг.",
+   38:   "Иногда просто замирает.",
+   39:   "И смотрит по ту сторону стекла.",
+   40:   "Туда где экран.",
+   41:   "Где камера.",
+   42:   "Где начинается стрим.",
+   43:   "И тогда становится ясно",
+   44:   "Толик это не просто рыба.",
+   45:   "Это характер по ту сторону воды.",
+   46:   "Это отражение,",
+   47:   "тень,",
+   48:   "часть мира...",
+   49:   "Это...",
+   50:   "История",
+   51: ];
+   52: const SCENE_THREE_ADAPTIVE_LINES = new Set([
+   53:   "И смотрит по ту сторону стекла.",
+   54:   "Это характер по ту сторону воды.",
+   55:   "Пузырьки поднимаются со дна.",
+   56:   "И среди этого плавает рыбка.",
+   57: ]);
+   58: const SCENE_TWO_MODEL_BASE_POSITION = {
+   59:   x: 0.32,
+   60:   y: -0.22,
+   61:   z: -0.18,
+   62: };
+   63: 
+   64: function clamp01(value: number): number {
+   65:   return Math.max(Math.min(value, 1), 0);
+   66: }
+   67: 
+   68: function smootherStep(t: number): number {
+   69:   const x = clamp01(t);
+   70:   return x * x * x * (x * (x * 6 - 15) + 10);
+   71: }
+   72: 
+   73: function getNumericStylePx(node: HTMLElement, prop: "left" | "right"): number {
+   74:   if (typeof window === "undefined") return 0;
+   75:   const raw = window.getComputedStyle(node).getPropertyValue(prop).trim();
+   76:   const value = Number.parseFloat(raw);
+   77:   return Number.isNaN(value) ? 0 : value;
+   78: }
+   79: 
+   80: type Hotspot = {
+   81:   id: string;
+   82:   position: [number, number, number];
+   83:   text: string;
+   84:   command: string;
+   85:   execCommand: string;
+   86:   details: string;
+   87:   output: string[];
+   88:   focusZ: number;
+   89:   focusY: number;
+   90: };
+   91: 
+   92: function getMinimalConnectorRotationY(position: [number, number, number]): number {
+   93:   const [x, , z] = position;
+   94:   // Rotate selected point toward the right side (fixed info panel side) to minimize connector length.
+   95:   return Math.atan2(z, x) - 0.08;
+   96: }
+   97: 
+   98: const BRAIN_HOTSPOTS: Hotspot[] = [
+   99:   {
+  100:     id: "frontal",
+  101:     position: [0.18, 0.26, 0.42],
+  102:     text: "1",
+  103:     command: "Лобная доля",
+  104:     execCommand: "brain_scan --region frontal_lobe --subject \"Глеб Борисович\"",
+  105:     details:
+  106:       "Проведен анализ лобной доли мозга Глеба Борисовича: выявлен высокий уровень стратегического планирования, быстрый выбор решений и устойчивый когнитивный контроль в стрессовых задачах.",
+  107:     output: [
+  108:       "node: frontal-lobe",
+  109:       "subject: Глеб Борисович Орлов",
+  110:       "status: все исправно",
+  111:       "focus: планирование и контроль поведения",
+  112:     ],
+  113:     focusZ: -0.04,
+  114:     focusY: -0.18,
+  115:   },
+  116:   {
+  117:     id: "temporal",
+  118:     position: [-0.42, 0.02, 0.22],
+  119:     text: "2",
+  120:     command: "Височная доля",
+  121:     execCommand: "brain_scan --region temporal_lobe --subject \"Глеб Борисович\"",
+  122:     details:
+  123:       "Проведен анализ височной доли мозга Глеба Борисовича: зафиксированы усиленная обработка слуховой информации, устойчивое удержание смыслов речи и точное извлечение эпизодической памяти.",
+  124:     output: [
+  125:       "node: temporal-lobe",
+  126:       "subject: Глеб Борисович Орлов",
+  127:       "status: все исправно",
+  128:       "focus: слух и консолидация памяти",
+  129:     ],
+  130:     focusZ: 0,
+  131:     focusY: -0.2,
+  132:   },
+  133:   {
+  134:     id: "parietal",
+  135:     position: [0.34, 0.44, -0.12],
+  136:     text: "3",
+  137:     command: "Теменная доля",
+  138:     execCommand: "brain_scan --region parietal_lobe --subject \"Глеб Борисович\"",
+  139:     details:
+  140:       "Проведен анализ теменной доли мозга Глеба Борисовича: подтверждены точная сенсорная интеграция, устойчивая пространственная ориентация и быстрый пересчет внимания между несколькими стимулами.",
+  141:     output: [
+  142:       "node: parietal-lobe",
+  143:       "subject: Глеб Борисович Орлов",
+  144:       "status: все исправно",
+  145:       "focus: сенсорная интеграция и внимание",
+  146:     ],
+  147:     focusZ: 0.06,
+  148:     focusY: -0.14,
+  149:   },
+  150:   {
+  151:     id: "occipital",
+  152:     position: [-0.16, 0.2, -0.46],
+  153:     text: "4",
+  154:     command: "Затылочная доля",
+  155:     execCommand: "brain_scan --region occipital_lobe --subject \"Глеб Борисович\"",
+  156:     details:
+  157:       "Проведен анализ затылочной доли мозга Глеба Борисовича: зафиксированы высокая скорость визуального распознавания, стабильная обработка контрастов и уверенная декомпозиция сложных образов.",
+  158:     output: [
+  159:       "node: occipital-lobe",
+  160:       "subject: Глеб Борисович Орлов",
+  161:       "status: все исправно",
+  162:       "focus: визуальная обработка и распознавание",
+  163:     ],
+  164:     focusZ: 0.08,
+  165:     focusY: -0.12,
+  166:   },
+  167: ];
+  168: 
+  169: function BrainHologramModel({
+  170:   selectedHotspotId,
+  171:   visibleHotspotsCount,
+  172: }: {
+  173:   selectedHotspotId: string | null;
+  174:   visibleHotspotsCount: number;
+  175: }) {
+  176:   const gltf = useGLTF("/assets/3d/brain_hologram.glb");
+  177:   const groupRef = useRef<Group | null>(null);
+  178:   const autoRotationRef = useRef(0);
+  179:   const modelCenterOffset = useMemo(() => {
+  180:     const box = new Box3().setFromObject(gltf.scene);
+  181:     const center = box.getCenter(new Vector3());
+  182:     return new Vector3(-center.x, -center.y, -center.z);
+  183:   }, [gltf.scene]);
+  184:   const selectedHotspot = BRAIN_HOTSPOTS.find((hotspot) => hotspot.id === selectedHotspotId);
+  185: 
+  186:   useFrame((state, delta) => {
+  187:     const group = groupRef.current;
+  188:     if (!group) return;
+  189:     autoRotationRef.current += delta * (selectedHotspot ? 0.12 : 0.22);
+  190:     const targetRotationY = selectedHotspot
+  191:       ? getMinimalConnectorRotationY(selectedHotspot.position) + autoRotationRef.current * 0.45
+  192:       : -0.3 + autoRotationRef.current;
+  193:     const targetX = SCENE_TWO_MODEL_BASE_POSITION.x;
+  194:     const targetZ = selectedHotspot?.focusZ ?? SCENE_TWO_MODEL_BASE_POSITION.z;
+  195:     const targetY = selectedHotspot?.focusY ?? SCENE_TWO_MODEL_BASE_POSITION.y;
+  196:     const targetScale = selectedHotspot ? 1.02 : 0.68;
+  197:     group.position.x = MathUtils.damp(group.position.x, targetX, 4.2, delta);
+  198:     group.rotation.y = MathUtils.damp(group.rotation.y, targetRotationY, 4.6, delta);
+  199:     group.position.z = MathUtils.damp(group.position.z, targetZ, 4.2, delta);
+  200:     group.position.y = MathUtils.damp(group.position.y, targetY, 4.2, delta);
+  201:     group.scale.x = MathUtils.damp(group.scale.x, targetScale, 4.2, delta);
+  202:     group.scale.y = MathUtils.damp(group.scale.y, targetScale, 4.2, delta);
+  203:     group.scale.z = MathUtils.damp(group.scale.z, targetScale, 4.2, delta);
+  204:   });
+  205: 
+  206:   return (
+  207:     <group
+  208:       ref={groupRef}
+  209:       position={[
+  210:         SCENE_TWO_MODEL_BASE_POSITION.x,
+  211:         SCENE_TWO_MODEL_BASE_POSITION.y,
+  212:         SCENE_TWO_MODEL_BASE_POSITION.z,
+  213:       ]}
+  214:       rotation={[0, -0.3, 0]}
+  215:       scale={0.68}
+  216:     >
+  217:       <group position={[modelCenterOffset.x, modelCenterOffset.y, modelCenterOffset.z]}>
+  218:         <primitive object={gltf.scene} />
+  219:         {BRAIN_HOTSPOTS.map((hotspot, index) =>
+  220:           index < visibleHotspotsCount ? (
+  221:             <group key={hotspot.id} position={hotspot.position}>
+  222:               <mesh>
+  223:                 <sphereGeometry args={[0.02, 24, 24]} />
+  224:                 <meshStandardMaterial
+  225:                   color={selectedHotspotId === hotspot.id ? "#5f0d14" : "#8ed5ff"}
+  226:                   emissive={selectedHotspotId === hotspot.id ? "#2a0308" : "#5ec4ff"}
+  227:                   emissiveIntensity={selectedHotspotId === hotspot.id ? 1.35 : 1.25}
+  228:                 />
+  229:               </mesh>
+  230:             </group>
+  231:           ) : null,
+  232:         )}
+  233:       </group>
+  234:     </group>
+  235:   );
+  236: }
+  237: 
+  238: useGLTF.preload("/assets/3d/brain_hologram.glb");
+  239: 
+  240: export default function CinematicStorytelling() {
+  241:   const sceneTwoCommandsCount = BRAIN_HOTSPOTS.length + 2;
+  242:   const rootRef = useRef<HTMLElement | null>(null);
+  243:   const viewportRef = useRef<HTMLDivElement | null>(null);
+  244:   const sceneRefs = useRef<Array<HTMLElement | null>>([]);
+  245:   const contentRefs = useRef<Array<HTMLDivElement | null>>([]);
+  246:   const keywordRefs = useRef<Array<HTMLParagraphElement | null>>([]);
+  247:   const bgRefs = useRef<Array<HTMLDivElement | null>>([]);
+  248:   const bannerRefs = useRef<Array<HTMLParagraphElement | null>>([]);
+  249:   const secondaryBannerRefs = useRef<Array<HTMLParagraphElement | null>>([]);
+  250:   const tertiaryBannerRefs = useRef<Array<HTMLParagraphElement | null>>([]);
+  251:   const quaternaryBannerRefs = useRef<Array<HTMLParagraphElement | null>>([]);
+  252:   const cupRefs = useRef<Array<HTMLImageElement | null>>([]);
+  253:   const cupSwapVideoRefs = useRef<Array<HTMLVideoElement | null>>([]);
+  254:   const cupSwapDimRefs = useRef<Array<HTMLDivElement | null>>([]);
+  255: 
+  256:   const [progress, setProgress] = useState(0);
+  257:   const [activeScene, setActiveScene] = useState(0);
+  258:   const [isStoryActive, setIsStoryActive] = useState(false);
+  259:   const [sceneTwoVisibleCount, setSceneTwoVisibleCount] = useState(0);
+  260:   const [sceneTwoSelectedHotspot, setSceneTwoSelectedHotspot] = useState<string | null>(null);
+  261:   const [sceneTwoPanelOpened, setSceneTwoPanelOpened] = useState(false);
+  262:   const [sceneTwoExecutedCommands, setSceneTwoExecutedCommands] = useState<string[]>([]);
+  263:   const [sceneTwoTerminalLines, setSceneTwoTerminalLines] = useState<string[]>([]);
+  264:   const sceneTwoTerminalLinesRef = useRef<string[]>([]);
+  265:   const sceneTwoLoggedCommandsRef = useRef<Set<string>>(new Set());
+  266:   const terminalTimersRef = useRef<number[]>([]);
+  267:   const sceneTwoUnlockedRef = useRef(false);
+  268:   const selectedSceneTwoHotspot = BRAIN_HOTSPOTS.find((hotspot) => hotspot.id === sceneTwoSelectedHotspot) ?? null;
+  269:   const sceneTwoCommandsProgress = Math.min(
+  270:     sceneTwoExecutedCommands.length / Math.max(BRAIN_HOTSPOTS.length, 1),
+  271:     1,
+  272:   );
+  273:   const sceneTwoOrbitTarget: [number, number, number] = [
+  274:     SCENE_TWO_MODEL_BASE_POSITION.x,
+  275:     selectedSceneTwoHotspot?.focusY ?? SCENE_TWO_MODEL_BASE_POSITION.y,
+  276:     selectedSceneTwoHotspot?.focusZ ?? SCENE_TWO_MODEL_BASE_POSITION.z,
+  277:   ];
+  278:   const sceneWeightProgressThresholds = useMemo(() => {
+  279:     const sceneWeights = STORY_SCENES.map((_, index) => SCENE_SCROLL_WEIGHTS[index] ?? 1);
+  280:     const totalWeight = sceneWeights.reduce((sum, weight) => sum + weight, 0);
+  281:     return sceneWeights.map((_, index) => {
+  282:       const completedWeight = sceneWeights.slice(0, index + 1).reduce((sum, weight) => sum + weight, 0);
+  283:       return completedWeight / totalWeight;
+  284:     });
+  285:   }, []);
+  286:   const sceneStepPositions = (() => {
+  287:     const sceneWeights = STORY_SCENES.map((_, index) => SCENE_SCROLL_WEIGHTS[index] ?? 1);
+  288:     if (sceneWeights.length <= 1) return [0];
+  289:     const startPositions = sceneWeights.reduce<number[]>((acc, _, index) => {
+  290:       if (index === 0) {
+  291:         acc.push(0);
+  292:         return acc;
+  293:       }
+  294:       acc.push(acc[index - 1] + sceneWeights[index - 1]);
+  295:       return acc;
+  296:     }, []);
+  297:     const maxStart = startPositions[startPositions.length - 1] || 1;
+  298:     return startPositions.map((start, index) => {
+  299:       if (index === startPositions.length - 1) return 100;
+  300:       return (start / maxStart) * 100;
+  301:     });
+  302:   })();
+  303:   const displayedProgress = (() => {
+  304:     const sceneTwoStart = (sceneStepPositions[1] ?? 0) / 100;
+  305:     const sceneTwoEnd = (sceneStepPositions[2] ?? 100) / 100;
+  306:     if (sceneTwoCommandsProgress >= 1) {
+  307:       return Math.max(progress, sceneTwoEnd);
+  308:     }
+  309:     if (activeScene === 1) {
+  310:       return sceneTwoStart + (sceneTwoEnd - sceneTwoStart) * sceneTwoCommandsProgress;
+  311:     }
+  312:     return progress;
+  313:   })();
+  314:   const sceneThreeStartThreshold = sceneWeightProgressThresholds[1] ?? 0;
+  315:   const sceneThreeEndThreshold = sceneWeightProgressThresholds[2] ?? 1;
+  316:   const sceneThreeProgressSpan = Math.max(sceneThreeEndThreshold - sceneThreeStartThreshold, 0.0001);
+  317:   const sceneThreeRawProgress = (progress - sceneThreeStartThreshold) / sceneThreeProgressSpan;
+  318:   const sceneThreeStartHold = 0.08;
+  319:   const sceneThreeEndHold = 0.08;
+  320:   const sceneThreePlayableSpan = Math.max(1 - sceneThreeStartHold - sceneThreeEndHold, 0.0001);
+  321:   const sceneThreeSequenceBaseProgress = clamp01(
+  322:     (sceneThreeRawProgress - sceneThreeStartHold) / sceneThreePlayableSpan,
+  323:   );
+  324:   const sceneThreeSequenceProgress = smootherStep(sceneThreeSequenceBaseProgress);
+  325:   const sceneThreeLineCursor = sceneThreeSequenceProgress * SCENE_THREE_POEM_LINES.length;
+  326:   useEffect(() => {
+  327:     sceneTwoTerminalLinesRef.current = sceneTwoTerminalLines;
+  328:   }, [sceneTwoTerminalLines]);
+  329: 
+  330:   const ensureSceneTwoPromptLine = (): number => {
+  331:     const lines = [...sceneTwoTerminalLinesRef.current];
+  332:     const lastLine = lines[lines.length - 1] ?? "";
+  333:     if (lastLine === "C:\\brain>") {
+  334:       return lines.length - 1;
+  335:     }
+  336:     lines.push("C:\\brain>");
+  337:     sceneTwoTerminalLinesRef.current = lines;
+  338:     setSceneTwoTerminalLines(lines);
+  339:     return lines.length - 1;
+  340:   };
+  341: 
+  342:   const appendSceneTwoNextPromptLine = () => {
+  343:     const lines = [...sceneTwoTerminalLinesRef.current];
+  344:     const lastLine = lines[lines.length - 1] ?? "";
+  345:     if (lastLine !== "C:\\brain>") {
+  346:       lines.push("C:\\brain>");
+  347:       sceneTwoTerminalLinesRef.current = lines;
+  348:       setSceneTwoTerminalLines(lines);
+  349:     }
+  350:   };
+  351: 
+  352:   const runSceneTwoCommand = (hotspot: Hotspot) => {
+  353:     setSceneTwoSelectedHotspot(hotspot.id);
+  354:     setSceneTwoExecutedCommands((prev) => (prev.includes(hotspot.id) ? prev : [...prev, hotspot.id]));
+  355:     if (sceneTwoLoggedCommandsRef.current.has(hotspot.id)) {
+  356:       return;
+  357:     }
+  358: 
+  359:     terminalTimersRef.current.forEach((timer) => window.clearTimeout(timer));
+  360:     terminalTimersRef.current = [];
+  361:     sceneTwoLoggedCommandsRef.current.add(hotspot.id);
+  362:     const commandLineIndex = ensureSceneTwoPromptLine();
+  363: 
+  364:     hotspot.execCommand.split("").forEach((char, index) => {
+  365:       const timer = window.setTimeout(() => {
+  366:         const nextLines = [...sceneTwoTerminalLinesRef.current];
+  367:         nextLines[commandLineIndex] = `${nextLines[commandLineIndex] ?? "C:\\brain>"}${char}`;
+  368:         sceneTwoTerminalLinesRef.current = nextLines;
+  369:         setSceneTwoTerminalLines(nextLines);
+  370:       }, 100 + index * 22);
+  371:       terminalTimersRef.current.push(timer);
+  372:     });
+  373: 
+  374:     const outputStartDelay = 100 + hotspot.execCommand.length * 22 + 180;
+  375:     const outputLines = [`[scan] ${hotspot.command}`, ...hotspot.output];
+  376:     outputLines.forEach((line, index) => {
+  377:       const timer = window.setTimeout(() => {
+  378:         const nextLines = [...sceneTwoTerminalLinesRef.current, line];
+  379:         sceneTwoTerminalLinesRef.current = nextLines;
+  380:         setSceneTwoTerminalLines(nextLines);
+  381:       }, outputStartDelay + index * 230);
+  382:       terminalTimersRef.current.push(timer);
+  383:     });
+  384: 
+  385:     const detailsStartDelay = outputStartDelay + outputLines.length * 230 + 120;
+  386:     let infoLineIndex = -1;
+  387:     const infoLineTimer = window.setTimeout(() => {
+  388:       const nextLines = [...sceneTwoTerminalLinesRef.current, "> info "];
+  389:       infoLineIndex = nextLines.length - 1;
+  390:       sceneTwoTerminalLinesRef.current = nextLines;
+  391:       setSceneTwoTerminalLines(nextLines);
+  392:     }, detailsStartDelay);
+  393:     terminalTimersRef.current.push(infoLineTimer);
+  394: 
+  395:     hotspot.details.split("").forEach((char, index) => {
+  396:       const timer = window.setTimeout(() => {
+  397:         if (infoLineIndex < 0) return;
+  398:         const nextLines = [...sceneTwoTerminalLinesRef.current];
+  399:         nextLines[infoLineIndex] = `${nextLines[infoLineIndex] ?? "> info "}${char}`;
+  400:         sceneTwoTerminalLinesRef.current = nextLines;
+  401:         setSceneTwoTerminalLines(nextLines);
+  402:       }, detailsStartDelay + 40 + index * 18);
+  403:       terminalTimersRef.current.push(timer);
+  404:     });
+  405: 
+  406:     const finalDelay = detailsStartDelay + 40 + hotspot.details.length * 18 + 160;
+  407:     const nextPromptTimer = window.setTimeout(() => {
+  408:       appendSceneTwoNextPromptLine();
+  409:     }, finalDelay);
+  410:     terminalTimersRef.current.push(nextPromptTimer);
+  411:   };
+  412: 
+  413:   const runSceneTwoPanelCommand = (command: "start" | "end") => {
+  414:     if (command === "start") {
+  415:       setSceneTwoPanelOpened(true);
+  416:     } else {
+  417:       setSceneTwoPanelOpened(false);
+  418:       setSceneTwoSelectedHotspot(null);
+  419:     }
+  420: 
+  421:     if (sceneTwoLoggedCommandsRef.current.has(command)) {
+  422:       return;
+  423:     }
+  424: 
+  425:     terminalTimersRef.current.forEach((timer) => window.clearTimeout(timer));
+  426:     terminalTimersRef.current = [];
+  427:     sceneTwoLoggedCommandsRef.current.add(command);
+  428:     const commandLineIndex = ensureSceneTwoPromptLine();
+  429: 
+  430:     command.split("").forEach((char, index) => {
+  431:       const timer = window.setTimeout(() => {
+  432:         const nextLines = [...sceneTwoTerminalLinesRef.current];
+  433:         nextLines[commandLineIndex] = `${nextLines[commandLineIndex] ?? "C:\\brain>"}${char}`;
+  434:         sceneTwoTerminalLinesRef.current = nextLines;
+  435:         setSceneTwoTerminalLines(nextLines);
+  436:       }, 90 + index * 22);
+  437:       terminalTimersRef.current.push(timer);
+  438:     });
+  439: 
+  440:     const toggleTimer = window.setTimeout(
+  441:       () => {
+  442:         appendSceneTwoNextPromptLine();
+  443:       },
+  444:       90 + command.length * 22 + 120,
+  445:     );
+  446:     terminalTimersRef.current.push(toggleTimer);
+  447:   };
+  448: 
+  449:   useEffect(() => {
+  450:     sceneTwoUnlockedRef.current = sceneTwoExecutedCommands.length >= BRAIN_HOTSPOTS.length;
+  451:   }, [sceneTwoExecutedCommands]);
+  452: 
+  453:   useEffect(() => {
+  454:     if (activeScene !== 1) {
+  455:       terminalTimersRef.current.forEach((timer) => window.clearTimeout(timer));
+  456:       terminalTimersRef.current = [];
+  457:       setSceneTwoVisibleCount(0);
+  458:       setSceneTwoSelectedHotspot(null);
+  459:       setSceneTwoPanelOpened(false);
+  460:       setSceneTwoTerminalLines([]);
+  461:       sceneTwoTerminalLinesRef.current = [];
+  462:       sceneTwoLoggedCommandsRef.current = new Set();
+  463:       return;
+  464:     }
+  465: 
+  466:     setSceneTwoVisibleCount(0);
+  467:     setSceneTwoSelectedHotspot(null);
+  468:     sceneTwoLoggedCommandsRef.current = new Set();
+  469:     const timers: number[] = [];
+  470: 
+  471:     Array.from({ length: sceneTwoCommandsCount }).forEach((_, index) => {
+  472:       const timer = window.setTimeout(() => {
+  473:         setSceneTwoVisibleCount(index + 1);
+  474:       }, 220 + index * 500);
+  475:       timers.push(timer);
+  476:     });
+  477: 
+  478:     return () => {
+  479:       timers.forEach((timer) => window.clearTimeout(timer));
+  480:       terminalTimersRef.current.forEach((timer) => window.clearTimeout(timer));
+  481:       terminalTimersRef.current = [];
+  482:     };
+  483:   }, [activeScene]);
+  484: 
+  485:   useEffect(() => {
+  486:     const root = rootRef.current;
+  487:     const viewport = viewportRef.current;
+  488:     if (!root || !viewport) return;
+  489: 
+  490:     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  491:     if (reduceMotion) {
+  492:       return;
+  493:     }
+  494: 
+  495:     const mm = gsap.matchMedia();
+  496:     let lenis: Lenis | null = null;
+  497:     let rafId = 0;
+  498: 
+  499:     mm.add("(min-width: 1024px)", () => {
+  500:       const scenes = sceneRefs.current.filter(Boolean) as HTMLElement[];
+  501:       const contents = contentRefs.current;
+  502:       const keywords = keywordRefs.current;
+  503:       const bgs = bgRefs.current;
+  504:       const banners = bannerRefs.current;
+  505:       const secondaryBanners = secondaryBannerRefs.current;
+  506:       const tertiaryBanners = tertiaryBannerRefs.current;
+  507:       const quaternaryBanners = quaternaryBannerRefs.current;
+  508:       const cups = cupRefs.current;
+  509:       const cupSwapVideos = cupSwapVideoRefs.current;
+  510:       const cupSwapDims = cupSwapDimRefs.current;
+  511:       const contentNodes = contents.filter(Boolean) as HTMLDivElement[];
+  512:       const keywordNodes = keywords.filter(Boolean) as HTMLParagraphElement[];
+  513:       const bgNodes = bgs.filter(Boolean) as HTMLDivElement[];
+  514:       const bannerNodes = banners.filter(Boolean) as HTMLParagraphElement[];
+  515:       const secondaryBannerNodes = secondaryBanners.filter(Boolean) as HTMLParagraphElement[];
+  516:       const tertiaryBannerNodes = tertiaryBanners.filter(Boolean) as HTMLParagraphElement[];
+  517:       const quaternaryBannerNodes = quaternaryBanners.filter(Boolean) as HTMLParagraphElement[];
+  518:       const cupNodes = cups.filter(Boolean) as HTMLImageElement[];
+  519:       const cupSwapVideoNodes = cupSwapVideos.filter(Boolean) as HTMLVideoElement[];
+  520:       const cupSwapDimNodes = cupSwapDims.filter(Boolean) as HTMLDivElement[];
+  521:       if (!scenes.length) return undefined;
+  522: 
+  523:       lenis = new Lenis({
+  524:         duration: 1.15,
+  525:         smoothWheel: true,
+  526:         wheelMultiplier: 0.95,
+  527:         touchMultiplier: 1,
+  528:       });
+  529: 
+  530:       const updateOnLenis = () => ScrollTrigger.update();
+  531:       lenis.on("scroll", updateOnLenis);
+  532: 
+  533:       const raf = (time: number) => {
+  534:         lenis?.raf(time);
+  535:         rafId = window.requestAnimationFrame(raf);
+  536:       };
+  537:       rafId = window.requestAnimationFrame(raf);
+  538: 
+  539:       const ctx = gsap.context(() => {
+  540:         gsap.set(scenes, { autoAlpha: 0, yPercent: 0, scale: 1, transformOrigin: "center center" });
+  541:         gsap.set(contentNodes, { autoAlpha: 0, y: 34 });
+  542:         gsap.set(keywordNodes, { autoAlpha: 0, y: 26, scale: 1.05 });
+  543:         gsap.set(bgNodes, {
+  544:           scale: SCENE_PARALLAX_START_SCALE,
+  545:           yPercent: SCENE_PARALLAX_START_Y,
+  546:           transformOrigin: "center center",
+  547:           force3D: true,
+  548:         });
+  549:         gsap.set(bannerNodes, { autoAlpha: 1, xPercent: 0, x: -2000 });
+  550:         gsap.set(secondaryBannerNodes, { autoAlpha: 0, x: 2000 });
+  551:         gsap.set(tertiaryBannerNodes, { autoAlpha: 0 });
+  552:         gsap.set(quaternaryBannerNodes, { autoAlpha: 0, y: 16 });
+  553:         gsap.set(cupNodes, { autoAlpha: 0, scale: 0.9, y: 20 });
+  554:         gsap.set(cupSwapVideoNodes, { autoAlpha: 0, scale: 0.9, y: 20 });
+  555:         gsap.set(cupSwapDimNodes, { autoAlpha: 0 });
+  556:         gsap.set(scenes[0], { autoAlpha: 1, yPercent: 0, scale: 1 });
+  557: 
+  558:         const sceneWeights = STORY_SCENES.map((_, index) => SCENE_SCROLL_WEIGHTS[index] ?? 1);
+  559:         const totalWeight = sceneWeights.reduce((sum, weight) => sum + weight, 0);
+  560:         const sceneThresholds = sceneWeights.map((_, index) => {
+  561:           const completedWeight = sceneWeights.slice(0, index + 1).reduce((sum, weight) => sum + weight, 0);
+  562:           return completedWeight / totalWeight;
+  563:         });
+  564: 
+  565:         const sceneStartAt = sceneWeights.reduce<number[]>((acc, weight, index) => {
+  566:           if (index === 0) {
+  567:             acc.push(0);
+  568:             return acc;
+  569:           }
+  570:           acc.push(acc[index - 1] + sceneWeights[index - 1]);
+  571:           return acc;
+  572:         }, []);
+  573: 
+  574:         const timeline = gsap.timeline({
+  575:           defaults: { ease: "none", autoRound: false },
+  576:           scrollTrigger: {
+  577:             trigger: root,
+  578:             pin: viewport,
+  579:             start: "top top",
+  580:             // Main pacing control: increase multiplier for longer cinematic storytelling.
+  581:             end: `+=${window.innerHeight * STORY_SCENES.length * SCENE_SCROLL_LENGTH_MULTIPLIER}`,
+  582:             // Scrub smoothing controls how "inertial" scene transitions feel.
+  583:             scrub: SCENE_PARALLAX_SCRUB,
+  584:             anticipatePin: 1,
+  585:             invalidateOnRefresh: true,
+  586:             onToggle: (self) => setIsStoryActive(self.isActive),
+  587:             onUpdate: (self) => {
+  588:               const sceneTwoEndThreshold = sceneThresholds[1] ?? 1;
+  589:               if (!sceneTwoUnlockedRef.current && self.progress >= sceneTwoEndThreshold) {
+  590:                 const lockedProgress = Math.max(sceneTwoEndThreshold - 0.0008, 0);
+  591:                 const lockedScroll = self.start + (self.end - self.start) * lockedProgress;
+  592:                 self.scroll(lockedScroll);
+  593:                 setProgress(lockedProgress);
+  594:                 setActiveScene(1);
+  595:                 return;
+  596:               }
+  597: 
+  598:               const nextProgress = self.progress;
+  599:               const nextActive = sceneThresholds.findIndex((threshold) => self.progress < threshold);
+  600:               setProgress(nextProgress);
+  601:               setActiveScene((prev) =>
+  602:                 prev ===
+  603:                   (!sceneTwoUnlockedRef.current && nextActive > 1
+  604:                     ? 1
+  605:                     : nextActive === -1
+  606:                       ? STORY_SCENES.length - 1
+  607:                       : nextActive)
+  608:                   ? prev
+  609:                   : !sceneTwoUnlockedRef.current && nextActive > 1
+  610:                     ? 1
+  611:                     : nextActive === -1
+  612:                       ? STORY_SCENES.length - 1
+  613:                       : nextActive,
+  614:               );
+  615:             },
+  616:           },
+  617:         });
+  618: 
+  619:         const transitionDuration = 0.34;
+  620:         for (let i = 0; i < scenes.length; i += 1) {
+  621:           const scene = scenes[i];
+  622:           const content = contents[i];
+  623:           const keyword = keywords[i];
+  624:           const bg = bgs[i];
+  625:           const banner = banners[i];
+  626:           const secondaryBanner = secondaryBanners[i];
+  627:           const tertiaryBanner = tertiaryBanners[i];
+  628:           const quaternaryBanner = quaternaryBanners[i];
+  629:           const cup = cups[i];
+  630:           const cupSwapVideo = cupSwapVideos[i];
+  631:           const cupSwapDim = cupSwapDims[i];
+  632:           const at = sceneStartAt[i];
+  633: 
+  634:           if (i > 0) {
+  635:             const prevScene = scenes[i - 1];
+  636:             const prevContent = contents[i - 1];
+  637:             const prevKeyword = keywords[i - 1];
+  638:             const prevBanner = banners[i - 1];
+  639:             const prevSecondaryBanner = secondaryBanners[i - 1];
+  640:             const prevTertiaryBanner = tertiaryBanners[i - 1];
+  641:             const prevQuaternaryBanner = quaternaryBanners[i - 1];
+  642:             const prevCup = cups[i - 1];
+  643:             const prevCupSwapVideo = cupSwapVideos[i - 1];
+  644:             const prevCupSwapDim = cupSwapDims[i - 1];
+  645: 
+  646:             timeline.to(
+  647:               prevScene,
+  648:               {
+  649:                 autoAlpha: 0,
+  650:                 yPercent: -102,
+  651:                 duration: transitionDuration,
+  652:               },
+  653:               at,
+  654:             );
+  655: 
+  656:             if (prevContent) {
+  657:               timeline.to(
+  658:                 prevContent,
+  659:                 {
+  660:                   autoAlpha: 0,
+  661:                   y: -26,
+  662:                   duration: transitionDuration * 0.7,
+  663:                 },
+  664:                 at,
+  665:               );
+  666:             }
+  667: 
+  668:             if (prevKeyword) {
+  669:               timeline.to(
+  670:                 prevKeyword,
+  671:                 {
+  672:                   autoAlpha: 0,
+  673:                   y: -18,
+  674:                   duration: transitionDuration * 0.7,
+  675:                 },
+  676:                 at,
+  677:               );
+  678:             }
+  679: 
+  680:             if (prevBanner) {
+  681:               timeline.to(
+  682:                 prevBanner,
+  683:                 {
+  684:                   autoAlpha: 1,
+  685:                   x: () => prevScene.clientWidth + prevBanner.offsetWidth + 80,
+  686:                   duration: transitionDuration * 0.75,
+  687:                 },
+  688:                 at - SCENE_TEXT_EDGE_EXIT_LEAD,
+  689:               );
+  690:             }
+  691: 
+  692:             if (prevSecondaryBanner) {
+  693:               timeline.to(
+  694:                 prevSecondaryBanner,
+  695:                 {
+  696:                   autoAlpha: 1,
+  697:                   x: () => -(prevSecondaryBanner.offsetWidth + 80),
+  698:                   duration: transitionDuration * 0.75,
+  699:                 },
+  700:                 at - SCENE_TEXT_EDGE_EXIT_LEAD,
+  701:               );
+  702:             }
+  703: 
+  704:             if (prevTertiaryBanner) {
+  705:               timeline.to(
+  706:                 prevTertiaryBanner,
+  707:                 {
+  708:                   autoAlpha: 0,
+  709:                   duration: transitionDuration * 0.45,
+  710:                 },
+  711:                 at - SCENE_TEXT_EDGE_EXIT_LEAD,
+  712:               );
+  713:             }
+  714: 
+  715:             if (prevQuaternaryBanner) {
+  716:               timeline.to(
+  717:                 prevQuaternaryBanner,
+  718:                 {
+  719:                   autoAlpha: 0,
+  720:                   duration: transitionDuration * 0.45,
+  721:                 },
+  722:                 at - SCENE_TEXT_EDGE_EXIT_LEAD,
+  723:               );
+  724:             }
+  725: 
+  726:             if (prevCup) {
+  727:               timeline.to(
+  728:                 prevCup,
+  729:                 {
+  730:                   autoAlpha: 0,
+  731:                   scale: 0.9,
+  732:                   y: 20,
+  733:                   duration: transitionDuration * 0.5,
+  734:                 },
+  735:                 at,
+  736:               );
+  737:             }
+  738: 
+  739:             if (prevCupSwapVideo) {
+  740:               timeline.to(
+  741:                 prevCupSwapVideo,
+  742:                 {
+  743:                   autoAlpha: 0,
+  744:                   scale: 0.9,
+  745:                   y: 20,
+  746:                   duration: transitionDuration * 0.5,
+  747:                 },
+  748:                 at,
+  749:               );
+  750:             }
+  751: 
+  752:             if (prevCupSwapDim) {
+  753:               timeline.to(
+  754:                 prevCupSwapDim,
+  755:                 {
+  756:                   autoAlpha: 0,
+  757:                   duration: transitionDuration * 0.5,
+  758:                 },
+  759:                 at,
+  760:               );
+  761:             }
+  762: 
+  763:             timeline.fromTo(
+  764:               scene,
+  765:               { autoAlpha: 1, yPercent: 102, scale: 1 },
+  766:               {
+  767:                 autoAlpha: 1,
+  768:                 yPercent: 0,
+  769:                 scale: 1,
+  770:                 duration: transitionDuration,
+  771:                 immediateRender: false,
+  772:               },
+  773:               at,
+  774:             );
+  775:           }
+  776: 
+  777:           if (bg) {
+  778:             const bgDuration = i === 0 ? (sceneWeights[i] ?? 1) : (sceneWeights[i] ?? 1) + 0.2;
+  779:             timeline.fromTo(
+  780:               bg,
+  781:               {
+  782:                 scale: SCENE_PARALLAX_START_SCALE,
+  783:                 yPercent: SCENE_PARALLAX_START_Y,
+  784:               },
+  785:               {
+  786:                 scale: SCENE_PARALLAX_END_SCALE,
+  787:                 yPercent: SCENE_PARALLAX_END_Y,
+  788:                 duration: bgDuration,
+  789:                 immediateRender: false,
+  790:                 force3D: true,
+  791:               },
+  792:               at,
+  793:             );
+  794:           }
+  795: 
+  796:           if (content) {
+  797:             timeline.fromTo(
+  798:               content,
+  799:               { autoAlpha: 0, y: 36 },
+  800:               { autoAlpha: 1, y: 0, duration: 0.35 },
+  801:               at + 0.1,
+  802:             );
+  803:           }
+  804: 
+  805:           if (keyword) {
+  806:             timeline.fromTo(
+  807:               keyword,
+  808:               { autoAlpha: 0, y: 22, scale: 1.06 },
+  809:               { autoAlpha: 0.2, y: 0, scale: 1, duration: 0.36 },
+  810:               at + 0.14,
+  811:             );
+  812:           }
+  813: 
+  814:           if (banner) {
+  815:             timeline.fromTo(
+  816:               banner,
+  817:               {
+  818:                 autoAlpha: 1,
+  819:                 x: () => -(banner.offsetWidth + 120),
+  820:               },
+  821:               {
+  822:                 autoAlpha: 1,
+  823:                 x: () => {
+  824:                   const sceneWidth = scene.clientWidth;
+  825:                   const bannerLeft = getNumericStylePx(banner, "left");
+  826:                   return Math.max(
+  827:                     sceneWidth - banner.offsetWidth - bannerLeft - SCENE_TEXT_EDGE_PADDING,
+  828:                     0,
+  829:                   );
+  830:                 },
+  831:                 duration: SCENE_TEXT_TRAVEL_DURATION,
+  832:               },
+  833:               at,
+  834:             );
+  835:           }
+  836: 
+  837:           if (secondaryBanner) {
+  838:             timeline.fromTo(
+  839:               secondaryBanner,
+  840:               {
+  841:                 autoAlpha: 1,
+  842:                 x: () => scene.clientWidth + secondaryBanner.offsetWidth + 80,
+  843:               },
+  844:               {
+  845:                 autoAlpha: 1,
+  846:                 x: () => {
+  847:                   const secondaryLeft = getNumericStylePx(secondaryBanner, "left");
+  848:                   return Math.max(SCENE_TEXT_EDGE_PADDING - secondaryLeft, 0);
+  849:                 },
+  850:                 duration: SCENE_TEXT_TRAVEL_DURATION,
+  851:               },
+  852:               at,
+  853:             );
+  854:           }
+  855: 
+  856:           if (tertiaryBanner && i === 0) {
+  857:             timeline.fromTo(
+  858:               tertiaryBanner,
+  859:               { autoAlpha: 0 },
+  860:               { autoAlpha: 1, duration: 0.28, immediateRender: false },
+  861:               at + SCENE_TEXT_TRAVEL_DURATION + 0.02,
+  862:             );
+  863:           }
+  864: 
+  865:           if (i === 0) {
+  866:             const revealAt = at + SCENE_TEXT_TRAVEL_DURATION + 0.34;
+  867: 
+  868:             if (cup) {
+  869:               timeline.fromTo(
+  870:                 cup,
+  871:                 { autoAlpha: 0, scale: 0.9, y: 20 },
+  872:                 { autoAlpha: 0.92, scale: 1, y: 0, duration: 0.36, immediateRender: false },
+  873:                 revealAt,
+  874:               );
+  875:             }
+  876: 
+  877:             if (quaternaryBanner) {
+  878:               timeline.fromTo(
+  879:                 quaternaryBanner,
+  880:                 { autoAlpha: 0, y: 16 },
+  881:                 { autoAlpha: 1, y: 0, duration: 0.32, immediateRender: false },
+  882:                 revealAt + 0.04,
+  883:               );
+  884:             }
+  885: 
+  886:             const swapAt = revealAt + 0.42 + SCENE_CUP_HOLD_DURATION;
+  887: 
+  888:             if (cup) {
+  889:               timeline.to(
+  890:                 cup,
+  891:                 { autoAlpha: 0, scale: 0.9, y: 20, duration: 0.34 },
+  892:                 swapAt,
+  893:               );
+  894:             }
+  895: 
+  896:             if (cupSwapVideo) {
+  897:               timeline.fromTo(
+  898:                 cupSwapVideo,
+  899:                 { autoAlpha: 0, scale: 0.9, y: 20 },
+  900:                 { autoAlpha: 0.94, scale: 1, y: 0, duration: 0.34, immediateRender: false },
+  901:                 swapAt,
+  902:               );
+  903:             }
+  904: 
+  905:             if (cupSwapDim) {
+  906:               timeline.fromTo(
+  907:                 cupSwapDim,
+  908:                 { autoAlpha: 0 },
+  909:                 { autoAlpha: 0.62, duration: 0.34, immediateRender: false },
+  910:                 swapAt,
+  911:               );
+  912:             }
+  913: 
+  914:             if (tertiaryBanner) {
+  915:               timeline.to(
+  916:                 tertiaryBanner,
+  917:                 { y: SCENE_TEXT_UNDER_MEDIA_SHIFT_Y, duration: 0.34 },
+  918:                 swapAt,
+  919:               );
+  920:             }
+  921: 
+  922:             if (quaternaryBanner) {
+  923:               timeline.to(
+  924:                 quaternaryBanner,
+  925:                 { y: SCENE_TEXT_UNDER_MEDIA_SHIFT_Y, duration: 0.34 },
+  926:                 swapAt,
+  927:               );
+  928:             }
+  929: 
+  930:             if (cupSwapVideo) {
+  931:               // Hold the second media on screen a bit longer before Scene 02 starts.
+  932:               timeline.to(
+  933:                 {},
+  934:                 { duration: SCENE_SWAP_MEDIA_HOLD_DURATION },
+  935:                 swapAt + 0.34,
+  936:               );
+  937:             }
+  938:           }
+  939: 
+  940:         }
+  941:       }, root);
+  942: 
+  943:       if (typeof document !== "undefined" && "fonts" in document) {
+  944:         void document.fonts.ready.then(() => {
+  945:           ScrollTrigger.refresh();
+  946:         });
+  947:       }
+  948: 
+  949:       return () => {
+  950:         ctx.revert();
+  951:         if (rafId) window.cancelAnimationFrame(rafId);
+  952:         lenis?.destroy();
+  953:         lenis = null;
+  954:       };
+  955:     });
+  956: 
+  957:     return () => {
+  958:       mm.revert();
+  959:       if (rafId) window.cancelAnimationFrame(rafId);
+  960:       lenis?.destroy();
+  961:       lenis = null;
+  962:     };
+  963:   }, []);
+  964: 
+  965:   return (
+  966:     <section id="about" ref={rootRef} className={styles.root}>
+  967:       <div ref={viewportRef} className={styles.viewport}>
+  968:         <div className={styles.sceneStack}>
+  969:           {STORY_SCENES.map((scene, index) => (
+  970:             <article
+  971:               key={scene.id}
+  972:               ref={(node) => {
+  973:                 sceneRefs.current[index] = node;
+  974:               }}
+  975:               className={`${styles.scene} ${index === activeScene ? styles.sceneActive : ""}`}
+  976:             >
+  977:               <div
+  978:                 ref={(node) => {
+  979:                   bgRefs.current[index] = node;
+  980:                 }}
+  981:                 className={styles.sceneBg}
+  982:                 style={{ background: scene.gradient }}
+  983:                 aria-hidden="true"
+  984:               >
+  985:                 {scene.bgVideoSrc ? (
+  986:                   <video className={styles.sceneVideo} autoPlay loop muted playsInline preload="metadata">
+  987:                     <source src={encodeURI(scene.bgVideoSrc)} type="video/webm" />
+  988:                   </video>
+  989:                 ) : null}
+  990:               </div>
+  991:               {index !== 0 && index !== 1 && index !== 2 ? (
+  992:                 <div
+  993:                   ref={(node) => {
+  994:                     contentRefs.current[index] = node;
+  995:                   }}
+  996:                   className={styles.content}
+  997:                 >
+  998:                   <p className={styles.eyebrow}>{scene.eyebrow}</p>
+  999:                   <h2 className={styles.title}>{scene.title}</h2>
+ 1000:                   <p className={styles.description}>{scene.description}</p>
+ 1001:                   {scene.cta ? (
+ 1002:                     <Link className={styles.cta} href={scene.cta.href} prefetch={false}>
+ 1003:                       {scene.cta.label}
+ 1004:                     </Link>
+ 1005:                   ) : null}
+ 1006:                 </div>
+ 1007:               ) : null}
+ 1008:               {index !== 1 && index !== 2 ? (
+ 1009:                 <p
+ 1010:                   ref={(node) => {
+ 1011:                     keywordRefs.current[index] = node;
+ 1012:                   }}
+ 1013:                   className={styles.keyword}
+ 1014:                 >
+ 1015:                   {scene.keyword}
+ 1016:                 </p>
+ 1017:               ) : null}
+ 1018:               {index === 2 ? (
+ 1019:                 <div className={styles.sceneThreePoem} aria-label="Стих сцены 3">
+ 1020:                   <div className={styles.sceneThreePoemBackdrop} aria-hidden="true" />
+ 1021:                   <div
+ 1022:                     className={`${styles.sceneThreePoemInner} ${
+ 1023:                       activeScene === 2 ? styles.sceneThreePoemInnerVisible : ""
+ 1024:                     }`}
+ 1025:                   >
+ 1026:                     {SCENE_THREE_POEM_LINES.map((line, lineIndex) => {
+ 1027:                       const lineLocalProgress = sceneThreeLineCursor - lineIndex;
+ 1028:                       const fadeInProgress = clamp01(lineLocalProgress / 0.32);
+ 1029:                       const fadeOutProgress = clamp01((1 - lineLocalProgress) / 0.32);
+ 1030:                       const lineOpacity = Math.min(smootherStep(fadeInProgress), smootherStep(fadeOutProgress));
+ 1031:                       const lineOffsetY = (1 - lineOpacity) * 20;
+ 1032: 
+ 1033:                       return (
+ 1034:                         <p
+ 1035:                           key={`scene-three-poem-line-${lineIndex}`}
+ 1036:                           className={`${styles.sceneThreePoemLine} ${
+ 1037:                             SCENE_THREE_ADAPTIVE_LINES.has(line) ? styles.sceneThreePoemLineAdaptive : ""
+ 1038:                           }`}
+ 1039:                           style={
+ 1040:                             {
+ 1041:                               opacity: lineOpacity,
+ 1042:                               transform: `translate(-50%, calc(-50% + ${lineOffsetY}px))`,
+ 1043:                             } as { [key: string]: string | number }
+ 1044:                           }
+ 1045:                         >
+ 1046:                           {line}
+ 1047:                         </p>
+ 1048:                       );
+ 1049:                     })}
+ 1050:                   </div>
+ 1051:                 </div>
+ 1052:               ) : null}
+ 1053:               {index === 1 ? (
+ 1054:                 <div className={styles.sceneModelStage}>
+ 1055:                   <div className={styles.sceneModelGridBackdrop} aria-hidden="true" />
+ 1056:                   <div className={styles.sceneTwoSidebar}>
+ 1057:                     <div className={styles.sceneTwoCommands}>
+ 1058:                       <button
+ 1059:                         type="button"
+ 1060:                         className={`${styles.sceneTwoItem} ${
+ 1061:                           sceneTwoVisibleCount > 0 ? styles.sceneTwoItemVisible : ""
+ 1062:                         } ${sceneTwoPanelOpened ? styles.sceneTwoItemActive : ""}`}
+ 1063:                         onClick={() => runSceneTwoPanelCommand("start")}
+ 1064:                         aria-label="Открыть правую командную плашку"
+ 1065:                       >
+ 1066:                         <span className={styles.sceneTwoItemPrompt}>&gt;</span>
+ 1067:                         <span className={styles.sceneTwoItemLabel}>start</span>
+ 1068:                       </button>
+ 1069:                       {BRAIN_HOTSPOTS.map((hotspot, hotspotIndex) => (
+ 1070:                         <button
+ 1071:                           key={hotspot.id}
+ 1072:                           type="button"
+ 1073:                           className={`${styles.sceneTwoItem} ${
+ 1074:                             hotspotIndex + 1 < sceneTwoVisibleCount ? styles.sceneTwoItemVisible : ""
+ 1075:                           } ${sceneTwoSelectedHotspot === hotspot.id ? styles.sceneTwoItemActive : ""}`}
+ 1076:                           onClick={() => runSceneTwoCommand(hotspot)}
+ 1077:                           aria-label={`Выполнить команду ${hotspot.command}`}
+ 1078:                         >
+ 1079:                           <span className={styles.sceneTwoItemPrompt}>&gt;</span>
+ 1080:                           <span className={styles.sceneTwoItemLabel}>{hotspot.command}</span>
+ 1081:                         </button>
+ 1082:                       ))}
+ 1083:                       <button
+ 1084:                         type="button"
+ 1085:                         className={`${styles.sceneTwoItem} ${
+ 1086:                           sceneTwoVisibleCount >= sceneTwoCommandsCount ? styles.sceneTwoItemVisible : ""
+ 1087:                         } ${!sceneTwoPanelOpened ? styles.sceneTwoItemActive : ""}`}
+ 1088:                         onClick={() => runSceneTwoPanelCommand("end")}
+ 1089:                         aria-label="Закрыть правую командную плашку"
+ 1090:                       >
+ 1091:                         <span className={styles.sceneTwoItemPrompt}>&gt;</span>
+ 1092:                         <span className={styles.sceneTwoItemLabel}>end</span>
+ 1093:                       </button>
+ 1094:                     </div>
+ 1095:                     <div className={styles.sceneTwoChecks} aria-label="Прогресс выполнения команд">
+ 1096:                       {BRAIN_HOTSPOTS.map((hotspot, checkIndex) => {
+ 1097:                         const isDone = sceneTwoExecutedCommands.includes(hotspot.id);
+ 1098:                         return (
+ 1099:                           <span
+ 1100:                             key={`check-${hotspot.id}`}
+ 1101:                             className={`${styles.sceneTwoCheckItem} ${isDone ? styles.sceneTwoCheckDone : ""}`}
+ 1102:                             aria-label={`Команда ${checkIndex + 1} ${isDone ? "выполнена" : "не выполнена"}`}
+ 1103:                           >
+ 1104:                             {isDone ? "✓" : ""}
+ 1105:                           </span>
+ 1106:                         );
+ 1107:                       })}
+ 1108:                     </div>
+ 1109:                   </div>
+ 1110:                   <div
+ 1111:                     className={`${styles.sceneTwoTerminalPanel} ${
+ 1112:                       activeScene === 1 && sceneTwoPanelOpened ? styles.sceneTwoTerminalPanelVisible : ""
+ 1113:                     }`}
+ 1114:                   >
+ 1115:                     <div className={styles.sceneTwoFixedPanel}>
+ 1116:                       <p className={styles.sceneTwoWindowTitle}>SASAVOT141 Console [Version 1.0.141]</p>
+ 1117:                       {sceneTwoTerminalLines.length === 0 ? (
+ 1118:                         <p className={styles.sceneTwoFixedCommand}>C:\\brain&gt; <span className={styles.sceneTwoCursor}>_</span></p>
+ 1119:                       ) : null}
+ 1120:                       {sceneTwoTerminalLines.map((line, lineIndex) => (
+ 1121:                         <p key={`${line}-${lineIndex}`} className={styles.sceneTwoFixedLineText}>
+ 1122:                           {line}
+ 1123:                           {lineIndex === sceneTwoTerminalLines.length - 1 ? (
+ 1124:                             <span className={styles.sceneTwoCursor}>_</span>
+ 1125:                           ) : null}
+ 1126:                         </p>
+ 1127:                       ))}
+ 1128:                     </div>
+ 1129:                   </div>
+ 1130:                   <Canvas
+ 1131:                     className={styles.sceneModelCanvas}
+ 1132:                     dpr={[1, 1.8]}
+ 1133:                     camera={{ position: [0, 0.2, 3.3], fov: 34 }}
+ 1134:                   >
+ 1135:                     <ambientLight intensity={0.9} />
+ 1136:                     <directionalLight position={[2.5, 3, 2]} intensity={1.4} />
+ 1137:                     <directionalLight position={[-2.5, -1.5, -2]} intensity={0.4} />
+ 1138:                     <Suspense fallback={null}>
+ 1139:                       <BrainHologramModel
+ 1140:                         selectedHotspotId={sceneTwoSelectedHotspot}
+ 1141:                         visibleHotspotsCount={sceneTwoVisibleCount}
+ 1142:                       />
+ 1143:                       <Environment preset="city" />
+ 1144:                       <OrbitControls
+ 1145:                         makeDefault
+ 1146:                         target={sceneTwoOrbitTarget}
+ 1147:                         enablePan={false}
+ 1148:                         enableZoom={false}
+ 1149:                         enableDamping
+ 1150:                         dampingFactor={0.08}
+ 1151:                         rotateSpeed={0.7}
+ 1152:                         minDistance={2.2}
+ 1153:                         maxDistance={6}
+ 1154:                       />
+ 1155:                     </Suspense>
+ 1156:                   </Canvas>
+ 1157:                 </div>
+ 1158:               ) : null}
+ 1159:               {index === 0 ? (
+ 1160:                 <>
+ 1161:                   <p
+ 1162:                     ref={(node) => {
+ 1163:                       bannerRefs.current[index] = node;
+ 1164:                     }}
+ 1165:                     className={styles.scrollBanner}
+ 1166:                   >
+ 1167:                     ВЕЛИКИЙ ХОУБИСТ
+ 1168:                   </p>
+ 1169:                   <p
+ 1170:                     ref={(node) => {
+ 1171:                       secondaryBannerRefs.current[index] = node;
+ 1172:                     }}
+ 1173:                     className={styles.scrollBannerSecondary}
+ 1174:                   >
+ 1175:                     Мэр города Курска
+ 1176:                   </p>
+ 1177:                   <p
+ 1178:                     ref={(node) => {
+ 1179:                       tertiaryBannerRefs.current[index] = node;
+ 1180:                     }}
+ 1181:                     className={styles.scrollBannerTertiary}
+ 1182:                   >
+ 1183:                     SLAY KING
+ 1184:                   </p>
+ 1185:                   <img
+ 1186:                     ref={(node) => {
+ 1187:                       cupRefs.current[index] = node;
+ 1188:                     }}
+ 1189:                     className={styles.cupBackdrop}
+ 1190:                     src={encodeURI("/assets/icons/cup.png")}
+ 1191:                     alt=""
+ 1192:                     aria-hidden="true"
+ 1193:                   />
+ 1194:                   <video
+ 1195:                     ref={(node) => {
+ 1196:                       cupSwapVideoRefs.current[index] = node;
+ 1197:                     }}
+ 1198:                     className={styles.cupBackdropSwap}
+ 1199:                     autoPlay
+ 1200:                     loop
+ 1201:                     muted
+ 1202:                     playsInline
+ 1203:                     preload="metadata"
+ 1204:                     aria-hidden="true"
+ 1205:                   >
+ 1206:                     <source src={encodeURI("/assets/bg/глеб_слей_сцена1.webm")} type="video/webm" />
+ 1207:                   </video>
+ 1208:                   <div
+ 1209:                     ref={(node) => {
+ 1210:                       cupSwapDimRefs.current[index] = node;
+ 1211:                     }}
+ 1212:                     className={styles.cupSwapDim}
+ 1213:                     aria-hidden="true"
+ 1214:                   />
+ 1215:                   <p
+ 1216:                     ref={(node) => {
+ 1217:                       quaternaryBannerRefs.current[index] = node;
+ 1218:                     }}
+ 1219:                     className={styles.scrollBannerQuaternary}
+ 1220:                   >
+ 1221:                     2025
+ 1222:                   </p>
+ 1223:                 </>
+ 1224:               ) : null}
+ 1225:             </article>
+ 1226:           ))}
+ 1227:         </div>
+ 1228:       </div>
+ 1229: 
+ 1230:       <div className={`${styles.progressDock} ${isStoryActive ? styles.progressDockVisible : ""}`} aria-hidden="true">
+ 1231:         <div className={styles.progressTrack}>
+ 1232:           <div className={styles.progressFill} style={{ width: `${displayedProgress * 100}%` }} />
+ 1233:           {STORY_SCENES.map((scene, index) => (
+ 1234:             <span
+ 1235:               key={scene.id}
+ 1236:               className={`${styles.progressStep} ${index <= activeScene ? styles.progressStepActive : ""}`}
+ 1237:               style={{ left: `${sceneStepPositions[index] ?? 0}%` }}
+ 1238:             />
+ 1239:           ))}
+ 1240:         </div>
+ 1241:       </div>
+ 1242:     </section>
+ 1243:   );
+ 1244: }

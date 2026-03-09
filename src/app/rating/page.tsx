@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { StreamRatingsPage } from "@/features/ratings/components/StreamRatingsPage";
 import { RatingHelpPopup } from "@/features/ratings/components/RatingHelpPopup";
@@ -29,8 +28,6 @@ export default function RatingPage() {
           >
             <source src={encodeURI("/assets/logo/фон_остальные_разделы.webm")} type="video/webm" />
           </video>
-          <div className="absolute inset-0 bg-black/60" />
-          <div className="absolute inset-0 bg-[radial-gradient(120%_80%_at_10%_-10%,rgba(151,17,34,0.24),transparent_55%),radial-gradient(90%_75%_at_92%_8%,rgba(99,8,22,0.18),transparent_50%)]" />
         </div>
 
         <div className="relative z-10">

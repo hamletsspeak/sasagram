@@ -348,12 +348,17 @@ export default function Hero() {
           {isLive ? (
             <Link
               href="/watch"
+              prefetch={false}
               className="live-nav-link mt-4 rounded-full border px-5 py-2 text-sm font-semibold text-red-100 transition-colors duration-200 md:text-base"
             >
               Смотреть
             </Link>
           ) : null}
         </div>
+      </div>
+
+      <div className="hero-scene-divider" aria-hidden="true">
+        <div className="hero-scene-divider__line" />
       </div>
     </section>
   );

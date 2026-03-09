@@ -37,7 +37,7 @@ function getTwitchChatEmbedSrc(hostname: string | null): string {
 }
 
 export function WatchLivePage() {
-  const [embedHost] = useState<string | null>(() => (typeof window === "undefined" ? null : window.location.hostname));
+  const [embedHost, setEmbedHost] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isLive, setIsLive] = useState(false);
   const [title, setTitle] = useState("SASAVOT на Twitch");
@@ -57,6 +57,10 @@ export function WatchLivePage() {
     const ss = String(seconds).padStart(2, "0");
     return `${hh}:${mm}:${ss}`;
   })();
+
+  useEffect(() => {
+    setEmbedHost(window.location.hostname);
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -97,7 +101,7 @@ export function WatchLivePage() {
 
   if (loading) {
     return (
-      <section className="mx-auto w-full max-w-6xl px-6 pb-6">
+      <section className="mx-auto h-full w-full max-w-6xl px-6 pb-0">
         <div className="mb-3 flex items-center justify-between gap-3 rounded-2xl border border-red-500/30 bg-black/35 px-4 py-2">
           <div className="h-7 w-3/5 animate-pulse rounded-lg bg-zinc-700/70" />
           <div className="h-8 w-24 animate-pulse rounded-lg bg-zinc-700/70" />
@@ -113,7 +117,7 @@ export function WatchLivePage() {
 
   if (!isLive) {
     return (
-      <section className="mx-auto w-full max-w-6xl px-6 pb-6">
+      <section className="mx-auto h-full w-full max-w-6xl px-6 pb-0">
         <div className="rounded-2xl border border-red-500/25 bg-black/45 px-5 py-8 text-center">
           <p className="text-sm font-semibold uppercase tracking-[0.24em] text-red-300/80">Смотреть</p>
           <p className="mt-2 text-xl text-zinc-100">Сейчас оффлайн</p>
@@ -124,7 +128,7 @@ export function WatchLivePage() {
   }
 
   return (
-    <section className="mx-auto w-full max-w-6xl px-6 pb-6">
+    <section className="mx-auto h-full w-full max-w-6xl px-6 pb-0">
       <div className="mb-3 flex items-center justify-between gap-3 rounded-2xl border border-red-500/30 bg-black/35 px-4 py-2">
         <h1 className="font-audex min-w-0 truncate text-xl text-zinc-100 md:text-2xl">{title}</h1>
         <p className="font-type-light-sans shrink-0 rounded-lg border border-emerald-300 bg-emerald-600 px-3 py-1 text-sm font-semibold text-emerald-50 md:text-base">
@@ -135,19 +139,21 @@ export function WatchLivePage() {
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-[1fr_360px]">
         <div className="overflow-hidden rounded-2xl border border-red-500/30 bg-black/55 shadow-2xl">
           <iframe
+            key={`player-${embedHost ?? "fallback"}`}
             src={getTwitchEmbedSrc(embedHost)}
             title="Twitch player"
             className="h-[52vh] min-h-[330px] w-full"
             allowFullScreen
-            loading="lazy"
+            loading="eager"
           />
         </div>
         <div className="overflow-hidden rounded-2xl border border-red-500/30 bg-black/55 shadow-2xl">
           <iframe
+            key={`chat-${embedHost ?? "fallback"}`}
             src={getTwitchChatEmbedSrc(embedHost)}
             title="Twitch chat"
             className="h-[52vh] min-h-[330px] w-full"
-            loading="lazy"
+            loading="eager"
           />
         </div>
       </div>

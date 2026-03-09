@@ -22,15 +22,8 @@ export default function DisclaimerOverlay() {
   const xhrRef = useRef<XMLHttpRequest | null>(null);
   const introStartTimeoutRef = useRef<number | null>(null);
   const introFinishTimeoutRef = useRef<number | null>(null);
-  const [isVisible, setIsVisible] = useState(() => {
-    if (typeof performance === "undefined") {
-      return true;
-    }
-    const navigationEntry = performance.getEntriesByType("navigation")[0] as
-      | PerformanceNavigationTiming
-      | undefined;
-    return navigationEntry?.type !== "reload";
-  });
+  const [isVisible, setIsVisible] = useState(false);
+  const [hasVisibilityDecision, setHasVisibilityDecision] = useState(false);
   const [deviceType, setDeviceType] = useState<DeviceType>(null);
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [videoObjectUrl, setVideoObjectUrl] = useState<string | null>(null);
@@ -60,6 +53,18 @@ export default function DisclaimerOverlay() {
   }, [selectedSrc]);
 
   const isReadyToStart = deviceType !== null && isVideoDownloaded && isVideoPrepared && !hasError;
+
+  useEffect(() => {
+    const navigationEntry = performance.getEntriesByType("navigation")[0] as
+      | PerformanceNavigationTiming
+      | undefined;
+    const isReloadNavigation =
+      navigationEntry?.type === "reload" ||
+      ((performance as Performance & { navigation?: { type?: number } }).navigation?.type ?? -1) === 1;
+
+    setIsVisible(!isReloadNavigation);
+    setHasVisibilityDecision(true);
+  }, []);
 
   const cleanupObjectUrl = useCallback(() => {
     if (objectUrlRef.current) {
@@ -207,7 +212,7 @@ export default function DisclaimerOverlay() {
     };
   }, [cleanupObjectUrl, cleanupRequest]);
 
-  if (!isVisible) {
+  if (!hasVisibilityDecision || !isVisible) {
     return null;
   }
 

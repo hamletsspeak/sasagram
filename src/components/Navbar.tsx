@@ -1,159 +1,167 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { AVATAR_TRIGGER_LINE_Y } from "@/lib/avatar-transition";
-
-const NAVBAR_AVATAR_SRC = encodeURI("/assets/logo/Кружок_сасыч.webm");
 
 type NavLink = {
   label: string;
   href: string;
-  section: boolean;
+  prefetch?: boolean;
 };
 
 const navLinks: NavLink[] = [
-  { label: "Главная", href: "#home", section: true },
-  { label: "О стримере", href: "#about", section: true },
-  { label: "Расписание", href: "#schedule", section: true },
-  { label: "Оценки", href: "/rating", section: false },
-  { label: "Записи", href: "#vods", section: true },
-  { label: "Контакты", href: "#contact", section: true },
+  { label: "Главная", href: "/", prefetch: false },
+  { label: "Расписание", href: "/schedule", prefetch: false },
+  { label: "Записи", href: "/vods", prefetch: false },
+  { label: "Контакты", href: "/contacts", prefetch: false },
+  { label: "Оценки", href: "/rating", prefetch: false },
 ];
 
 export default function Navbar() {
-  const [scrolled, setScrolled] = useState(false);
-  const [heroPassed, setHeroPassed] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [hoveredHref, setHoveredHref] = useState<string | null>(null);
   const pathname = usePathname();
 
-  useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 0);
-    handleScroll();
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  useEffect(() => {
-    let frame = 0;
-
-    const updateHeroPassed = () => {
-      frame = 0;
-      const heroAvatar = document.querySelector<HTMLElement>("[data-hero-avatar-point='true']");
-      if (!heroAvatar) return;
-      const rect = heroAvatar.getBoundingClientRect();
-      const triggerPointY = rect.top + rect.height / 2;
-      const shouldPass = triggerPointY <= AVATAR_TRIGGER_LINE_Y;
-      setHeroPassed((prev) => (prev === shouldPass ? prev : shouldPass));
-    };
-
-    const onScrollOrResize = () => {
-      if (frame) return;
-      frame = window.requestAnimationFrame(updateHeroPassed);
-    };
-
-    onScrollOrResize();
-    window.addEventListener("scroll", onScrollOrResize, { passive: true });
-    window.addEventListener("resize", onScrollOrResize);
-
-    return () => {
-      if (frame) window.cancelAnimationFrame(frame);
-      window.removeEventListener("scroll", onScrollOrResize);
-      window.removeEventListener("resize", onScrollOrResize);
-    };
-  }, []);
-
-  const resolveHref = (href: string, section: boolean) => {
-    if (!section) return href;
-    return pathname === "/" ? href : `/${href}`;
+  const isLinkActive = (href: string) => {
+    if (hoveredHref) {
+      return hoveredHref === href;
+    }
+    if (href === "/") {
+      return pathname === "/";
+    }
+    return pathname === href || pathname.startsWith(`${href}/`);
   };
 
+  useEffect(() => {
+    const applyRailOffset = () => {
+      const railWidth = window.matchMedia("(max-width: 767px)").matches ? "54px" : "76px";
+      document.body.style.paddingLeft = railWidth;
+      document.documentElement.style.setProperty("--left-rail-offset", railWidth);
+    };
+
+    applyRailOffset();
+    window.addEventListener("resize", applyRailOffset);
+
+    return () => {
+      document.body.style.paddingLeft = "";
+      document.documentElement.style.removeProperty("--left-rail-offset");
+      window.removeEventListener("resize", applyRailOffset);
+    };
+  }, []);
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+
+    if (menuOpen) {
+      document.body.style.overflow = "hidden";
+    }
+
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setMenuOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", onEscape);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onEscape);
+    };
+  }, [menuOpen]);
+
   return (
-    <header className="fixed top-2 left-0 right-0 z-50 px-4 pointer-events-none md:top-3 md:px-6">
-      <a
-        id="navbar-logo-anchor"
-        href="#home"
-        className={`fixed top-2 left-3 z-[60] flex items-center cursor-pointer md:top-3 md:left-6 ${
-          heroPassed
-            ? "opacity-100 pointer-events-auto"
-            : "opacity-0 pointer-events-none"
-        }`}
-      >
-        <div
-          id="navbar-logo-visual"
-          className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border-2 border-red-700/80 bg-black/35 shadow-[0_10px_28px_rgba(122,8,24,0.55)] md:h-16 md:w-16"
-        >
+    <>
+      <aside className="fixed inset-y-0 left-0 z-[90] w-[54px] border-r border-white/10 bg-black/86 backdrop-blur-sm md:w-[76px]">
+        <div className="pointer-events-none absolute bottom-5 left-1/2 -translate-x-1/2 md:bottom-6">
           <video
-            className="h-full w-full rounded-full scale-[1.34] object-cover object-[center_38%]"
+            className="h-8 w-8 object-contain opacity-95 [filter:grayscale(1)_brightness(0)_invert(1)_contrast(1.2)] md:h-9 md:w-9"
             autoPlay
             loop
             muted
             playsInline
             preload="metadata"
-            aria-label="SASAVOT"
+            aria-hidden="true"
           >
-            <source src={NAVBAR_AVATAR_SRC} type="video/webm" />
+            <source src={encodeURI("/assets/icons/Mouse scroll animation.webm")} type="video/webm" />
           </video>
         </div>
-        <span className="sr-only">SASAVOT</span>
-      </a>
+      </aside>
 
-      <nav
-        className={`pointer-events-auto ml-auto mt-0 mr-0 flex w-fit items-center rounded-full border px-5 py-2 shadow-2xl transition-all duration-300 md:mx-auto md:mt-0 md:px-8 md:py-3 ${
-          scrolled
-            ? "native-glass--strong shadow-[0_14px_40px_rgba(0,0,0,0.62)]"
-            : "native-glass shadow-[0_12px_34px_rgba(0,0,0,0.5)]"
-        }`}
+      <button
+        type="button"
+        onClick={() => setMenuOpen((prev) => !prev)}
+        className="fixed left-[27px] top-1/2 z-[130] -translate-x-1/2 -translate-y-1/2 text-zinc-100 transition-colors hover:text-white md:left-[38px]"
+        aria-label={menuOpen ? "Close menu" : "Open menu"}
       >
-        {/* Desktop nav */}
-        <ul className="hidden items-center gap-7 md:flex">
-          {navLinks.map((link) => (
-            <li key={link.href}>
-              <Link
-                href={resolveHref(link.href, link.section)}
-                className="text-zinc-400 hover:text-rose-200 text-sm font-medium transition-colors duration-200"
-              >
-                {link.label}
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <span className={`nav-rail-toggle ${menuOpen ? "is-open" : ""}`} aria-hidden="true">
+          <span />
+          <span />
+          <span />
+        </span>
+      </button>
 
-        {/* Mobile burger */}
-        <button
-          className="text-zinc-300 transition-colors hover:text-rose-100 md:hidden"
-          onClick={() => setMenuOpen(!menuOpen)}
-          aria-label="Toggle menu"
+      <div className={`fixed inset-y-0 left-[54px] right-0 z-[100] md:left-[76px] ${menuOpen ? "pointer-events-auto" : "pointer-events-none"}`}>
+        <div
+          className={`absolute inset-0 bg-black transition-opacity duration-300 ${menuOpen ? "opacity-100" : "opacity-0"}`}
+          onClick={() => setMenuOpen(false)}
+        />
+
+        <div
+          className={`absolute inset-0 border-t border-white/10 bg-black transition-transform duration-500 ease-out ${
+            menuOpen ? "translate-y-0" : "-translate-y-full"
+          }`}
         >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            {menuOpen ? (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            ) : (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            )}
-          </svg>
-        </button>
-      </nav>
+          <div className="grid h-full min-h-full grid-cols-1 min-[992px]:grid-cols-[minmax(0,58%)_minmax(0,42%)]">
+            <ul className="relative z-10 flex h-full flex-col">
+              {navLinks.map((link, index) => (
+                <li key={link.href} className="flex-1 border-b border-white/10 first:border-t">
+                  <Link
+                    href={link.href}
+                    prefetch={link.prefetch}
+                    onMouseEnter={() => setHoveredHref(link.href)}
+                    onMouseLeave={() => setHoveredHref(null)}
+                    onFocus={() => setHoveredHref(link.href)}
+                    onBlur={() => setHoveredHref(null)}
+                    onClick={() => setMenuOpen(false)}
+                    className="group flex h-full items-center px-6 md:px-10"
+                  >
+                    <span className="mr-3 text-xs font-medium align-middle text-white/45 md:text-sm">
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
+                    <span
+                      className={`text-[clamp(2rem,7vw,4.5rem)] uppercase leading-[0.9] tracking-[-0.02em] transition-all duration-200 ${
+                        isLinkActive(link.href)
+                          ? "font-gropled-bold text-white"
+                          : "font-gropled-hollow text-white/20 [text-shadow:0_0_0_rgba(0,0,0,0)]"
+                      }`}
+                      style={isLinkActive(link.href) ? undefined : { WebkitTextStroke: "1px rgba(255,255,255,0.75)" }}
+                    >
+                      {link.label}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
 
-      {/* Mobile menu */}
-      {menuOpen && (
-        <div className="native-glass--strong pointer-events-auto ml-auto mt-3 mr-0 w-[min(94vw,380px)] rounded-3xl border px-6 py-5 shadow-[0_20px_55px_rgba(0,0,0,0.65)] md:hidden">
-          <ul className="flex flex-col gap-4">
-            {navLinks.map((link) => (
-              <li key={link.href}>
-                <Link
-                  href={resolveHref(link.href, link.section)}
-                  className="text-zinc-300 hover:text-rose-200 text-sm font-medium transition-colors"
-                  onClick={() => setMenuOpen(false)}
-                >
-                  {link.label}
-                </Link>
-              </li>
-            ))}
-          </ul>
+            <div className="relative hidden min-[992px]:block border-l border-white/10">
+              <video
+                className="absolute inset-0 h-full w-full object-cover"
+                autoPlay
+                loop
+                muted
+                playsInline
+                preload="metadata"
+                aria-hidden="true"
+              >
+                <source src={encodeURI("/assets/bg/edit_navbar_slay.webm")} type="video/webm" />
+              </video>
+              <div className="absolute inset-0 bg-black/45" />
+            </div>
+          </div>
         </div>
-      )}
-    </header>
+      </div>
+    </>
   );
 }

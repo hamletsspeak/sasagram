@@ -7,7 +7,6 @@ import { fetchJsonWithCache } from "@/lib/client-api-cache";
 const contactLinks = [
   {
     label: "YouTube Нарезки",
-    description: "Канал с нарезками",
     value: "@141kishkiFM",
     href: "https://www.youtube.com/@141kishkiFM",
     avatarUrl: "https://unavatar.io/youtube/141kishkiFM",
@@ -22,7 +21,6 @@ const contactLinks = [
   },
   {
     label: "Telegram Канал",
-    description: "Официальный TG канал",
     value: "t.me/sasavot",
     href: "https://t.me/sasavot",
     avatarUrl: "https://unavatar.io/telegram/sasavot",
@@ -37,7 +35,6 @@ const contactLinks = [
   },
   {
     label: "Discord",
-    description: "Комьюнити сервер",
     value: "discord.gg/wl-141",
     href: "https://discord.com/invite/wl-141",
     avatarUrl: "/assets/logo/ds_logo.jpg",
@@ -52,7 +49,6 @@ const contactLinks = [
   },
   {
     label: "Предложить контент",
-    description: "Пиши модератору в TG",
     value: "@uran_mod",
     href: "https://t.me/uran_mod",
     avatarVideoUrl: "/assets/logo/alert_orig.mp4",
@@ -62,6 +58,34 @@ const contactLinks = [
     icon: (
       <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 4v16m8-8H4" />
+      </svg>
+    ),
+  },
+  {
+    label: "Instagram",
+    value: "@gleb0413",
+    href: "https://www.instagram.com/gleb0413",
+    avatarUrl: "/assets/logo/inst_logo.jpg",
+    avatar: "IG",
+    color: "from-zinc-700/35 via-zinc-800/30 to-zinc-900/35",
+    border: "border-zinc-500/35",
+    icon: (
+      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M7.75 2h8.5A5.75 5.75 0 0 1 22 7.75v8.5A5.75 5.75 0 0 1 16.25 22h-8.5A5.75 5.75 0 0 1 2 16.25v-8.5A5.75 5.75 0 0 1 7.75 2Zm0 1.8A3.95 3.95 0 0 0 3.8 7.75v8.5a3.95 3.95 0 0 0 3.95 3.95h8.5a3.95 3.95 0 0 0 3.95-3.95v-8.5a3.95 3.95 0 0 0-3.95-3.95h-8.5Zm8.9 1.35a1.1 1.1 0 1 1 0 2.2 1.1 1.1 0 0 1 0-2.2ZM12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10Zm0 1.8a3.2 3.2 0 1 0 0 6.4 3.2 3.2 0 0 0 0-6.4Z" />
+      </svg>
+    ),
+  },
+  {
+    label: "Почта для жалоб или серьезных вопросов",
+    value: "VOTVOPROS.13@yandex.ru",
+    href: "mailto:VOTVOPROS.13@yandex.ru",
+    avatarUrl: "/assets/icons/yandex_logo.png",
+    avatar: "M",
+    color: "from-zinc-700/35 via-zinc-800/30 to-zinc-900/35",
+    border: "border-zinc-500/35",
+    icon: (
+      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 7.5 12 14l9-6.5M4.5 6h15A1.5 1.5 0 0 1 21 7.5v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 16.5v-9A1.5 1.5 0 0 1 4.5 6Z" />
       </svg>
     ),
   },
@@ -175,16 +199,17 @@ export default function Contact() {
   }, []);
 
   return (
-    <section id="contact" className="blood-divider min-h-screen py-24 bg-black/45 flex items-center">
-      <div className="max-w-4xl mx-auto px-6">
-        <div className="grid grid-cols-2 gap-8 sm:grid-cols-2 md:grid-cols-4">
+    <section id="contact" className="flex h-[calc(100vh-66px)] items-center overflow-hidden bg-transparent py-2 md:h-[calc(100vh-78px)] md:py-3">
+      <div className="mx-auto w-full max-w-6xl px-4 md:px-6">
+        <div className="rounded-3xl border border-zinc-700/80 bg-zinc-950/84 px-4 py-4 backdrop-blur-sm md:px-6 md:py-5">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-5">
           {contactLinks.map((item) => (
             <a
               key={item.label}
               href={item.href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group flex flex-col items-center text-center"
+              target={item.href.startsWith("mailto:") ? undefined : "_blank"}
+              rel={item.href.startsWith("mailto:") ? undefined : "noopener noreferrer"}
+              className="group flex flex-col items-center rounded-2xl border border-zinc-700/80 bg-zinc-900/70 px-2 py-2 text-center transition hover:border-zinc-400 hover:bg-zinc-900/90"
               onMouseEnter={(event) => {
                 if (!item.avatarVideoUrl) return;
                 if (!canHover()) return;
@@ -203,7 +228,7 @@ export default function Contact() {
               }}
             >
               <div
-                className={`relative flex h-28 w-28 items-center justify-center rounded-full border bg-gradient-to-br ${item.color} ${item.border} shadow-xl transition-all duration-200 group-hover:-translate-y-1 group-hover:shadow-2xl sm:h-32 sm:w-32`}
+                className={`relative mx-auto flex h-16 w-16 items-center justify-center rounded-full border bg-gradient-to-br ${item.color} ${item.border} shadow-xl transition-all duration-200 group-hover:-translate-y-1 group-hover:shadow-2xl sm:h-20 sm:w-20 md:h-24 md:w-24`}
               >
                 {item.avatarVideoUrl ? (
                   <video
@@ -226,32 +251,33 @@ export default function Contact() {
                     unoptimized={shouldBypassNextImage(item.avatarUrl)}
                   />
                 ) : (
-                  <span className="text-xl font-black tracking-wide text-white sm:text-2xl">{item.avatar}</span>
+                  <span className="text-base font-black tracking-wide text-white sm:text-lg md:text-xl">{item.avatar}</span>
                 )}
-                <span className="absolute -bottom-1 -right-1 flex h-10 w-10 items-center justify-center rounded-full border border-gray-900 bg-gray-900 text-white shadow-lg">
+                <span className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full border border-zinc-700 bg-zinc-900 text-zinc-100 md:h-8 md:w-8">
                   {item.icon}
                 </span>
               </div>
 
-              <p className="mt-4 text-sm font-semibold text-white sm:text-base">{item.label}</p>
-              <p className="mt-1 text-xs text-gray-400 sm:text-sm">{item.description}</p>
-              <p className="mt-1 text-xs text-gray-300 sm:text-sm">{item.value}</p>
+              <p className="mt-2 text-[11px] font-semibold text-zinc-100 sm:text-xs md:text-sm">{item.label}</p>
+              {item.value ? (
+                <p className="mt-0.5 text-[10px] font-medium text-zinc-300 sm:text-[11px] md:text-xs">{item.value}</p>
+              ) : null}
             </a>
           ))}
-        </div>
+          </div>
 
-        <div className="mt-16">
-          <p className="mb-4 text-center text-red-300 text-sm font-semibold uppercase tracking-[0.22em]">
+          <div className="mt-5 border-t border-zinc-700/80 pt-4 md:mt-6">
+            <p className="mb-2 text-center text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-300 md:text-xs">
             Смотреть также
-          </p>
-          <div className="grid grid-cols-2 gap-3 pt-1 sm:flex sm:items-start sm:justify-center sm:gap-3 sm:overflow-x-auto sm:pb-2 sm:[ms-overflow-style:none] sm:[scrollbar-width:none] sm:[&::-webkit-scrollbar]:hidden">
+            </p>
+            <div className="grid grid-cols-4 gap-2.5 pt-1">
             {watchAlsoLinks.map((item) => (
               <a
                 key={item.key}
                 href={item.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group flex w-full min-w-0 flex-col items-center rounded-2xl border border-red-950/45 bg-black/35 px-2 py-3 text-center sm:w-24 sm:min-w-24 sm:rounded-none sm:border-0 sm:bg-transparent sm:px-0 sm:py-0"
+                className="group flex w-full min-w-0 flex-col items-center rounded-xl border border-zinc-700/80 bg-zinc-900/70 px-1.5 py-2 text-center transition hover:border-zinc-400 hover:bg-zinc-900/90"
               >
                 <div className="relative">
                   <Image
@@ -259,7 +285,7 @@ export default function Contact() {
                     alt={item.label}
                     width={80}
                     height={80}
-                    className="h-16 w-16 rounded-full border border-gray-700/80 object-cover shadow-lg transition-transform duration-200 group-hover:scale-105"
+                    className="h-10 w-10 rounded-full border border-gray-700/80 object-cover shadow-lg transition-transform duration-200 group-hover:scale-105 md:h-12 md:w-12"
                     unoptimized={shouldBypassNextImage(creatorStates[item.key]?.avatarUrl ?? item.avatarUrl)}
                   />
                   <span className="absolute bottom-0 right-0 drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)]">
@@ -274,7 +300,7 @@ export default function Contact() {
                         />
                       </span>
                     ) : (
-                      <span className="flex h-6 w-6 items-center justify-center rounded-full border border-red-300 bg-red-700/90">
+                      <span className="flex h-6 w-6 items-center justify-center rounded-full border border-zinc-500 bg-zinc-800/90">
                         <svg className="h-4 w-4 text-white" viewBox="0 0 24 24" fill="currentColor" aria-label="Twitch">
                           <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z" />
                         </svg>
@@ -284,24 +310,24 @@ export default function Contact() {
                   <span
                     className={`absolute -top-1 -left-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
                       creatorStates[item.key]?.isLive
-                        ? "bg-red-500/90 text-white"
-                        : "bg-gray-800/90 text-gray-200"
+                        ? "bg-red-500 text-white"
+                        : "bg-zinc-800/90 text-zinc-200"
                     }`}
                   >
                     {creatorStates[item.key]?.isLive ? "LIVE" : "OFF"}
                   </span>
                 </div>
-                <span className="mt-2 text-sm text-gray-300 transition-colors group-hover:text-white">
+                <span className="mt-1 text-[10px] font-semibold text-zinc-100 transition-colors group-hover:text-white md:text-xs">
                   @{item.label}
                 </span>
-                <span className="mt-0.5 text-xs text-gray-500">
+                <span className="mt-0.5 text-[10px] text-zinc-400 md:text-xs">
                   {item.realName}
                 </span>
               </a>
             ))}
+            </div>
           </div>
         </div>
-
       </div>
     </section>
   );

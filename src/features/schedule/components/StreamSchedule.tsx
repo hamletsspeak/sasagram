@@ -90,27 +90,27 @@ export default function StreamSchedule() {
   };
 
   return (
-    <section id="schedule" className="min-h-screen py-20 bg-black/45">
-      <div className="max-w-6xl mx-auto px-6">
-        <div className="flex items-center justify-between mb-4 gap-3">
+    <section id="schedule" className="h-[calc(100vh-66px)] overflow-hidden bg-transparent py-2 md:h-[calc(100vh-78px)] md:py-3">
+      <div className="mx-auto flex h-full min-h-0 max-w-6xl flex-col px-4 md:px-6">
+        <div className="mb-3 flex items-center justify-between gap-3">
           <h2 className="font-fontick text-2xl md:text-3xl font-bold text-white">Расписание стримов</h2>
           <Link
             href="/rating"
-            className="inline-flex items-center rounded-full border border-red-400/35 bg-red-500/12 px-4 py-2 text-sm font-medium text-red-100 transition hover:border-red-300/60 hover:bg-red-500/18 hover:text-white"
+            className="inline-flex items-center rounded-full border border-red-500/80 bg-black/85 px-4 py-2 text-sm font-bold text-red-200 shadow-[0_8px_24px_rgba(0,0,0,0.45)] transition hover:border-red-400 hover:bg-red-700/85 hover:text-white"
           >
             Оценить стримы
           </Link>
         </div>
 
         {loading ? (
-          <div className="space-y-3 rounded-2xl border border-white/10 bg-zinc-900/60 p-4">
+          <div className="h-full space-y-3 rounded-2xl border border-white/10 bg-zinc-900/60 p-4">
             <div className="h-10 w-56 animate-pulse rounded-xl bg-zinc-700/70" />
-            <div className="h-64 animate-pulse rounded-xl bg-zinc-800/80" />
+            <div className="h-[calc(100%-3.25rem)] animate-pulse rounded-xl bg-zinc-800/80" />
           </div>
         ) : error ? (
-          <div className="text-center text-gray-400 text-sm py-8">Не удалось загрузить расписание</div>
+          <div className="flex h-full items-center justify-center text-center text-sm text-gray-400">Не удалось загрузить расписание</div>
         ) : (
-          <>
+          <div className="min-h-0 flex-1 overflow-hidden">
             <ScheduleMobile
               selectedWeek={selectedWeek}
               selectedWeekRangeLabel={selectedWeekRangeLabel}
@@ -158,7 +158,7 @@ export default function StreamSchedule() {
               onSelectWeek={selectWeek}
               onJumpToday={() => setSelectedWeekKey(weeks.length > 0 ? weeks[weeks.length - 1].key : null)}
             />
-          </>
+          </div>
         )}
       </div>
     </section>
