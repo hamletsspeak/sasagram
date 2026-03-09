@@ -8,6 +8,9 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: configDir,
   },
+  experimental: {
+    optimizePackageImports: ["@react-three/drei"],
+  },
   images: {
     remotePatterns: [
       {
