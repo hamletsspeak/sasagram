@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import dynamic from "next/dynamic";
-import { memo, startTransition, useEffect, useMemo, useRef, useState } from "react";
+import { memo, Suspense, startTransition, useEffect, useMemo, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Lenis from "lenis";
+import { Canvas, useFrame } from "@react-three/fiber";
+import { OrbitControls, useGLTF } from "@react-three/drei";
+import { Box3, MathUtils, Vector3, type Group } from "three";
 import { STORY_SCENES } from "@/features/storytelling/data/scenes";
 import { fetchJsonWithCache } from "@/lib/client-api-cache";
 import styles from "./CinematicStorytelling.module.css";
@@ -113,10 +115,11 @@ type TwitchFollowersPayload = {
   followersCount?: number;
 };
 
-const SceneTwoBrainCanvas = dynamic(() => import("./SceneTwoBrainCanvas"), {
-  ssr: false,
-  loading: () => null,
-});
+function getMinimalConnectorRotationY(position: [number, number, number]): number {
+  const [x, , z] = position;
+  // Rotate selected point toward the right side (fixed info panel side) to minimize connector length.
+  return Math.atan2(z, x) - 0.08;
+}
 
 const BRAIN_HOTSPOTS: Hotspot[] = [
   {
@@ -188,7 +191,77 @@ const BRAIN_HOTSPOTS: Hotspot[] = [
     focusY: -0.12,
   },
 ];
-const SCENE_TWO_HOTSPOT_LIGHTS = BRAIN_HOTSPOTS.map(({ id, position }) => ({ id, position }));
+
+function BrainHologramModel({
+  selectedHotspotId,
+  visibleHotspotsCount,
+}: {
+  selectedHotspotId: string | null;
+  visibleHotspotsCount: number;
+}) {
+  const gltf = useGLTF("/assets/3d/brain_hologram.glb");
+  const groupRef = useRef<Group | null>(null);
+  const autoRotationRef = useRef(0);
+  const modelCenterOffset = useMemo(() => {
+    const box = new Box3().setFromObject(gltf.scene);
+    const center = box.getCenter(new Vector3());
+    return new Vector3(-center.x, -center.y, -center.z);
+  }, [gltf.scene]);
+  const selectedHotspot = BRAIN_HOTSPOTS.find((hotspot) => hotspot.id === selectedHotspotId);
+
+  useFrame((state, delta) => {
+    const group = groupRef.current;
+    if (!group) return;
+    autoRotationRef.current += delta * (selectedHotspot ? 0.12 : 0.22);
+    const targetRotationY = selectedHotspot
+      ? getMinimalConnectorRotationY(selectedHotspot.position) + autoRotationRef.current * 0.45
+      : -0.3 + autoRotationRef.current;
+    const targetX = SCENE_TWO_MODEL_BASE_POSITION.x;
+    const targetZ = selectedHotspot?.focusZ ?? SCENE_TWO_MODEL_BASE_POSITION.z;
+    const targetY = selectedHotspot?.focusY ?? SCENE_TWO_MODEL_BASE_POSITION.y;
+    const targetScale = selectedHotspot ? 1.02 : 0.68;
+    group.position.x = MathUtils.damp(group.position.x, targetX, 4.2, delta);
+    group.rotation.y = MathUtils.damp(group.rotation.y, targetRotationY, 4.6, delta);
+    group.position.z = MathUtils.damp(group.position.z, targetZ, 4.2, delta);
+    group.position.y = MathUtils.damp(group.position.y, targetY, 4.2, delta);
+    group.scale.x = MathUtils.damp(group.scale.x, targetScale, 4.2, delta);
+    group.scale.y = MathUtils.damp(group.scale.y, targetScale, 4.2, delta);
+    group.scale.z = MathUtils.damp(group.scale.z, targetScale, 4.2, delta);
+  });
+
+  return (
+    <group
+      ref={groupRef}
+      position={[
+        SCENE_TWO_MODEL_BASE_POSITION.x,
+        SCENE_TWO_MODEL_BASE_POSITION.y,
+        SCENE_TWO_MODEL_BASE_POSITION.z,
+      ]}
+      rotation={[0, -0.3, 0]}
+      scale={0.68}
+    >
+      <group position={[modelCenterOffset.x, modelCenterOffset.y, modelCenterOffset.z]}>
+        <primitive object={gltf.scene} />
+        {BRAIN_HOTSPOTS.map((hotspot, index) =>
+          index < visibleHotspotsCount ? (
+            <group key={hotspot.id} position={hotspot.position}>
+              <mesh>
+                <sphereGeometry args={[0.02, 24, 24]} />
+                <meshStandardMaterial
+                  color={selectedHotspotId === hotspot.id ? "#5f0d14" : "#8ed5ff"}
+                  emissive={selectedHotspotId === hotspot.id ? "#2a0308" : "#5ec4ff"}
+                  emissiveIntensity={selectedHotspotId === hotspot.id ? 1.35 : 1.25}
+                />
+              </mesh>
+            </group>
+          ) : null,
+        )}
+      </group>
+    </group>
+  );
+}
+
+useGLTF.preload("/assets/3d/brain_hologram.glb");
 
 const SceneFourFollowersCounter = memo(function SceneFourFollowersCounter({
   value,
@@ -301,7 +374,6 @@ export default function CinematicStorytelling() {
     selectedSceneTwoHotspot?.focusY ?? SCENE_TWO_MODEL_BASE_POSITION.y,
     selectedSceneTwoHotspot?.focusZ ?? SCENE_TWO_MODEL_BASE_POSITION.z,
   ];
-  const shouldRenderSceneTwoCanvas = Math.abs(activeScene - 1) <= 1;
   const sceneWeightProgressThresholds = useMemo(() => {
     const sceneWeights = STORY_SCENES.map((_, index) => SCENE_SCROLL_WEIGHTS[index] ?? 1);
     const totalWeight = sceneWeights.reduce((sum, weight) => sum + weight, 0);
@@ -1327,17 +1399,33 @@ export default function CinematicStorytelling() {
                       ))}
                     </div>
                   </div>
-                  {shouldRenderSceneTwoCanvas ? (
-                    <SceneTwoBrainCanvas
-                      hotspots={SCENE_TWO_HOTSPOT_LIGHTS}
-                      selectedHotspotId={sceneTwoSelectedHotspot}
-                      visibleHotspotsCount={sceneTwoVisibleCount}
-                      orbitTarget={sceneTwoOrbitTarget}
-                      isActive={activeScene === 1}
-                    />
-                  ) : (
-                    <div className={styles.sceneModelCanvas} aria-hidden="true" />
-                  )}
+                  <Canvas
+                    className={styles.sceneModelCanvas}
+                    dpr={[1, 1.35]}
+                    frameloop={activeScene === 1 ? "always" : "never"}
+                    camera={{ position: [0, 0.2, 3.3], fov: 34 }}
+                  >
+                    <ambientLight intensity={0.9} />
+                    <directionalLight position={[2.5, 3, 2]} intensity={1.4} />
+                    <directionalLight position={[-2.5, -1.5, -2]} intensity={0.4} />
+                    <Suspense fallback={null}>
+                      <BrainHologramModel
+                        selectedHotspotId={sceneTwoSelectedHotspot}
+                        visibleHotspotsCount={sceneTwoVisibleCount}
+                      />
+                      <OrbitControls
+                        makeDefault
+                        target={sceneTwoOrbitTarget}
+                        enablePan={false}
+                        enableZoom={false}
+                        enableDamping
+                        dampingFactor={0.08}
+                        rotateSpeed={0.7}
+                        minDistance={2.2}
+                        maxDistance={6}
+                      />
+                    </Suspense>
+                  </Canvas>
                 </div>
               ) : null}
               {index === 0 ? (
