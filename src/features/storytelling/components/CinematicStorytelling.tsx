@@ -990,15 +990,16 @@ export default function CinematicStorytelling() {
 
           if (bg) {
             const bgDuration = i === 0 ? (sceneWeights[i] ?? 1) : (sceneWeights[i] ?? 1) + 0.2;
+            const isSceneThree = i === 2;
             timeline.fromTo(
               bg,
               {
-                scale: SCENE_PARALLAX_START_SCALE,
-                yPercent: SCENE_PARALLAX_START_Y,
+                scale: isSceneThree ? 1 : SCENE_PARALLAX_START_SCALE,
+                yPercent: isSceneThree ? 0 : SCENE_PARALLAX_START_Y,
               },
               {
-                scale: SCENE_PARALLAX_END_SCALE,
-                yPercent: SCENE_PARALLAX_END_Y,
+                scale: isSceneThree ? 1 : SCENE_PARALLAX_END_SCALE,
+                yPercent: isSceneThree ? 0 : SCENE_PARALLAX_END_Y,
                 duration: bgDuration,
                 immediateRender: false,
                 force3D: true,
@@ -1219,11 +1220,11 @@ export default function CinematicStorytelling() {
                   }}
                   className={`${styles.content} ${index === 3 ? styles.sceneFourContent : ""}`}
                 >
-                  <p className={styles.eyebrow}>{scene.eyebrow}</p>
+                  {index !== 3 ? <p className={styles.eyebrow}>{scene.eyebrow}</p> : null}
                   <h2 className={`${styles.title} ${index === 3 ? styles.sceneFourTitle : ""}`}>{scene.title}</h2>
                   {index === 3 ? (
                     <div className={styles.sceneFourFollowers} aria-live="polite">
-                      <p className={styles.sceneFourFollowersLabel}>Фолловеры Twitch</p>
+                      <p className={styles.sceneFourFollowersLabel}>нас уже</p>
                       <SceneFourFollowersCounter value={sceneFourFollowersCount} />
                     </div>
                   ) : null}
@@ -1267,7 +1268,6 @@ export default function CinematicStorytelling() {
               {index === 2 ? <div className={styles.sceneThreeTransitionDim} aria-hidden="true" /> : null}
               {index === 2 ? (
                 <div className={styles.sceneThreePoem} aria-label="Стих сцены 3">
-                  <div className={styles.sceneThreePoemBackdrop} aria-hidden="true" />
                   <div
                     className={`${styles.sceneThreePoemInner} ${
                       activeScene === 2 ? styles.sceneThreePoemInnerVisible : ""
@@ -1300,8 +1300,6 @@ export default function CinematicStorytelling() {
                       } else {
                         lineOpacity *= sceneThreeEnvelope;
                       }
-                      const lineOffsetY = (1 - lineOpacity) * 20;
-
                       return (
                         <p
                           key={`scene-three-poem-line-${lineIndex}`}
@@ -1311,7 +1309,7 @@ export default function CinematicStorytelling() {
                           style={
                             {
                               opacity: lineOpacity,
-                              transform: `translate(-50%, calc(-50% + ${lineOffsetY}px))`,
+                              transform: "translate(-50%, -50%)",
                             } as { [key: string]: string | number }
                           }
                         >

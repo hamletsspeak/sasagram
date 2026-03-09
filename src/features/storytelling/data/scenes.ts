@@ -50,14 +50,10 @@ export const STORY_SCENES: StoryScene[] = [
   {
     id: "scene-community",
     eyebrow: "Scene 04",
-    title: "История становления сообщества",
+    title: "ИСТОРИЯ СТАНОВЛЕНИЯ СООБЩЕСТВА 141",
     description:
       "Сообщество растет с каждым эфиром. Новые зрители становятся частью общей истории. Live продолжается здесь и сейчас.",
     keyword: "PULSE",
-    cta: {
-      label: "Открыть контакты",
-      href: "/contacts",
-    },
     gradient: "linear-gradient(180deg, #000000 0%, #000000 100%)",
   },
 ];

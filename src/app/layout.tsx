@@ -21,6 +21,11 @@ export const metadata: Metadata = {
     description: "Официальный сайт стримера SASAVOT. Прямые эфиры, игровой контент и коллаборации.",
     type: "website",
   },
+  icons: {
+    icon: "/assets/logo/%D0%BB%D0%BE%D0%B3%D0%BE_%D1%81%D0%B0%D0%B9%D1%82.png",
+    shortcut: "/assets/logo/%D0%BB%D0%BE%D0%B3%D0%BE_%D1%81%D0%B0%D0%B9%D1%82.png",
+    apple: "/assets/logo/%D0%BB%D0%BE%D0%B3%D0%BE_%D1%81%D0%B0%D0%B9%D1%82.png",
+  },
 };
 
 export const viewport: Viewport = {
