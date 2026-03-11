@@ -9,6 +9,8 @@ const MOBILE_DISCLAIMER_SRC =
   process.env.NEXT_PUBLIC_DISCLAIMER_VIDEO_URL_MOBILE ??
   "/assets/logo/дисклеймен_final_mob.webm";
 const DOWNLOAD_PROGRESS_MAX = 95;
+const INTRO_WATCHED_STORAGE_KEY = "sasagram:intro-watched";
+const OPEN_DISCLAIMER_EVENT = "sasagram:open-disclaimer";
 
 type DeviceType = "mobile" | "desktop" | null;
 
@@ -54,15 +56,26 @@ export default function DisclaimerOverlay() {
 
   const isReadyToStart = deviceType !== null && isVideoDownloaded && isVideoPrepared && !hasError;
 
-  useEffect(() => {
-    const navigationEntry = performance.getEntriesByType("navigation")[0] as
-      | PerformanceNavigationTiming
-      | undefined;
-    const isReloadNavigation =
-      navigationEntry?.type === "reload" ||
-      ((performance as Performance & { navigation?: { type?: number } }).navigation?.type ?? -1) === 1;
+  const resetOverlayState = useCallback(() => {
+    setHasStarted(false);
+    setIsStarting(false);
+    setIsFinishing(false);
+    setPlayBlocked(false);
+    setHasError(false);
+    setDownloadProgress((current) => {
+      if (isVideoPrepared) {
+        return 100;
+      }
+      if (isVideoDownloaded) {
+        return DOWNLOAD_PROGRESS_MAX;
+      }
+      return current;
+    });
+  }, [isVideoDownloaded, isVideoPrepared]);
 
-    setIsVisible(!isReloadNavigation);
+  useEffect(() => {
+    const hasSeenIntro = window.localStorage.getItem(INTRO_WATCHED_STORAGE_KEY) === "true";
+    setIsVisible(!hasSeenIntro);
     setHasVisibilityDecision(true);
   }, []);
 
@@ -161,6 +174,30 @@ export default function DisclaimerOverlay() {
       mediaQuery.removeEventListener("change", updateDeviceType);
     };
   }, []);
+
+  useEffect(() => {
+    const onOpenDisclaimer = () => {
+      resetOverlayState();
+      setIsVisible(true);
+
+      if (selectedSrc && !videoObjectUrl) {
+        startLoadingSelectedVideo(selectedSrc);
+      } else {
+        window.requestAnimationFrame(() => {
+          const video = videoRef.current;
+          if (video) {
+            video.pause();
+            video.currentTime = 0;
+          }
+        });
+      }
+    };
+
+    window.addEventListener(OPEN_DISCLAIMER_EVENT, onOpenDisclaimer);
+    return () => {
+      window.removeEventListener(OPEN_DISCLAIMER_EVENT, onOpenDisclaimer);
+    };
+  }, [resetOverlayState, selectedSrc, startLoadingSelectedVideo, videoObjectUrl]);
 
   useEffect(() => {
     const html = document.documentElement;
@@ -317,6 +354,7 @@ export default function DisclaimerOverlay() {
           setIsVideoPrepared(true);
         }}
         onEnded={() => {
+          window.localStorage.setItem(INTRO_WATCHED_STORAGE_KEY, "true");
           setIsFinishing(true);
           window.dispatchEvent(new Event("sasagram:disclaimer-finished"));
           introFinishTimeoutRef.current = window.setTimeout(() => {

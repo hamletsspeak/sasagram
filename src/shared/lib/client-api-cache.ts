@@ -71,3 +71,12 @@ export async function fetchJsonWithCache<T>(
   pendingMap().set(cacheKey, requestPromise);
   return (await requestPromise) as T;
 }
+
+export function clearClientApiCache() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  cacheMap().clear();
+  pendingMap().clear();
+}

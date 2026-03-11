@@ -1,6 +1,8 @@
 import pg from "pg";
 
 const { Client } = pg;
+const MATCH_WINDOW_MINUTES = 5;
+const FORCE_MERGE_WINDOW_MINUTES = 2;
 
 const connectionString =
   process.env.SUPABASE_DB_URL ??
@@ -66,34 +68,64 @@ async function main() {
     `);
 
     await client.query(`
-      WITH ranked AS (
+      WITH candidate_pairs AS (
         SELECT
-          s.id,
-          date_trunc('minute', s.started_at) AS minute_key,
-          FIRST_VALUE(s.id) OVER (
-            PARTITION BY date_trunc('minute', s.started_at)
-            ORDER BY
-              (NULLIF(BTRIM(s.stream_url), '') IS NOT NULL) DESC,
-              (NULLIF(BTRIM(s.title), '') IS NOT NULL) DESC,
-              s.duration_hours DESC,
-              s.created_at DESC,
-              s.id DESC
-          ) AS winner_id,
-          ROW_NUMBER() OVER (
-            PARTITION BY date_trunc('minute', s.started_at)
-            ORDER BY
-              (NULLIF(BTRIM(s.stream_url), '') IS NOT NULL) DESC,
-              (NULLIF(BTRIM(s.title), '') IS NOT NULL) DESC,
-              s.duration_hours DESC,
-              s.created_at DESC,
-              s.id DESC
-          ) AS rn
-        FROM streams AS s
+          a.id AS left_id,
+          b.id AS right_id,
+          ABS(EXTRACT(EPOCH FROM (a.started_at - b.started_at))) AS diff_seconds,
+          CASE
+            WHEN NULLIF(LOWER(BTRIM(a.title)), '') IS NOT DISTINCT FROM NULLIF(LOWER(BTRIM(b.title)), '')
+            THEN TRUE
+            ELSE FALSE
+          END AS title_matches
+        FROM streams AS a
+        JOIN streams AS b
+          ON a.id < b.id
+         AND ABS(EXTRACT(EPOCH FROM (a.started_at - b.started_at))) <= (${MATCH_WINDOW_MINUTES} * 60)
+         AND DATE_TRUNC('day', a.started_at AT TIME ZONE 'UTC') = DATE_TRUNC('day', b.started_at AT TIME ZONE 'UTC')
+      ),
+      matched_pairs AS (
+        SELECT *
+        FROM candidate_pairs
+        WHERE title_matches OR diff_seconds <= (${FORCE_MERGE_WINDOW_MINUTES} * 60)
+      ),
+      resolved_pairs AS (
+        SELECT
+          CASE
+            WHEN left_meta.priority >= right_meta.priority THEN left_id
+            ELSE right_id
+          END AS winner_id,
+          CASE
+            WHEN left_meta.priority >= right_meta.priority THEN right_id
+            ELSE left_id
+          END AS loser_id
+        FROM matched_pairs
+        JOIN LATERAL (
+          SELECT
+            (
+              CASE WHEN NULLIF(BTRIM(s.stream_url), '') IS NOT NULL THEN 1000000 ELSE 0 END +
+              CASE WHEN NULLIF(BTRIM(s.title), '') IS NOT NULL THEN 100000 ELSE 0 END +
+              COALESCE(ROUND(s.duration_hours * 100)::bigint, 0) * 100 +
+              EXTRACT(EPOCH FROM s.created_at)::bigint
+            ) AS priority
+          FROM streams AS s
+          WHERE s.id = left_id
+        ) AS left_meta ON TRUE
+        JOIN LATERAL (
+          SELECT
+            (
+              CASE WHEN NULLIF(BTRIM(s.stream_url), '') IS NOT NULL THEN 1000000 ELSE 0 END +
+              CASE WHEN NULLIF(BTRIM(s.title), '') IS NOT NULL THEN 100000 ELSE 0 END +
+              COALESCE(ROUND(s.duration_hours * 100)::bigint, 0) * 100 +
+              EXTRACT(EPOCH FROM s.created_at)::bigint
+            ) AS priority
+          FROM streams AS s
+          WHERE s.id = right_id
+        ) AS right_meta ON TRUE
       )
       INSERT INTO stream_dedupe_map (winner_id, loser_id)
-      SELECT winner_id, id
-      FROM ranked
-      WHERE rn > 1
+      SELECT DISTINCT winner_id, loser_id
+      FROM resolved_pairs
     `);
 
     await client.query(`
@@ -176,6 +208,7 @@ async function main() {
     console.log(`Duplicate rows before: ${duplicateRowsBefore.rows[0].count}`);
     console.log(`Deleted duplicate stream rows: ${deleted.rowCount ?? 0}`);
     console.log(`Duplicate minute groups after: ${duplicateMinutesAfter.rows[0].count}`);
+    console.log(`Matching window: ${MATCH_WINDOW_MINUTES} minutes; force-merge window: ${FORCE_MERGE_WINDOW_MINUTES} minutes.`);
     console.log("Done.");
   } catch (error) {
     await client.query("ROLLBACK");

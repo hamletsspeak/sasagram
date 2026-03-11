@@ -76,6 +76,20 @@ const contactLinks = [
     ),
   },
   {
+    label: "Twitch Лиза",
+    value: "@iceicell",
+    href: "https://www.twitch.tv/iceicell",
+    avatarUrl: "/api/twitch/avatar/iceicell",
+    avatar: "LI",
+    color: "from-violet-700/30 via-fuchsia-800/25 to-zinc-900/35",
+    border: "border-violet-400/35",
+    icon: (
+      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z" />
+      </svg>
+    ),
+  },
+  {
     label: "Почта для жалоб или серьезных вопросов",
     value: "VOTVOPROS.13@yandex.ru",
     href: "mailto:VOTVOPROS.13@yandex.ru",
@@ -171,6 +185,7 @@ interface WatchAlsoResponse {
 
 export default function Contact() {
   const [creatorStates, setCreatorStates] = useState<Record<string, CreatorLiveState>>({});
+  const [watchAlsoLoading, setWatchAlsoLoading] = useState(true);
   const shouldBypassNextImage = (url: string) =>
     url.startsWith("http://") || url.startsWith("https://") || url.startsWith("/api/");
   const canHover = () => (typeof window !== "undefined" ? window.matchMedia("(hover: hover)").matches : false);
@@ -186,6 +201,10 @@ export default function Contact() {
         })
         .catch(() => {
           // Keep static fallback data when request fails.
+        })
+        .finally(() => {
+          if (!isActive) return;
+          setWatchAlsoLoading(false);
         });
     };
 
@@ -270,62 +289,77 @@ export default function Contact() {
             <p className="mb-2 text-center text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-300 md:text-xs">
             Смотреть также
             </p>
-            <div className="grid grid-cols-4 gap-2.5 pt-1">
-            {watchAlsoLinks.map((item) => (
-              <a
-                key={item.key}
-                href={item.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group flex w-full min-w-0 flex-col items-center rounded-xl border border-zinc-700/80 bg-zinc-900/70 px-1.5 py-2 text-center transition hover:border-zinc-400 hover:bg-zinc-900/90"
-              >
-                <div className="relative">
-                  <Image
-                    src={creatorStates[item.key]?.avatarUrl ?? item.avatarUrl}
-                    alt={item.label}
-                    width={80}
-                    height={80}
-                    className="h-10 w-10 rounded-full border border-gray-700/80 object-cover shadow-lg transition-transform duration-200 group-hover:scale-105 md:h-12 md:w-12"
-                    unoptimized={shouldBypassNextImage(creatorStates[item.key]?.avatarUrl ?? item.avatarUrl)}
-                  />
-                  <span className="absolute bottom-0 right-0 drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)]">
-                    {item.platform === "Kick" ? (
-                      <span className="flex h-6 w-6 items-center justify-center rounded-full border border-emerald-200/80 bg-black/90 p-0.5">
-                        <Image
-                          src="/assets/logo/kick-streaming-platform-logo-icon.svg"
-                          alt="Kick"
-                          width={18}
-                          height={18}
-                          className="h-4 w-4 object-contain"
-                        />
-                      </span>
-                    ) : (
-                      <span className="flex h-6 w-6 items-center justify-center rounded-full border border-zinc-500 bg-zinc-800/90">
-                        <svg className="h-4 w-4 text-white" viewBox="0 0 24 24" fill="currentColor" aria-label="Twitch">
-                          <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z" />
-                        </svg>
-                      </span>
-                    )}
-                  </span>
-                  <span
-                    className={`absolute -top-1 -left-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
-                      creatorStates[item.key]?.isLive
-                        ? "bg-red-500 text-white"
-                        : "bg-zinc-800/90 text-zinc-200"
-                    }`}
+            {watchAlsoLoading ? (
+              <div className="grid grid-cols-4 gap-2.5 pt-1">
+                {watchAlsoLinks.map((item) => (
+                  <div
+                    key={item.key}
+                    className="flex min-w-0 flex-col items-center rounded-xl border border-zinc-700/80 bg-zinc-900/70 px-1.5 py-2 text-center"
                   >
-                    {creatorStates[item.key]?.isLive ? "LIVE" : "OFF"}
+                    <div className="relative h-10 w-10 animate-pulse rounded-full border border-zinc-700/80 bg-zinc-800 md:h-12 md:w-12" />
+                    <div className="mt-2 h-3 w-16 animate-pulse rounded-full bg-zinc-800" />
+                    <div className="mt-1 h-2.5 w-12 animate-pulse rounded-full bg-zinc-800/80" />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-4 gap-2.5 pt-1">
+              {watchAlsoLinks.map((item) => (
+                <a
+                  key={item.key}
+                  href={item.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group flex w-full min-w-0 flex-col items-center rounded-xl border border-zinc-700/80 bg-zinc-900/70 px-1.5 py-2 text-center transition hover:border-zinc-400 hover:bg-zinc-900/90"
+                >
+                  <div className="relative">
+                    <Image
+                      src={creatorStates[item.key]?.avatarUrl ?? item.avatarUrl}
+                      alt={item.label}
+                      width={80}
+                      height={80}
+                      className="h-10 w-10 rounded-full border border-gray-700/80 object-cover shadow-lg transition-transform duration-200 group-hover:scale-105 md:h-12 md:w-12"
+                      unoptimized={shouldBypassNextImage(creatorStates[item.key]?.avatarUrl ?? item.avatarUrl)}
+                    />
+                    <span className="absolute bottom-0 right-0 drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)]">
+                      {item.platform === "Kick" ? (
+                        <span className="flex h-6 w-6 items-center justify-center rounded-full border border-emerald-200/80 bg-black/90 p-0.5">
+                          <Image
+                            src="/assets/logo/kick-streaming-platform-logo-icon.svg"
+                            alt="Kick"
+                            width={18}
+                            height={18}
+                            className="h-4 w-4 object-contain"
+                          />
+                        </span>
+                      ) : (
+                        <span className="flex h-6 w-6 items-center justify-center rounded-full border border-zinc-500 bg-zinc-800/90">
+                          <svg className="h-4 w-4 text-white" viewBox="0 0 24 24" fill="currentColor" aria-label="Twitch">
+                            <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z" />
+                          </svg>
+                        </span>
+                      )}
+                    </span>
+                    <span
+                      className={`absolute -top-1 -left-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+                        creatorStates[item.key]?.isLive
+                          ? "bg-red-500 text-white"
+                          : "bg-zinc-800/90 text-zinc-200"
+                      }`}
+                    >
+                      {creatorStates[item.key]?.isLive ? "LIVE" : "OFF"}
+                    </span>
+                  </div>
+                  <span className="mt-1 text-[10px] font-semibold text-zinc-100 transition-colors group-hover:text-white md:text-xs">
+                    @{item.label}
                   </span>
-                </div>
-                <span className="mt-1 text-[10px] font-semibold text-zinc-100 transition-colors group-hover:text-white md:text-xs">
-                  @{item.label}
-                </span>
-                <span className="mt-0.5 text-[10px] text-zinc-400 md:text-xs">
-                  {item.realName}
-                </span>
-              </a>
-            ))}
-            </div>
+                  <span className="mt-0.5 text-[10px] text-zinc-400 md:text-xs">
+                    {item.realName}
+                  </span>
+                </a>
+              ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

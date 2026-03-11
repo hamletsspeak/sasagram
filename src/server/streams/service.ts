@@ -1,5 +1,6 @@
 import { getDbPool } from "@/server/db/pool";
 import { listStreams, upsertStream, upsertStreams } from "@/server/streams/repository";
+import { getTwitchPayload } from "@/server/twitch/service";
 import { CreateStreamBody, NormalizedStreamInput } from "@/server/streams/types";
 
 function toMinutePrecision(date: Date): Date {
@@ -36,6 +37,33 @@ export function normalizeStreamInput(body: CreateStreamBody):
 
 export async function getStreams() {
   return listStreams(getDbPool());
+}
+
+function elapsedHoursServer(isoDate: string): number {
+  const startedAt = new Date(isoDate).getTime();
+  if (Number.isNaN(startedAt)) return 0;
+  const diffMs = Math.max(0, Date.now() - startedAt);
+  return Math.round((diffMs / 3600000) * 100) / 100;
+}
+
+export async function syncCurrentLiveStream() {
+  const twitchPayload = await getTwitchPayload();
+  if (!twitchPayload.ok || !twitchPayload.body.isLive || !twitchPayload.body.stream?.started_at) {
+    return null;
+  }
+
+  const parsed = normalizeStreamInput({
+    startedAt: twitchPayload.body.stream.started_at,
+    durationHours: elapsedHoursServer(twitchPayload.body.stream.started_at),
+    title: twitchPayload.body.stream.title,
+    streamUrl: "https://www.twitch.tv/sasavot",
+  });
+
+  if (!parsed.ok) {
+    return null;
+  }
+
+  return upsertStream(getDbPool(), parsed.value);
 }
 
 export async function createStreams(rawBody: CreateStreamBody | { streams?: CreateStreamBody[] }) {

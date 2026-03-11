@@ -1,1 +1,1 @@
-export { fetchJsonWithCache } from "@/shared/lib/client-api-cache";
+export { clearClientApiCache, fetchJsonWithCache } from "@/shared/lib/client-api-cache";

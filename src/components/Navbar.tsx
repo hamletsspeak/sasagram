@@ -20,6 +20,7 @@ const navLinks: NavLink[] = [
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [railVisible, setRailVisible] = useState(false);
   const [hoveredHref, setHoveredHref] = useState<string | null>(null);
   const pathname = usePathname();
 
@@ -71,9 +72,23 @@ export default function Navbar() {
     };
   }, [menuOpen]);
 
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setRailVisible(true);
+    }, 780);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, []);
+
   return (
     <>
-      <aside className="fixed inset-y-0 left-0 z-[90] w-[54px] border-r border-white/10 bg-black/86 backdrop-blur-sm md:w-[76px]">
+      <aside
+        className={`fixed inset-y-0 left-0 z-[90] w-[54px] border-r border-white/10 bg-black/86 backdrop-blur-sm transition-all duration-[900ms] md:w-[76px] ${
+          railVisible ? "translate-x-0 opacity-100" : "-translate-x-full opacity-0"
+        }`}
+      >
         <div className="pointer-events-none absolute bottom-5 left-1/2 -translate-x-1/2 md:bottom-6">
           <video
             className="h-8 w-8 object-contain opacity-95 [filter:grayscale(1)_brightness(0)_invert(1)_contrast(1.2)] md:h-9 md:w-9"
@@ -92,7 +107,9 @@ export default function Navbar() {
       <button
         type="button"
         onClick={() => setMenuOpen((prev) => !prev)}
-        className="fixed left-[27px] top-1/2 z-[130] -translate-x-1/2 -translate-y-1/2 text-zinc-100 transition-colors hover:text-white md:left-[38px]"
+        className={`fixed left-[27px] top-1/2 z-[130] -translate-y-1/2 text-zinc-100 transition-all duration-[900ms] hover:text-white md:left-[38px] ${
+          railVisible ? "-translate-x-1/2 opacity-100" : "translate-x-[-120%] opacity-0"
+        }`}
         aria-label={menuOpen ? "Close menu" : "Open menu"}
       >
         <span className={`nav-rail-toggle ${menuOpen ? "is-open" : ""}`} aria-hidden="true">

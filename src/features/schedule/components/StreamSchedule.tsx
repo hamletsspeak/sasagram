@@ -83,6 +83,15 @@ export default function StreamSchedule() {
     return ticks;
   }, [viewEndMinutes]);
 
+  const syncCalendarMonthToSelectedWeek = () => {
+    if (!selectedWeek?.key) {
+      return;
+    }
+
+    const selectedWeekStart = new Date(`${selectedWeek.key}T00:00:00`);
+    setCalendarMonthStart(new Date(selectedWeekStart.getFullYear(), selectedWeekStart.getMonth(), 1));
+  };
+
   const selectWeek = (weekKey: string) => {
     setSelectedWeekKey(weekKey);
     setCalendarOpen(false);
@@ -151,7 +160,14 @@ export default function StreamSchedule() {
                 if (safeWeekIndex >= weeks.length - 1) return;
                 setSelectedWeekKey(weeks[safeWeekIndex + 1].key);
               }}
-              onToggleCalendar={() => setCalendarOpen((prev) => !prev)}
+              onToggleCalendar={() =>
+                setCalendarOpen((prev) => {
+                  if (!prev) {
+                    syncCalendarMonthToSelectedWeek();
+                  }
+                  return !prev;
+                })
+              }
               onPrevMonth={() => setCalendarMonthStart((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))}
               onNextMonth={() => setCalendarMonthStart((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))}
               onHoverWeek={setHoveredWeekKey}

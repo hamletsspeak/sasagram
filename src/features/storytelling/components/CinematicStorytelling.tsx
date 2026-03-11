@@ -27,14 +27,6 @@ const SCENE_PARALLAX_END_SCALE = 1;
 const SCENE_PARALLAX_START_Y = 1.5;
 const SCENE_PARALLAX_END_Y = -1.5;
 const SCENE_PARALLAX_SCRUB = 0.55;
-const SCENE_THREE_LINE_FADE_IN_PORTION = 0.28;
-const SCENE_THREE_LINE_HOLD_PORTION = 0.62;
-const SCENE_THREE_LINE_FADE_OUT_PORTION = 0.28;
-const SCENE_THREE_LINE_STEP = 1.12;
-const SCENE_THREE_INITIAL_LINE_DELAY = 0.55;
-const SCENE_THREE_PRE_TEXT_TIMELINE_PORTION = 0.05;
-const SCENE_THREE_POST_TEXT_TIMELINE_PORTION = 0.06;
-const SCENE_THREE_EDGE_FADE_PORTION = 0.11;
 const SCENE_TWO_TO_THREE_TRANSITION_DURATION = 0.34;
 const SCENE_TWO_TO_THREE_TRANSITION_SHIFT = 102;
 const SCENE_TWO_TO_THREE_TRANSITION_OVERLAP = 0;
@@ -214,12 +206,12 @@ function BrainHologramModel({
     if (!group) return;
     autoRotationRef.current += delta * (selectedHotspot ? 0.12 : 0.22);
     const targetRotationY = selectedHotspot
-      ? getMinimalConnectorRotationY(selectedHotspot.position) + autoRotationRef.current * 0.45
+      ? getMinimalConnectorRotationY(selectedHotspot.position)
       : -0.3 + autoRotationRef.current;
     const targetX = SCENE_TWO_MODEL_BASE_POSITION.x;
     const targetZ = selectedHotspot?.focusZ ?? SCENE_TWO_MODEL_BASE_POSITION.z;
     const targetY = selectedHotspot?.focusY ?? SCENE_TWO_MODEL_BASE_POSITION.y;
-    const targetScale = selectedHotspot ? 1.02 : 0.68;
+    const targetScale = 0.68;
     group.position.x = MathUtils.damp(group.position.x, targetX, 4.2, delta);
     group.rotation.y = MathUtils.damp(group.rotation.y, targetRotationY, 4.6, delta);
     group.position.z = MathUtils.damp(group.position.z, targetZ, 4.2, delta);
@@ -357,12 +349,16 @@ export default function CinematicStorytelling() {
   const [sceneTwoPanelOpened, setSceneTwoPanelOpened] = useState(false);
   const [sceneTwoExecutedCommands, setSceneTwoExecutedCommands] = useState<string[]>([]);
   const [sceneTwoTerminalLines, setSceneTwoTerminalLines] = useState<string[]>([]);
+  const [sceneThreeVisibleLineCount, setSceneThreeVisibleLineCount] = useState(0);
+  const [sceneThreeRestartUnlocked, setSceneThreeRestartUnlocked] = useState(false);
   const [sceneFourFollowersCount, setSceneFourFollowersCount] = useState<number | null>(null);
   const progressRef = useRef(progress);
   const activeSceneRef = useRef(activeScene);
   const sceneTwoTerminalLinesRef = useRef<string[]>([]);
   const sceneTwoLoggedCommandsRef = useRef<Set<string>>(new Set());
   const terminalTimersRef = useRef<number[]>([]);
+  const sceneThreeVisibleLineCountRef = useRef(sceneThreeVisibleLineCount);
+  const sceneThreeRestartUnlockedRef = useRef(sceneThreeRestartUnlocked);
   const selectedSceneTwoHotspot = BRAIN_HOTSPOTS.find((hotspot) => hotspot.id === sceneTwoSelectedHotspot) ?? null;
   const sceneTwoCommandsProgress = Math.min(
     sceneTwoExecutedCommands.length / Math.max(BRAIN_HOTSPOTS.length, 1),
@@ -382,54 +378,36 @@ export default function CinematicStorytelling() {
       return completedWeight / totalWeight;
     });
   }, []);
-  const sceneStepPositions = (() => {
-    const sceneWeights = STORY_SCENES.map((_, index) => SCENE_SCROLL_WEIGHTS[index] ?? 1);
-    if (sceneWeights.length <= 1) return [0];
-    const startPositions = sceneWeights.reduce<number[]>((acc, _, index) => {
-      if (index === 0) {
-        acc.push(0);
-        return acc;
-      }
-      acc.push(acc[index - 1] + sceneWeights[index - 1]);
-      return acc;
-    }, []);
-    const maxStart = startPositions[startPositions.length - 1] || 1;
-    return startPositions.map((start, index) => {
-      if (index === startPositions.length - 1) return 100;
-      return (start / maxStart) * 100;
-    });
-  })();
-  const displayedProgress = (() => {
-    const sceneTwoStart = (sceneStepPositions[1] ?? 0) / 100;
-    const sceneTwoEnd = (sceneStepPositions[2] ?? 100) / 100;
-    if (sceneTwoCommandsProgress >= 1) {
-      return Math.max(progress, sceneTwoEnd);
-    }
-    if (activeScene === 1) {
-      return sceneTwoStart + (sceneTwoEnd - sceneTwoStart) * sceneTwoCommandsProgress;
-    }
-    return progress;
-  })();
-  const sceneThreeStartThreshold = sceneWeightProgressThresholds[1] ?? 0;
+  const sceneStepPositions = useMemo(() => {
+    const sceneCount = STORY_SCENES.length;
+    if (sceneCount <= 1) return [0];
+    return STORY_SCENES.map((_, index) => (index / (sceneCount - 1)) * 100);
+  }, []);
+  const sceneThreePlaybackStarted = sceneThreeVisibleLineCount > 0;
+  const sceneThreeFinalLineVisible = sceneThreeVisibleLineCount >= SCENE_THREE_POEM_LINES.length;
+  const sceneThreeControlsVisible = !sceneThreeFinalLineVisible || sceneThreeRestartUnlocked;
   const sceneThreeEndThreshold = sceneWeightProgressThresholds[2] ?? 1;
-  const sceneThreeProgressSpan = Math.max(sceneThreeEndThreshold - sceneThreeStartThreshold, 0.0001);
-  const sceneThreeRawProgress = (progress - sceneThreeStartThreshold) / sceneThreeProgressSpan;
-  const sceneThreePlayableSpan = Math.max(
-    1 - SCENE_THREE_PRE_TEXT_TIMELINE_PORTION - SCENE_THREE_POST_TEXT_TIMELINE_PORTION,
-    0.0001,
-  );
-  const sceneThreeEnvelope = smootherStep(
-    Math.min(
-      clamp01(sceneThreeRawProgress / SCENE_THREE_EDGE_FADE_PORTION),
-      clamp01((1 - sceneThreeRawProgress) / SCENE_THREE_EDGE_FADE_PORTION),
-    ),
-  );
-  const sceneThreeSequenceProgress = clamp01(
-    (sceneThreeRawProgress - SCENE_THREE_PRE_TEXT_TIMELINE_PORTION) / sceneThreePlayableSpan,
-  );
-  const sceneThreeTextReady = activeScene === 2 && sceneThreeRawProgress > 0.01;
-  const sceneThreeLineCursor =
-    sceneThreeSequenceProgress * SCENE_THREE_POEM_LINES.length * SCENE_THREE_LINE_STEP;
+  const sceneThreeProgress = Math.min(sceneThreeVisibleLineCount / Math.max(SCENE_THREE_POEM_LINES.length, 1), 1);
+  const displayedProgress = useMemo(() => {
+    const sceneCount = STORY_SCENES.length;
+    if (sceneCount <= 1) return 1;
+    const maxIndex = sceneCount - 1;
+    const segmentSize = 1 / maxIndex;
+
+    if (activeScene === 0) {
+      return 0;
+    }
+
+    if (activeScene === 1) {
+      return segmentSize + segmentSize * sceneTwoCommandsProgress;
+    }
+
+    if (activeScene === 2) {
+      return segmentSize * 2 + segmentSize * sceneThreeProgress;
+    }
+
+    return 1;
+  }, [activeScene, sceneThreeProgress, sceneTwoCommandsProgress]);
   const sceneFourDescriptionLines = useMemo(
     () => splitSentences(STORY_SCENES[3]?.description ?? ""),
     [],
@@ -437,6 +415,14 @@ export default function CinematicStorytelling() {
   useEffect(() => {
     sceneTwoTerminalLinesRef.current = sceneTwoTerminalLines;
   }, [sceneTwoTerminalLines]);
+
+  useEffect(() => {
+    sceneThreeVisibleLineCountRef.current = sceneThreeVisibleLineCount;
+  }, [sceneThreeVisibleLineCount]);
+
+  useEffect(() => {
+    sceneThreeRestartUnlockedRef.current = sceneThreeRestartUnlocked;
+  }, [sceneThreeRestartUnlocked]);
 
   useEffect(() => {
     progressRef.current = progress;
@@ -778,6 +764,16 @@ export default function CinematicStorytelling() {
                 Math.round(self.progress * PROGRESS_STATE_PRECISION) / PROGRESS_STATE_PRECISION;
               const nextActive = sceneThresholds.findIndex((threshold) => self.progress < threshold);
               const resolvedActive = nextActive === -1 ? STORY_SCENES.length - 1 : nextActive;
+              if (
+                self.direction < 0 &&
+                resolvedActive === 2 &&
+                sceneThreeVisibleLineCountRef.current >= SCENE_THREE_POEM_LINES.length &&
+                !sceneThreeRestartUnlockedRef.current
+              ) {
+                startTransition(() => {
+                  setSceneThreeRestartUnlocked(true);
+                });
+              }
               if (Math.abs(nextProgress - progressRef.current) >= PROGRESS_STATE_EPSILON) {
                 progressRef.current = nextProgress;
                 startTransition(() => {
@@ -1177,6 +1173,33 @@ export default function CinematicStorytelling() {
     };
   }, []);
 
+  const handleSceneThreePlaybackStart = (event: React.MouseEvent<HTMLButtonElement>) => {
+    if (sceneThreeFinalLineVisible) {
+      if (!sceneThreeRestartUnlocked) return;
+      setSceneThreeVisibleLineCount(1);
+      setSceneThreeRestartUnlocked(false);
+      return;
+    }
+
+    const nextVisibleLineCount = sceneThreeVisibleLineCount + 1;
+    if (nextVisibleLineCount >= SCENE_THREE_POEM_LINES.length) {
+      event.currentTarget.blur();
+      window.requestAnimationFrame(() => {
+        const root = rootRef.current;
+        if (!root) return;
+        const storyTrigger = ScrollTrigger.getAll().find((trigger) => trigger.vars.trigger === root);
+        if (!storyTrigger) return;
+        const endScroll = storyTrigger.start + (storyTrigger.end - storyTrigger.start) * sceneThreeEndThreshold;
+        window.scrollTo({
+          top: Math.max(endScroll - 24, storyTrigger.start),
+          behavior: "auto",
+        });
+      });
+    }
+
+    setSceneThreeVisibleLineCount(nextVisibleLineCount);
+  };
+
   return (
     <section id="about" ref={rootRef} className={styles.root}>
       <div ref={viewportRef} className={styles.viewport}>
@@ -1269,37 +1292,38 @@ export default function CinematicStorytelling() {
               {index === 2 ? (
                 <div className={styles.sceneThreePoem} aria-label="Стих сцены 3">
                   <div
+                    className={`${styles.sceneThreeFinalDim} ${
+                      activeScene === 2 && sceneThreeFinalLineVisible ? styles.sceneThreeFinalDimActive : ""
+                    }`}
+                    aria-hidden="true"
+                  />
+                  <div
+                    className={`${styles.sceneThreePoemControls} ${
+                      activeScene === 2 && sceneThreeControlsVisible ? styles.sceneThreePoemControlsVisible : ""
+                    }`}
+                  >
+                    <button
+                      type="button"
+                      className={styles.sceneThreePoemButton}
+                      onClick={handleSceneThreePlaybackStart}
+                    >
+                      {sceneThreeFinalLineVisible
+                        ? "Начать заново"
+                        : sceneThreePlaybackStarted
+                          ? "Следующая строка"
+                          : "Показать слова"}
+                    </button>
+                  </div>
+                  <div
                     className={`${styles.sceneThreePoemInner} ${
-                      activeScene === 2 ? styles.sceneThreePoemInnerVisible : ""
+                      activeScene === 2 && sceneThreePlaybackStarted ? styles.sceneThreePoemInnerVisible : ""
                     }`}
                   >
                     {SCENE_THREE_POEM_LINES.map((line, lineIndex) => {
-                      const lineLocalProgress =
-                        sceneThreeLineCursor -
-                        lineIndex * SCENE_THREE_LINE_STEP -
-                        SCENE_THREE_INITIAL_LINE_DELAY;
-                      const fadeInEnd = SCENE_THREE_LINE_FADE_IN_PORTION;
-                      const holdEnd = fadeInEnd + SCENE_THREE_LINE_HOLD_PORTION;
-                      const fadeOutEnd = holdEnd + SCENE_THREE_LINE_FADE_OUT_PORTION;
-                      const isLastLine = lineIndex === SCENE_THREE_POEM_LINES.length - 1;
-                      let lineOpacity = 0;
-                      if (sceneThreeTextReady && lineLocalProgress > 0) {
-                        if (lineLocalProgress < fadeInEnd) {
-                          lineOpacity = smootherStep(clamp01(lineLocalProgress / SCENE_THREE_LINE_FADE_IN_PORTION));
-                        } else if (isLastLine || lineLocalProgress < holdEnd) {
-                          lineOpacity = 1;
-                        } else if (lineLocalProgress < fadeOutEnd) {
-                          const fadeOutProgress = clamp01(
-                            (lineLocalProgress - holdEnd) / SCENE_THREE_LINE_FADE_OUT_PORTION,
-                          );
-                          lineOpacity = 1 - smootherStep(fadeOutProgress);
-                        }
-                      }
-                      if (isLastLine) {
-                        lineOpacity *= smootherStep(clamp01(sceneThreeRawProgress / SCENE_THREE_EDGE_FADE_PORTION));
-                      } else {
-                        lineOpacity *= sceneThreeEnvelope;
-                      }
+                      const isVisible =
+                        activeScene === 2 &&
+                        sceneThreeVisibleLineCount > 0 &&
+                        lineIndex === sceneThreeVisibleLineCount - 1;
                       return (
                         <p
                           key={`scene-three-poem-line-${lineIndex}`}
@@ -1308,8 +1332,10 @@ export default function CinematicStorytelling() {
                           }`}
                           style={
                             {
-                              opacity: lineOpacity,
-                              transform: "translate(-50%, -50%)",
+                              opacity: isVisible ? 1 : 0,
+                              transform: isVisible
+                                ? "translate(-50%, -50%)"
+                                : "translate(-50%, calc(-50% + 12px))",
                             } as { [key: string]: string | number }
                           }
                         >
@@ -1417,8 +1443,8 @@ export default function CinematicStorytelling() {
                         enablePan={false}
                         enableZoom={false}
                         enableDamping
-                        dampingFactor={0.08}
-                        rotateSpeed={0.7}
+                        dampingFactor={0.18}
+                        rotateSpeed={0.18}
                         minDistance={2.2}
                         maxDistance={6}
                       />

@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isDatabaseConnectivityError } from "@/server/db/pool";
-import { createStreams, getStreams } from "@/server/streams/service";
+import { createStreams, getStreams, syncCurrentLiveStream } from "@/server/streams/service";
 
 export const runtime = "nodejs";
 
 export async function GET() {
   try {
+    await syncCurrentLiveStream().catch(() => null);
     const streams = await getStreams();
     return NextResponse.json(
       { streams },

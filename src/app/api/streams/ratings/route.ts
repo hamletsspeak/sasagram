@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { isDatabaseConnectivityError } from "@/server/db/pool";
 import { getAnonymousViewer } from "@/server/streams/rating-cookie";
 import { getRatedStreams } from "@/server/streams/rating-service";
+import { syncCurrentLiveStream } from "@/server/streams/service";
 
 export const runtime = "nodejs";
 
@@ -9,6 +10,7 @@ export async function GET(request: NextRequest) {
   const viewer = getAnonymousViewer(request);
 
   try {
+    await syncCurrentLiveStream().catch(() => null);
     const streams = await getRatedStreams(viewer.tokenHash);
     const response = NextResponse.json(
       {

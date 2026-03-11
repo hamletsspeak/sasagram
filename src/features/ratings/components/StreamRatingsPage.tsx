@@ -85,6 +85,15 @@ export function StreamRatingsPage() {
   const weekPickerMin = weeks[0]?.key;
   const weekPickerMax = weeks[weeks.length - 1]?.key;
 
+  const syncCalendarMonthToSelectedWeek = () => {
+    if (!selectedWeek?.key) {
+      return;
+    }
+
+    const selectedWeekStart = new Date(`${selectedWeek.key}T00:00:00`);
+    setCalendarMonthStart(new Date(selectedWeekStart.getFullYear(), selectedWeekStart.getMonth(), 1));
+  };
+
   const handleRate = async (streamId: string, rating: number) => {
     setSubmitState((current) => ({
       pendingStreamId: streamId,
@@ -178,9 +187,15 @@ export function StreamRatingsPage() {
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-none border border-white/10 bg-[#09090b]/75 shadow-[0_30px_80px_rgba(0,0,0,0.42)] md:rounded-[32px]">
-      <div className="flex flex-wrap items-center justify-center gap-2 border-b border-red-950/45 bg-zinc-950/80 px-3 py-4 md:px-4">
-        <div className="flex items-center gap-2">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-none border border-white/10 bg-[linear-gradient(180deg,rgba(15,15,18,0.86),rgba(8,8,11,0.92))] shadow-[0_30px_80px_rgba(0,0,0,0.42)] md:rounded-[32px]">
+      <div className="border-b border-white/8 bg-[linear-gradient(180deg,rgba(24,24,27,0.9),rgba(12,12,14,0.9))] px-3 py-4 md:px-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-[10px] uppercase tracking-[0.32em] text-zinc-500">Rating panel</p>
+            <p className="mt-2 text-sm text-zinc-300 md:text-base">Оценку можно поставить один раз.</p>
+          </div>
+
+          <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => {
@@ -208,7 +223,14 @@ export function StreamRatingsPage() {
             availableWeekKeys={availableWeekKeys}
             weekPickerMin={weekPickerMin}
             weekPickerMax={weekPickerMax}
-            onToggle={() => setCalendarOpen((prev) => !prev)}
+            onToggle={() =>
+              setCalendarOpen((prev) => {
+                if (!prev) {
+                  syncCalendarMonthToSelectedWeek();
+                }
+                return !prev;
+              })
+            }
             onPrevMonth={() => setCalendarMonthStart((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))}
             onNextMonth={() => setCalendarMonthStart((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))}
             onHoverWeek={setHoveredWeekKey}
@@ -233,16 +255,17 @@ export function StreamRatingsPage() {
               <path d="M8.5 4.5 14 10l-5.5 5.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
+          </div>
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-hidden px-4 py-4">
+      <div className="min-h-0 flex-1 overflow-hidden px-4 py-4 md:px-5">
         {!selectedWeek || selectedWeek.streams.length === 0 ? (
           <div className="native-glass flex h-full items-center justify-center rounded-[28px] border border-white/10 p-6 text-sm text-zinc-300">
             В выбранной неделе нет стримов для оценки.
           </div>
         ) : (
-          <div className="hide-scrollbar flex h-full min-h-0 flex-col gap-4 overflow-y-auto pr-1">
+          <div className="hide-scrollbar flex h-full min-h-0 flex-col gap-4 overflow-y-auto pr-1 md:pr-2">
             {selectedWeek.streams.map((stream) => (
               <div key={stream.id}>
                 <RatingCard
