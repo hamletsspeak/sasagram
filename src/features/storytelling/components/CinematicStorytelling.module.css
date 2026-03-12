@@ -31,6 +31,26 @@
   visibility: hidden;
 }
 
+@media (min-width: 1024px) {
+  .scene {
+    inset: clamp(0.75rem, 1.5vw, 1.35rem);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: clamp(1.15rem, 2vw, 1.8rem);
+    background: #020202;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      0 16px 34px rgba(0, 0, 0, 0.28);
+    transform-origin: center top;
+    will-change: transform, opacity;
+    contain: layout paint style;
+    backface-visibility: hidden;
+  }
+}
+
+.sceneFullBleed {
+  padding: 0;
+}
+
 .sceneActive {
   z-index: 2;
 }
@@ -40,9 +60,21 @@
   inset: 0;
   pointer-events: none;
   will-change: transform, opacity;
+  contain: paint;
   transform: translateZ(0);
   backface-visibility: hidden;
   overflow: hidden;
+}
+
+.sceneTransitionDarken {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(0, 0, 0, 0.16) 0%, rgba(0, 0, 0, 0.58) 62%, rgba(0, 0, 0, 0.92) 100%);
+  opacity: 0;
+  pointer-events: none;
+  will-change: opacity;
 }
 
 .sceneVideo {
@@ -474,6 +506,46 @@
   justify-content: space-between;
 }
 
+.sceneTwoIntroCard {
+  max-width: min(360px, 32vw);
+  padding: 1rem 1.05rem 1.1rem;
+  border: 1px solid rgba(154, 154, 154, 0.42);
+  background:
+    linear-gradient(180deg, rgba(11, 11, 12, 0.96), rgba(4, 4, 4, 0.98)),
+    rgba(0, 0, 0, 0.9);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 12px 30px rgba(0, 0, 0, 0.32);
+}
+
+.sceneTwoIntroEyebrow {
+  margin: 0;
+  font-size: 0.68rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: rgba(155, 221, 248, 0.68);
+}
+
+.sceneTwoIntroTitle {
+  margin: 0.7rem 0 0;
+  font-family: "Audex", "Type Light Sans", sans-serif;
+  font-size: clamp(1.25rem, 2vw, 1.8rem);
+  line-height: 0.98;
+  color: rgba(242, 246, 248, 0.98);
+  text-transform: uppercase;
+}
+
+.sceneTwoIntroText {
+  margin: 0.7rem 0 0;
+  font-size: 0.82rem;
+  line-height: 1.48;
+  color: rgba(212, 223, 229, 0.84);
+}
+
+.sceneTwoIntroText span {
+  color: rgba(157, 230, 255, 0.98);
+}
+
 .sceneTwoCommands {
   display: flex;
   flex-direction: column;
@@ -663,11 +735,42 @@
   pointer-events: auto;
 }
 
+.sceneTwoWindowBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
 .sceneTwoWindowTitle {
   margin: 0;
   font-size: 0.74rem;
   color: rgba(186, 186, 186, 0.88);
   letter-spacing: 0.02em;
+}
+
+.sceneTwoCloseButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid rgba(158, 158, 158, 0.54);
+  background: rgba(19, 19, 19, 0.96);
+  color: rgba(231, 231, 231, 0.94);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease,
+    color 180ms ease;
+}
+
+.sceneTwoCloseButton:hover {
+  border-color: rgba(220, 220, 220, 0.8);
+  background: rgba(36, 36, 36, 0.98);
+  color: #fff;
 }
 
 .sceneTwoChecks {
@@ -1122,6 +1225,79 @@
   background: rgba(255, 255, 255, 0.86);
 }
 
+.storySceneNav {
+  position: fixed;
+  right: clamp(1rem, 3vw, 2rem);
+  bottom: clamp(1.4rem, 4vh, 2.3rem);
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  opacity: 0;
+  transform: translateY(14px);
+  pointer-events: none;
+  transition:
+    opacity 320ms ease,
+    transform 320ms ease;
+}
+
+.storySceneNavVisible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.storySceneNavButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  min-width: 156px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(6, 6, 8, 0.84);
+  color: rgba(250, 250, 250, 0.96);
+  padding: 0.88rem 1.15rem;
+  font-family: "Audex", "Type Light Sans", sans-serif;
+  font-size: 0.8rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 16px 34px rgba(0, 0, 0, 0.34);
+  transition:
+    opacity 240ms ease,
+    transform 240ms ease,
+    transform 180ms ease,
+    border-color 180ms ease,
+    background-color 180ms ease;
+}
+
+.storySceneNavButtonVisible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.storySceneNavButtonHidden {
+  opacity: 0;
+  transform: translateY(8px);
+  pointer-events: none;
+}
+
+.storySceneNavButton:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(18, 18, 22, 0.92);
+}
+
+.storySceneNavButtonUp {
+  align-self: flex-end;
+}
+
+.storySceneNavArrow {
+  font-size: 1rem;
+  line-height: 1;
+}
+
 @media (max-width: 1023px) {
   .root {
     --scene-text-3-size: calc(clamp(0.9rem, 5.8vw, 2.2rem) + 12px);
@@ -1171,6 +1347,20 @@
     left: 0.82rem;
     top: 12vh;
     bottom: 12vh;
+  }
+
+  .sceneTwoIntroCard {
+    max-width: min(250px, 62vw);
+    padding: 0.74rem 0.8rem 0.86rem;
+  }
+
+  .sceneTwoIntroTitle {
+    font-size: 1rem;
+  }
+
+  .sceneTwoIntroText {
+    font-size: 0.72rem;
+    line-height: 1.42;
   }
 
   .sceneTwoCommands {
@@ -1229,6 +1419,12 @@
     width: 100%;
     height: 100%;
     padding: 0.56rem;
+  }
+
+  .sceneTwoCloseButton {
+    width: 24px;
+    height: 24px;
+    font-size: 0.96rem;
   }
 
   .sceneTwoFixedCommand {
@@ -1304,6 +1500,10 @@
   }
 
   .progressDock {
+    display: none;
+  }
+
+  .storySceneNav {
     display: none;
   }
 }

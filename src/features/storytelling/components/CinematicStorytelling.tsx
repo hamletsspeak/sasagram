@@ -15,7 +15,7 @@ import styles from "./CinematicStorytelling.module.css";
 gsap.registerPlugin(ScrollTrigger);
 
 const SCENE_SCROLL_LENGTH_MULTIPLIER = 2;
-const SCENE_SCROLL_WEIGHTS = [3.6, 2.2, 4.6, 1];
+const SCENE_SCROLL_WEIGHTS = [4.7, 2.2, 4.6, 1];
 const SCENE_TEXT_TRAVEL_DURATION = 1;
 const SCENE_TEXT_EDGE_PADDING = 36;
 const SCENE_TEXT_UNDER_MEDIA_SHIFT_Y = 150;
@@ -27,12 +27,17 @@ const SCENE_PARALLAX_END_SCALE = 1;
 const SCENE_PARALLAX_START_Y = 1.5;
 const SCENE_PARALLAX_END_Y = -1.5;
 const SCENE_PARALLAX_SCRUB = 0.55;
-const SCENE_TWO_TO_THREE_TRANSITION_DURATION = 0.34;
-const SCENE_TWO_TO_THREE_TRANSITION_SHIFT = 102;
-const SCENE_TWO_TO_THREE_TRANSITION_OVERLAP = 0;
-const SCENE_TWO_TO_THREE_FADE_IN_START_ALPHA = 1;
+const SCENE_DEFAULT_TRANSITION_DURATION = 0.82;
+const SCENE_DEFAULT_TRANSITION_OVERLAP = 0.12;
+const SCENE_TWO_TO_THREE_TRANSITION_DURATION = 0.92;
+const SCENE_TWO_TO_THREE_TRANSITION_OVERLAP = 0.16;
+const SCENE_STACK_SHIFT_PERCENT = 3.4;
+const SCENE_STACK_SCALE_STEP = 0.045;
+const SCENE_STACK_OPACITY_STEP = 0.18;
+const SCENE_STACK_DIM_STEP = 0.18;
 const PROGRESS_STATE_EPSILON = 0.002;
 const PROGRESS_STATE_PRECISION = 1000;
+const STORY_BUTTON_SCROLL_DURATION_MS = 780;
 const SCENE_THREE_POEM_LINES = [
   "Тихий аквариум.",
   "Медленно движется вода.",
@@ -77,6 +82,15 @@ function smootherStep(t: number): number {
   return x * x * x * (x * (x * 6 - 15) + 10);
 }
 
+function dampAngle(current: number, target: number, smoothing: number, delta: number): number {
+  const shortestDelta = Math.atan2(Math.sin(target - current), Math.cos(target - current));
+  return current + shortestDelta * (1 - Math.exp(-smoothing * delta));
+}
+
+function easeInOutCubic(t: number): number {
+  return t < 0.5 ? 4 * t * t * t : 1 - ((-2 * t + 2) ** 3) / 2;
+}
+
 function getNumericStylePx(node: HTMLElement, prop: "left" | "right"): number {
   if (typeof window === "undefined") return 0;
   const raw = window.getComputedStyle(node).getPropertyValue(prop).trim();
@@ -116,7 +130,7 @@ function getMinimalConnectorRotationY(position: [number, number, number]): numbe
 const BRAIN_HOTSPOTS: Hotspot[] = [
   {
     id: "frontal",
-    position: [0.18, 0.26, 0.42],
+    position: [-0.16, 0.2, -0.46],
     text: "1",
     command: "Лобная доля",
     execCommand: "brain_scan --region frontal_lobe --subject \"Глеб Борисович\"",
@@ -167,7 +181,7 @@ const BRAIN_HOTSPOTS: Hotspot[] = [
   },
   {
     id: "occipital",
-    position: [-0.16, 0.2, -0.46],
+    position: [0.18, 0.26, 0.42],
     text: "4",
     command: "Затылочная доля",
     execCommand: "brain_scan --region occipital_lobe --subject \"Глеб Борисович\"",
@@ -186,10 +200,8 @@ const BRAIN_HOTSPOTS: Hotspot[] = [
 
 function BrainHologramModel({
   selectedHotspotId,
-  visibleHotspotsCount,
 }: {
   selectedHotspotId: string | null;
-  visibleHotspotsCount: number;
 }) {
   const gltf = useGLTF("/assets/3d/brain_hologram.glb");
   const groupRef = useRef<Group | null>(null);
@@ -204,16 +216,20 @@ function BrainHologramModel({
   useFrame((state, delta) => {
     const group = groupRef.current;
     if (!group) return;
-    autoRotationRef.current += delta * (selectedHotspot ? 0.12 : 0.22);
+
+    if (!selectedHotspot) {
+      autoRotationRef.current += delta * 0.2;
+    }
+
     const targetRotationY = selectedHotspot
       ? getMinimalConnectorRotationY(selectedHotspot.position)
       : -0.3 + autoRotationRef.current;
     const targetX = SCENE_TWO_MODEL_BASE_POSITION.x;
-    const targetZ = selectedHotspot?.focusZ ?? SCENE_TWO_MODEL_BASE_POSITION.z;
-    const targetY = selectedHotspot?.focusY ?? SCENE_TWO_MODEL_BASE_POSITION.y;
-    const targetScale = 0.68;
+    const targetZ = SCENE_TWO_MODEL_BASE_POSITION.z;
+    const targetY = SCENE_TWO_MODEL_BASE_POSITION.y;
+    const targetScale = selectedHotspot ? 0.74 : 0.68;
     group.position.x = MathUtils.damp(group.position.x, targetX, 4.2, delta);
-    group.rotation.y = MathUtils.damp(group.rotation.y, targetRotationY, 4.6, delta);
+    group.rotation.y = dampAngle(group.rotation.y, targetRotationY, 5.2, delta);
     group.position.z = MathUtils.damp(group.position.z, targetZ, 4.2, delta);
     group.position.y = MathUtils.damp(group.position.y, targetY, 4.2, delta);
     group.scale.x = MathUtils.damp(group.scale.x, targetScale, 4.2, delta);
@@ -234,16 +250,20 @@ function BrainHologramModel({
     >
       <group position={[modelCenterOffset.x, modelCenterOffset.y, modelCenterOffset.z]}>
         <primitive object={gltf.scene} />
-        {BRAIN_HOTSPOTS.map((hotspot, index) =>
-          index < visibleHotspotsCount ? (
+        {BRAIN_HOTSPOTS.map((hotspot) =>
+          selectedHotspotId === hotspot.id ? (
             <group key={hotspot.id} position={hotspot.position}>
               <mesh>
-                <sphereGeometry args={[0.02, 24, 24]} />
+                <sphereGeometry args={[0.03, 28, 28]} />
                 <meshStandardMaterial
-                  color={selectedHotspotId === hotspot.id ? "#5f0d14" : "#8ed5ff"}
-                  emissive={selectedHotspotId === hotspot.id ? "#2a0308" : "#5ec4ff"}
-                  emissiveIntensity={selectedHotspotId === hotspot.id ? 1.35 : 1.25}
+                  color="#ff8a9a"
+                  emissive="#ff2f57"
+                  emissiveIntensity={2.8}
                 />
+              </mesh>
+              <mesh scale={1.95}>
+                <sphereGeometry args={[0.03, 24, 24]} />
+                <meshBasicMaterial color="#ff6b86" transparent opacity={0.22} />
               </mesh>
             </group>
           ) : null,
@@ -266,16 +286,24 @@ const SceneFourFollowersCounter = memo(function SceneFourFollowersCounter({
 
   useEffect(() => {
     if (value === null) {
-      setAnimatedValue(null);
+      const rafId = window.requestAnimationFrame(() => {
+        setAnimatedValue(null);
+      });
       previousTargetRef.current = null;
-      return;
+      return () => {
+        window.cancelAnimationFrame(rafId);
+      };
     }
 
     const from = previousTargetRef.current ?? value;
     if (from === value) {
-      setAnimatedValue(value);
+      const rafId = window.requestAnimationFrame(() => {
+        setAnimatedValue(value);
+      });
       previousTargetRef.current = value;
-      return;
+      return () => {
+        window.cancelAnimationFrame(rafId);
+      };
     }
 
     const durationMs = 1100;
@@ -328,6 +356,7 @@ export default function CinematicStorytelling() {
   const sceneTwoCommandsCount = BRAIN_HOTSPOTS.length + 2;
   const rootRef = useRef<HTMLElement | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
+  const storyTriggerRef = useRef<ScrollTrigger | null>(null);
   const sceneRefs = useRef<Array<HTMLElement | null>>([]);
   const contentRefs = useRef<Array<HTMLDivElement | null>>([]);
   const keywordRefs = useRef<Array<HTMLParagraphElement | null>>([]);
@@ -344,6 +373,7 @@ export default function CinematicStorytelling() {
   const [progress, setProgress] = useState(0);
   const [activeScene, setActiveScene] = useState(0);
   const [isStoryActive, setIsStoryActive] = useState(false);
+  const [isDesktopStory, setIsDesktopStory] = useState(false);
   const [sceneTwoVisibleCount, setSceneTwoVisibleCount] = useState(0);
   const [sceneTwoSelectedHotspot, setSceneTwoSelectedHotspot] = useState<string | null>(null);
   const [sceneTwoPanelOpened, setSceneTwoPanelOpened] = useState(false);
@@ -367,15 +397,28 @@ export default function CinematicStorytelling() {
   const sceneTwoAllCommandsDone = sceneTwoExecutedCommands.length >= BRAIN_HOTSPOTS.length;
   const sceneTwoOrbitTarget: [number, number, number] = [
     SCENE_TWO_MODEL_BASE_POSITION.x,
-    selectedSceneTwoHotspot?.focusY ?? SCENE_TWO_MODEL_BASE_POSITION.y,
-    selectedSceneTwoHotspot?.focusZ ?? SCENE_TWO_MODEL_BASE_POSITION.z,
+    SCENE_TWO_MODEL_BASE_POSITION.y,
+    SCENE_TWO_MODEL_BASE_POSITION.z,
   ];
+  const sceneTwoCanvasDpr: [number, number] = isDesktopStory ? [1.35, 2] : [1, 1.5];
   const sceneWeightProgressThresholds = useMemo(() => {
     const sceneWeights = STORY_SCENES.map((_, index) => SCENE_SCROLL_WEIGHTS[index] ?? 1);
     const totalWeight = sceneWeights.reduce((sum, weight) => sum + weight, 0);
     return sceneWeights.map((_, index) => {
       const completedWeight = sceneWeights.slice(0, index + 1).reduce((sum, weight) => sum + weight, 0);
       return completedWeight / totalWeight;
+    });
+  }, []);
+  const sceneStartProgressThresholds = useMemo(() => {
+    const sceneWeights = STORY_SCENES.map((_, index) => SCENE_SCROLL_WEIGHTS[index] ?? 1);
+    const totalWeight = sceneWeights.reduce((sum, weight) => sum + weight, 0);
+
+    return STORY_SCENES.map((_, index) => {
+      if (index === 0) return 0;
+      const completedWeightBeforeScene = sceneWeights
+        .slice(0, index)
+        .reduce((sum, weight) => sum + weight, 0);
+      return completedWeightBeforeScene / totalWeight;
     });
   }, []);
   const sceneStepPositions = useMemo(() => {
@@ -412,6 +455,30 @@ export default function CinematicStorytelling() {
     () => splitSentences(STORY_SCENES[3]?.description ?? ""),
     [],
   );
+  const sceneOneButtonUnlockThreshold = sceneWeightProgressThresholds[0] ?? 0;
+  const storyButtonNavigationVisible =
+    isDesktopStory &&
+    isStoryActive &&
+    activeScene >= 1 &&
+    activeScene <= 2 &&
+    progress >= Math.min(sceneOneButtonUnlockThreshold + 0.02, 1) &&
+    ((activeScene === 1 && sceneTwoAllCommandsDone) ||
+      (activeScene === 2 && sceneTwoAllCommandsDone && sceneThreeFinalLineVisible));
+  const canGoToPreviousScene = storyButtonNavigationVisible && activeScene >= 1;
+  const canGoToNextScene = storyButtonNavigationVisible && activeScene < STORY_SCENES.length - 1;
+
+  useEffect(() => {
+    const media = window.matchMedia("(min-width: 1024px)");
+    const syncDesktopState = () => {
+      setIsDesktopStory(media.matches);
+    };
+
+    syncDesktopState();
+    media.addEventListener("change", syncDesktopState);
+    return () => {
+      media.removeEventListener("change", syncDesktopState);
+    };
+  }, []);
   useEffect(() => {
     sceneTwoTerminalLinesRef.current = sceneTwoTerminalLines;
   }, [sceneTwoTerminalLines]);
@@ -431,6 +498,32 @@ export default function CinematicStorytelling() {
   useEffect(() => {
     activeSceneRef.current = activeScene;
   }, [activeScene]);
+
+  useEffect(() => {
+    if (!isDesktopStory || !isStoryActive || activeScene < 1 || activeScene > 2) {
+      return;
+    }
+
+    const preventScroll = (event: Event) => {
+      event.preventDefault();
+    };
+
+    const preventKeyboardScroll = (event: KeyboardEvent) => {
+      if (["ArrowDown", "ArrowUp", "PageDown", "PageUp", " ", "Spacebar"].includes(event.key)) {
+        event.preventDefault();
+      }
+    };
+
+    window.addEventListener("wheel", preventScroll, { passive: false });
+    window.addEventListener("touchmove", preventScroll, { passive: false });
+    window.addEventListener("keydown", preventKeyboardScroll, { passive: false });
+
+    return () => {
+      window.removeEventListener("wheel", preventScroll);
+      window.removeEventListener("touchmove", preventScroll);
+      window.removeEventListener("keydown", preventKeyboardScroll);
+    };
+  }, [activeScene, isDesktopStory, isStoryActive]);
 
   useEffect(() => {
     let isCancelled = false;
@@ -463,6 +556,18 @@ export default function CinematicStorytelling() {
       isCancelled = true;
       window.clearInterval(intervalId);
     };
+  }, []);
+
+  useEffect(() => {
+    const sceneThreeVideo = sceneVideoRefs.current[2];
+    if (!sceneThreeVideo) return;
+
+    sceneThreeVideo.preload = "auto";
+    try {
+      sceneThreeVideo.load();
+    } catch {
+      // Ignore browsers that reject imperative load here.
+    }
   }, []);
 
   useEffect(() => {
@@ -516,6 +621,16 @@ export default function CinematicStorytelling() {
     }
   };
 
+  const clearSceneTwoTerminalTimers = () => {
+    terminalTimersRef.current.forEach((timer) => window.clearTimeout(timer));
+    terminalTimersRef.current = [];
+  };
+
+  const closeSceneTwoPanel = () => {
+    setSceneTwoPanelOpened(false);
+    setSceneTwoSelectedHotspot(null);
+  };
+
   const runSceneTwoCommand = (hotspot: Hotspot) => {
     setSceneTwoSelectedHotspot(hotspot.id);
     setSceneTwoExecutedCommands((prev) => {
@@ -526,8 +641,7 @@ export default function CinematicStorytelling() {
       return;
     }
 
-    terminalTimersRef.current.forEach((timer) => window.clearTimeout(timer));
-    terminalTimersRef.current = [];
+    clearSceneTwoTerminalTimers();
     sceneTwoLoggedCommandsRef.current.add(hotspot.id);
     const commandLineIndex = ensureSceneTwoPromptLine();
 
@@ -580,16 +694,14 @@ export default function CinematicStorytelling() {
     if (command === "start") {
       setSceneTwoPanelOpened(true);
     } else {
-      setSceneTwoPanelOpened(false);
-      setSceneTwoSelectedHotspot(null);
+      closeSceneTwoPanel();
     }
 
     if (sceneTwoLoggedCommandsRef.current.has(command)) {
       return;
     }
 
-    terminalTimersRef.current.forEach((timer) => window.clearTimeout(timer));
-    terminalTimersRef.current = [];
+    clearSceneTwoTerminalTimers();
     sceneTwoLoggedCommandsRef.current.add(command);
     const commandLineIndex = ensureSceneTwoPromptLine();
 
@@ -627,19 +739,22 @@ export default function CinematicStorytelling() {
 
   useEffect(() => {
     if (activeScene !== 1) {
-      terminalTimersRef.current.forEach((timer) => window.clearTimeout(timer));
-      terminalTimersRef.current = [];
-      setSceneTwoVisibleCount(0);
-      setSceneTwoSelectedHotspot(null);
-      setSceneTwoPanelOpened(false);
+      clearSceneTwoTerminalTimers();
+      startTransition(() => {
+        setSceneTwoVisibleCount(0);
+        setSceneTwoSelectedHotspot(null);
+        setSceneTwoPanelOpened(false);
+      });
       updateSceneTwoTerminal([]);
       sceneTwoTerminalLinesRef.current = [];
       sceneTwoLoggedCommandsRef.current = new Set();
       return;
     }
 
-    setSceneTwoVisibleCount(0);
-    setSceneTwoSelectedHotspot(null);
+    startTransition(() => {
+      setSceneTwoVisibleCount(0);
+      setSceneTwoSelectedHotspot(null);
+    });
     sceneTwoLoggedCommandsRef.current = new Set();
     const timers: number[] = [];
 
@@ -652,10 +767,71 @@ export default function CinematicStorytelling() {
 
     return () => {
       timers.forEach((timer) => window.clearTimeout(timer));
-      terminalTimersRef.current.forEach((timer) => window.clearTimeout(timer));
-      terminalTimersRef.current = [];
+      clearSceneTwoTerminalTimers();
     };
-  }, [activeScene]);
+  }, [activeScene, sceneTwoCommandsCount]);
+
+  useEffect(() => {
+    const scenes = sceneRefs.current.filter(Boolean) as HTMLElement[];
+    if (!scenes.length) return;
+
+    if (!isDesktopStory) {
+      scenes.forEach((scene) => {
+        gsap.killTweensOf(scene);
+        const darkenLayer = scene.querySelector(`.${styles.sceneTransitionDarken}`) as HTMLDivElement | null;
+        if (darkenLayer) {
+          gsap.killTweensOf(darkenLayer);
+          gsap.set(darkenLayer, { clearProps: "opacity,visibility" });
+        }
+        gsap.set(scene, {
+          clearProps: "opacity,visibility,transform,pointerEvents,zIndex",
+        });
+      });
+      return;
+    }
+
+    scenes.forEach((scene, index) => {
+      const darkenLayer = scene.querySelector(`.${styles.sceneTransitionDarken}`) as HTMLDivElement | null;
+      const delta = activeScene - index;
+      const stackDepth = Math.min(Math.max(delta, 0), 3);
+      const isActiveScene = delta === 0;
+      const isPastScene = delta > 0;
+      const isUpcomingScene = delta < 0;
+      const shouldHideScene = delta > 1 || isUpcomingScene;
+      const nextOpacity = shouldHideScene
+        ? 0
+        : isActiveScene
+          ? 1
+          : Math.max(0.22, 0.66 - stackDepth * SCENE_STACK_OPACITY_STEP);
+      const nextYPercent = shouldHideScene ? 0 : isActiveScene ? 0 : stackDepth * SCENE_STACK_SHIFT_PERCENT;
+      const nextScale = shouldHideScene ? 1 : 1 - stackDepth * SCENE_STACK_SCALE_STEP;
+      const nextDimOpacity = shouldHideScene ? 1 : Math.min(stackDepth * SCENE_STACK_DIM_STEP, 0.54);
+
+      gsap.killTweensOf(scene);
+      gsap.set(scene, {
+        zIndex: shouldHideScene ? 1 : 30 - stackDepth,
+        pointerEvents: isActiveScene ? "auto" : "none",
+      });
+      gsap.to(scene, {
+        autoAlpha: nextOpacity,
+        yPercent: nextYPercent,
+        scale: nextScale,
+        force3D: true,
+        duration: isStoryActive ? 0.52 : 0.22,
+        ease: "power2.out",
+        overwrite: "auto",
+      });
+      if (darkenLayer) {
+        gsap.killTweensOf(darkenLayer);
+        gsap.to(darkenLayer, {
+          autoAlpha: nextDimOpacity,
+          duration: isStoryActive ? 0.52 : 0.22,
+          ease: "power2.out",
+          overwrite: "auto",
+        });
+      }
+    });
+  }, [activeScene, isDesktopStory, isStoryActive]);
 
   useEffect(() => {
     const root = rootRef.current;
@@ -712,7 +888,7 @@ export default function CinematicStorytelling() {
       rafId = window.requestAnimationFrame(raf);
 
       const ctx = gsap.context(() => {
-        gsap.set(scenes, { autoAlpha: 0, yPercent: 0, scale: 1, transformOrigin: "center center" });
+        gsap.set(scenes, { yPercent: 0, scale: 1, transformOrigin: "center top" });
         gsap.set(contentNodes, { autoAlpha: 0, y: 34 });
         gsap.set(keywordNodes, { autoAlpha: 0, y: 26, scale: 1.05 });
         gsap.set(bgNodes, {
@@ -728,7 +904,6 @@ export default function CinematicStorytelling() {
         gsap.set(cupNodes, { autoAlpha: 0, scale: 0.9, y: 20 });
         gsap.set(cupSwapVideoNodes, { autoAlpha: 0, scale: 0.9, y: 20 });
         gsap.set(cupSwapDimNodes, { autoAlpha: 0 });
-        gsap.set(scenes[0], { autoAlpha: 1, yPercent: 0, scale: 1 });
 
         const sceneWeights = STORY_SCENES.map((_, index) => SCENE_SCROLL_WEIGHTS[index] ?? 1);
         const totalWeight = sceneWeights.reduce((sum, weight) => sum + weight, 0);
@@ -754,7 +929,6 @@ export default function CinematicStorytelling() {
             start: "top top",
             // Main pacing control: increase multiplier for longer cinematic storytelling.
             end: `+=${window.innerHeight * STORY_SCENES.length * SCENE_SCROLL_LENGTH_MULTIPLIER}`,
-            // Scrub smoothing controls how "inertial" scene transitions feel.
             scrub: SCENE_PARALLAX_SCRUB,
             anticipatePin: 1,
             invalidateOnRefresh: true,
@@ -789,8 +963,9 @@ export default function CinematicStorytelling() {
             },
           },
         });
+        storyTriggerRef.current = timeline.scrollTrigger ?? null;
 
-        const transitionDuration = 0.34;
+        const transitionDuration = SCENE_DEFAULT_TRANSITION_DURATION;
         for (let i = 0; i < scenes.length; i += 1) {
           const scene = scenes[i];
           const content = contents[i];
@@ -810,16 +985,10 @@ export default function CinematicStorytelling() {
             const sceneTransitionDuration = isSceneTwoToThreeTransition
               ? SCENE_TWO_TO_THREE_TRANSITION_DURATION
               : transitionDuration;
-            const sceneTransitionShift = isSceneTwoToThreeTransition
-              ? SCENE_TWO_TO_THREE_TRANSITION_SHIFT
-              : 102;
-            const sceneTransitionEase = isSceneTwoToThreeTransition ? "power1.inOut" : "none";
+            const sceneTransitionEase = isSceneTwoToThreeTransition ? "power2.inOut" : "power2.inOut";
             const sceneTransitionStartAt = isSceneTwoToThreeTransition
               ? at - SCENE_TWO_TO_THREE_TRANSITION_OVERLAP
-              : at;
-            const incomingSceneStartAlpha = isSceneTwoToThreeTransition
-              ? SCENE_TWO_TO_THREE_FADE_IN_START_ALPHA
-              : 1;
+              : at - SCENE_DEFAULT_TRANSITION_OVERLAP;
             const prevScene = scenes[i - 1];
             const prevContent = contents[i - 1];
             const prevKeyword = keywords[i - 1];
@@ -830,10 +999,42 @@ export default function CinematicStorytelling() {
             const prevCup = cups[i - 1];
             const prevCupSwapVideo = cupSwapVideos[i - 1];
             const prevCupSwapDim = cupSwapDims[i - 1];
+            const prevSceneDarkenLayer =
+              (prevScene.querySelector(`.${styles.sceneTransitionDarken}`) as HTMLDivElement | null);
+            const nextSceneDarkenLayer =
+              (scene.querySelector(`.${styles.sceneTransitionDarken}`) as HTMLDivElement | null);
             const prevSceneThreeTransitionDim =
               i === 3
                 ? (prevScene.querySelector(`.${styles.sceneThreeTransitionDim}`) as HTMLDivElement | null)
                 : null;
+
+            if (prevSceneDarkenLayer) {
+              timeline.fromTo(
+                prevSceneDarkenLayer,
+                { autoAlpha: 0 },
+                {
+                  autoAlpha: 0.9,
+                  duration: sceneTransitionDuration,
+                  ease: "power2.inOut",
+                  immediateRender: false,
+                },
+                sceneTransitionStartAt,
+              );
+            }
+
+            if (nextSceneDarkenLayer) {
+              timeline.fromTo(
+                nextSceneDarkenLayer,
+                { autoAlpha: 1 },
+                {
+                  autoAlpha: 0,
+                  duration: sceneTransitionDuration,
+                  ease: "power2.inOut",
+                  immediateRender: false,
+                },
+                sceneTransitionStartAt,
+              );
+            }
 
             if (prevSceneThreeTransitionDim) {
               timeline.fromTo(
@@ -848,17 +1049,6 @@ export default function CinematicStorytelling() {
                 sceneTransitionStartAt,
               );
             }
-
-            timeline.to(
-              prevScene,
-              {
-                autoAlpha: 0,
-                yPercent: -sceneTransitionShift,
-                duration: sceneTransitionDuration,
-                ease: sceneTransitionEase,
-              },
-              sceneTransitionStartAt,
-            );
 
             if (prevContent) {
               timeline.to(
@@ -968,20 +1158,6 @@ export default function CinematicStorytelling() {
                 at,
               );
             }
-
-            timeline.fromTo(
-              scene,
-              { autoAlpha: incomingSceneStartAlpha, yPercent: sceneTransitionShift, scale: 1 },
-              {
-                autoAlpha: 1,
-                yPercent: 0,
-                scale: 1,
-                duration: sceneTransitionDuration,
-                ease: sceneTransitionEase,
-                immediateRender: false,
-              },
-              sceneTransitionStartAt,
-            );
           }
 
           if (bg) {
@@ -1158,6 +1334,7 @@ export default function CinematicStorytelling() {
       }
 
       return () => {
+        storyTriggerRef.current = null;
         ctx.revert();
         if (rafId) window.cancelAnimationFrame(rafId);
         lenis?.destroy();
@@ -1166,12 +1343,47 @@ export default function CinematicStorytelling() {
     });
 
     return () => {
+      storyTriggerRef.current = null;
       mm.revert();
       if (rafId) window.cancelAnimationFrame(rafId);
       lenis?.destroy();
       lenis = null;
     };
   }, []);
+
+  const moveToStoryScene = (sceneIndex: number) => {
+    const storyTrigger = storyTriggerRef.current;
+    if (!storyTrigger) return;
+
+    const safeSceneIndex = Math.max(0, Math.min(sceneIndex, STORY_SCENES.length - 1));
+    const sceneStartProgress = sceneStartProgressThresholds[safeSceneIndex] ?? 0;
+    const sceneEndProgress = sceneWeightProgressThresholds[safeSceneIndex] ?? 1;
+    const sceneSpan = Math.max(sceneEndProgress - sceneStartProgress, 0);
+    const sceneProgress =
+      safeSceneIndex === 0
+        ? sceneStartProgress
+        : Math.min(sceneStartProgress + Math.min(sceneSpan * 0.22, 0.045), sceneEndProgress);
+    const targetScrollTop = storyTrigger.start + (storyTrigger.end - storyTrigger.start) * sceneProgress + 2;
+    const startScrollTop = window.scrollY;
+    const startedAt = performance.now();
+
+    const animateScroll = (now: number) => {
+      const progressValue = clamp01((now - startedAt) / STORY_BUTTON_SCROLL_DURATION_MS);
+      const easedProgress = easeInOutCubic(progressValue);
+      const nextScrollTop = startScrollTop + (targetScrollTop - startScrollTop) * easedProgress;
+
+      window.scrollTo({
+        top: nextScrollTop,
+        behavior: "auto",
+      });
+
+      if (progressValue < 1) {
+        window.requestAnimationFrame(animateScroll);
+      }
+    };
+
+    window.requestAnimationFrame(animateScroll);
+  };
 
   const handleSceneThreePlaybackStart = (event: React.MouseEvent<HTMLButtonElement>) => {
     if (sceneThreeFinalLineVisible) {
@@ -1204,13 +1416,27 @@ export default function CinematicStorytelling() {
     <section id="about" ref={rootRef} className={styles.root}>
       <div ref={viewportRef} className={styles.viewport}>
         <div className={styles.sceneStack}>
-          {STORY_SCENES.map((scene, index) => (
-            <article
+          {STORY_SCENES.map((scene, index) => {
+            const isPassedScene = isDesktopStory && index < activeScene;
+            const shouldKeepSceneOneMounted = index === 0;
+            const shouldRenderSceneAssets =
+              shouldKeepSceneOneMounted ||
+              !isDesktopStory ||
+              (index >= activeScene - 1 && index <= activeScene + 1);
+            const shouldRenderHeavyScene =
+              shouldKeepSceneOneMounted ||
+              !isDesktopStory ||
+              !isPassedScene ||
+              index === activeScene - 1;
+
+            return <article
               key={scene.id}
               ref={(node) => {
                 sceneRefs.current[index] = node;
               }}
-              className={`${styles.scene} ${index === activeScene ? styles.sceneActive : ""}`}
+              className={`${styles.scene} ${
+                index === 1 || index === 2 ? styles.sceneFullBleed : ""
+              } ${index === activeScene ? styles.sceneActive : ""}`}
             >
               <div
                 ref={(node) => {
@@ -1220,7 +1446,8 @@ export default function CinematicStorytelling() {
                 style={{ background: scene.gradient }}
                 aria-hidden="true"
               >
-                {scene.bgVideoSrc ? (
+                <div className={styles.sceneTransitionDarken} aria-hidden="true" />
+                {scene.bgVideoSrc && shouldRenderHeavyScene ? (
                   <video
                     ref={(node) => {
                       sceneVideoRefs.current[index] = node;
@@ -1230,13 +1457,13 @@ export default function CinematicStorytelling() {
                     loop
                     muted
                     playsInline
-                    preload="metadata"
+                    preload={index === 2 ? "auto" : "metadata"}
                   >
                     <source src={encodeURI(scene.bgVideoSrc)} type="video/webm" />
                   </video>
                 ) : null}
               </div>
-              {index !== 0 && index !== 1 && index !== 2 ? (
+              {index !== 0 && index !== 1 && index !== 2 && shouldRenderHeavyScene ? (
                 <div
                   ref={(node) => {
                     contentRefs.current[index] = node;
@@ -1278,7 +1505,7 @@ export default function CinematicStorytelling() {
                   ) : null}
                 </div>
               ) : null}
-              {index !== 1 && index !== 2 ? (
+              {index !== 0 && index !== 1 && index !== 2 && index !== STORY_SCENES.length - 1 && shouldRenderHeavyScene ? (
                 <p
                   ref={(node) => {
                     keywordRefs.current[index] = node;
@@ -1288,8 +1515,8 @@ export default function CinematicStorytelling() {
                   {scene.keyword}
                 </p>
               ) : null}
-              {index === 2 ? <div className={styles.sceneThreeTransitionDim} aria-hidden="true" /> : null}
-              {index === 2 ? (
+              {index === 2 && shouldRenderHeavyScene ? <div className={styles.sceneThreeTransitionDim} aria-hidden="true" /> : null}
+              {index === 2 && shouldRenderHeavyScene ? (
                 <div className={styles.sceneThreePoem} aria-label="Стих сцены 3">
                   <div
                     className={`${styles.sceneThreeFinalDim} ${
@@ -1346,10 +1573,18 @@ export default function CinematicStorytelling() {
                   </div>
                 </div>
               ) : null}
-              {index === 1 ? (
+              {index === 1 && shouldRenderHeavyScene ? (
                 <div className={styles.sceneModelStage}>
                   <div className={styles.sceneModelGridBackdrop} aria-hidden="true" />
                   <div className={styles.sceneTwoSidebar}>
+                    <div className={styles.sceneTwoIntroCard}>
+                      <p className={styles.sceneTwoIntroEyebrow}>{STORY_SCENES[1]?.eyebrow}</p>
+                      <h2 className={styles.sceneTwoIntroTitle}>{STORY_SCENES[1]?.title}</h2>
+                      <p className={styles.sceneTwoIntroText}>
+                        Сначала нажми <span>start</span>, чтобы открыть консоль. Затем выбирай команды слева:
+                        модель будет мягко подсвечивать нужную область, а справа появится расшифровка.
+                      </p>
+                    </div>
                     <div className={styles.sceneTwoCommands}>
                       <button
                         type="button"
@@ -1409,7 +1644,17 @@ export default function CinematicStorytelling() {
                     }`}
                   >
                     <div className={styles.sceneTwoFixedPanel}>
-                      <p className={styles.sceneTwoWindowTitle}>SASAVOT141 Console [Version 1.0.141]</p>
+                      <div className={styles.sceneTwoWindowBar}>
+                        <p className={styles.sceneTwoWindowTitle}>SASAVOT141 Console [Version 1.0.141]</p>
+                        <button
+                          type="button"
+                          className={styles.sceneTwoCloseButton}
+                          onClick={closeSceneTwoPanel}
+                          aria-label="Закрыть консоль"
+                        >
+                          ×
+                        </button>
+                      </div>
                       {sceneTwoTerminalLines.length === 0 ? (
                         <p className={styles.sceneTwoFixedCommand}>C:\\brain&gt; <span className={styles.sceneTwoCursor}>_</span></p>
                       ) : null}
@@ -1425,9 +1670,10 @@ export default function CinematicStorytelling() {
                   </div>
                   <Canvas
                     className={styles.sceneModelCanvas}
-                    dpr={[1, 1.35]}
+                    dpr={sceneTwoCanvasDpr}
                     frameloop={activeScene === 1 ? "always" : "never"}
                     camera={{ position: [0, 0.2, 3.3], fov: 34 }}
+                    gl={{ antialias: true, powerPreference: "default" }}
                   >
                     <ambientLight intensity={0.9} />
                     <directionalLight position={[2.5, 3, 2]} intensity={1.4} />
@@ -1435,16 +1681,16 @@ export default function CinematicStorytelling() {
                     <Suspense fallback={null}>
                       <BrainHologramModel
                         selectedHotspotId={sceneTwoSelectedHotspot}
-                        visibleHotspotsCount={sceneTwoVisibleCount}
                       />
                       <OrbitControls
                         makeDefault
                         target={sceneTwoOrbitTarget}
+                        enableRotate
                         enablePan={false}
                         enableZoom={false}
                         enableDamping
-                        dampingFactor={0.18}
-                        rotateSpeed={0.18}
+                        dampingFactor={0.15}
+                        rotateSpeed={0.22}
                         minDistance={2.2}
                         maxDistance={6}
                       />
@@ -1452,7 +1698,7 @@ export default function CinematicStorytelling() {
                   </Canvas>
                 </div>
               ) : null}
-              {index === 0 ? (
+              {index === 0 && shouldRenderHeavyScene ? (
                 <>
                   <p
                     ref={(node) => {
@@ -1518,12 +1764,15 @@ export default function CinematicStorytelling() {
                   </p>
                 </>
               ) : null}
-            </article>
-          ))}
+            </article>;
+          })}
         </div>
       </div>
 
-      <div className={`${styles.progressDock} ${isStoryActive ? styles.progressDockVisible : ""}`} aria-hidden="true">
+      <div
+        className={`${styles.progressDock} ${isStoryActive && activeScene <= 2 ? styles.progressDockVisible : ""}`}
+        aria-hidden="true"
+      >
         <div className={styles.progressTrack}>
           <div className={styles.progressFill} style={{ width: `${displayedProgress * 100}%` }} />
           {STORY_SCENES.map((scene, index) => (
@@ -1534,6 +1783,40 @@ export default function CinematicStorytelling() {
             />
           ))}
         </div>
+      </div>
+
+      <div
+        className={`${styles.storySceneNav} ${
+          storyButtonNavigationVisible ? styles.storySceneNavVisible : ""
+        }`}
+      >
+        <button
+          type="button"
+          className={`${styles.storySceneNavButton} ${styles.storySceneNavButtonUp} ${
+            canGoToPreviousScene ? styles.storySceneNavButtonVisible : styles.storySceneNavButtonHidden
+          }`}
+          onClick={() => moveToStoryScene(activeScene - 1)}
+          disabled={!canGoToPreviousScene}
+          aria-hidden={!canGoToPreviousScene}
+          tabIndex={canGoToPreviousScene ? 0 : -1}
+        >
+          <span className={styles.storySceneNavArrow} aria-hidden="true">↑</span>
+          <span>Назад</span>
+        </button>
+
+        <button
+          type="button"
+          className={`${styles.storySceneNavButton} ${
+            canGoToNextScene ? styles.storySceneNavButtonVisible : styles.storySceneNavButtonHidden
+          }`}
+          onClick={() => moveToStoryScene(activeScene + 1)}
+          disabled={!canGoToNextScene}
+          aria-hidden={!canGoToNextScene}
+          tabIndex={canGoToNextScene ? 0 : -1}
+        >
+          <span>Далее</span>
+          <span className={styles.storySceneNavArrow} aria-hidden="true">↓</span>
+        </button>
       </div>
     </section>
   );

@@ -1,11 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { fetchJsonWithCache } from "@/lib/client-api-cache";
-
-const OPEN_DISCLAIMER_EVENT = "sasagram:open-disclaimer";
 const HERO_PHOTO_SRC = encodeURI("/assets/logo/глеб_слей_фото.svg");
 const HERO_TITLE = "Глеб Борисович Орлов";
 
@@ -82,8 +79,6 @@ export default function Hero() {
     const onFinished = () => {
       setIsDisclaimerVisible(false);
     };
-
-    setIsDisclaimerVisible(document.documentElement.dataset.disclaimerVisible === "true");
 
     window.addEventListener("sasagram:disclaimer-visibility", onVisibility as EventListener);
     window.addEventListener("sasagram:disclaimer-finished", onFinished);
@@ -163,7 +158,6 @@ export default function Hero() {
     if (isDisclaimerVisible || heroIntroStartedRef.current) return;
 
     heroIntroStartedRef.current = true;
-    setHeroIntroStage(0);
 
     const pageTimer = window.setTimeout(() => {
       setHeroIntroStage(1);
@@ -197,10 +191,6 @@ export default function Hero() {
       window.clearTimeout(timeoutId);
     };
   }, [heroIntroStage, isHeroInView, typedTitle]);
-
-  const openIntro = () => {
-    window.dispatchEvent(new Event(OPEN_DISCLAIMER_EVENT));
-  };
 
   const pageVisible = heroIntroStage >= 1;
   const welcomeVisible = heroIntroStage >= 2 && heroIntroStage < 4;
@@ -249,22 +239,9 @@ export default function Hero() {
           pageVisible ? "translate-y-0 opacity-100" : "-translate-y-4 opacity-0"
         }`}
       >
-        {isLive ? (
-          <Link
-            href="/watch"
-            prefetch={false}
-            className="live-nav-link rounded-full border px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-red-50 transition md:px-5"
-          >
-            Watch
-          </Link>
-        ) : null}
-        <button
-          type="button"
-          onClick={openIntro}
-          className="rounded-full border border-white/18 bg-black/35 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-white/92 transition hover:border-white/40 hover:bg-white/10 md:px-5"
-        >
-          Intro
-        </button>
+        <p className="rounded-full border border-white/10 bg-black/35 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.28em] text-white/55 md:px-5">
+          Scroll to continue
+        </p>
       </div>
 
       <div className="relative z-10 flex h-full w-full max-w-[1440px] items-start pt-[3vh] md:pt-[1vh]">

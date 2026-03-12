@@ -190,9 +190,17 @@ export function StreamRatingsPage() {
     <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-none border border-white/10 bg-[linear-gradient(180deg,rgba(15,15,18,0.86),rgba(8,8,11,0.92))] shadow-[0_30px_80px_rgba(0,0,0,0.42)] md:rounded-[32px]">
       <div className="border-b border-white/8 bg-[linear-gradient(180deg,rgba(24,24,27,0.9),rgba(12,12,14,0.9))] px-3 py-4 md:px-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
+          <div className="max-w-3xl">
             <p className="text-[10px] uppercase tracking-[0.32em] text-zinc-500">Rating panel</p>
-            <p className="mt-2 text-sm text-zinc-300 md:text-base">Оценку можно поставить один раз.</p>
+            <h1 className="mt-2 text-lg font-semibold text-white md:text-2xl">Оценка прошедших стримов</h1>
+            <p className="mt-2 text-sm text-zinc-300 md:text-base">
+              Выбирай неделю, открывай нужный эфир и ставь оценку от 1 до 5. Голос сохраняется анонимно и доступен только один раз с текущего устройства.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2 text-[10px] uppercase tracking-[0.24em] text-zinc-400">
+              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-2">1 устройство = 1 голос</span>
+              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-2">Без регистрации</span>
+              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-2">Средняя оценка обновляется сразу</span>
+            </div>
           </div>
 
           <div className="flex items-center gap-2">

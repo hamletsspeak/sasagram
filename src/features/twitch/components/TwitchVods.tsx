@@ -56,14 +56,34 @@ export default function TwitchVods() {
 
   return (
     <section id="vods" className="relative z-10 h-[calc(100vh-66px)] scroll-mt-0 overflow-hidden bg-transparent py-2 md:h-[calc(100vh-78px)] md:py-3">
-      <div className="mx-auto flex h-full min-h-0 w-full max-w-[1680px] flex-col justify-center px-3 sm:px-6">
+      <div className="mx-auto flex h-full min-h-0 w-full max-w-[1680px] flex-col gap-3 px-3 sm:px-6">
+        <div className="shrink-0 rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(14,14,18,0.88),rgba(8,8,11,0.94))] px-4 py-4 shadow-[0_22px_60px_rgba(0,0,0,0.34)] md:px-5">
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+            <div className="max-w-3xl">
+              <p className="text-[10px] uppercase tracking-[0.32em] text-zinc-500">Media archive</p>
+              <h1 className="mt-2 font-audex text-[clamp(1.7rem,3.6vw,3.2rem)] uppercase leading-[0.92] text-white">
+                Записи и клипы
+              </h1>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-300 md:text-base">
+                Сверху собраны полные записи стримов, ниже лежат короткие клипы с лучшими моментами. Карточки листаются по горизонтали, а последний слайд ведёт на весь архив Twitch.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-2 text-xs uppercase tracking-[0.24em] text-zinc-400">
+              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-2">Полные эфиры</span>
+              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-2">Лучшие клипы</span>
+              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-2">Переход в Twitch архив</span>
+            </div>
+          </div>
+        </div>
+
         {loading ? (
-          <div className="grid h-full min-h-0 grid-rows-2 gap-3">
+          <div className="grid min-h-0 flex-1 grid-rows-2 gap-3">
             <ShelfLoadingPlaceholder title="Загрузка записей" accentClassName="bg-red-300/70" />
             <ShelfLoadingPlaceholder title="Загрузка клипов" accentClassName="bg-rose-300/70" />
           </div>
         ) : error || !data ? (
-          <div className="flex h-full min-h-0 items-center justify-center text-center">
+          <div className="flex min-h-0 flex-1 items-center justify-center text-center">
             <div>
               <p className="mb-3 text-lg text-gray-200">Не удалось загрузить Twitch данные</p>
               <a href="https://www.twitch.tv/sasavot/videos" target="_blank" rel="noopener noreferrer" className="text-red-300 underline hover:text-red-200">
@@ -72,7 +92,7 @@ export default function TwitchVods() {
             </div>
           </div>
         ) : (
-          <div className="grid h-full min-h-0 grid-rows-2 gap-3">
+          <div className="grid min-h-0 flex-1 grid-rows-2 gap-3">
             <VodsShelf
               items={vodsLimited}
             />

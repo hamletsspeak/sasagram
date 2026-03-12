@@ -52,7 +52,12 @@ export function ClipsShelf({ items }: ClipsShelfProps) {
 
   return (
     <div className="flex min-h-0 flex-col">
-      <p className="mb-3 text-xs font-semibold uppercase tracking-[0.28em] text-rose-300 md:hidden">Избранные клипы</p>
+      <div className="mb-3 flex items-end justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-rose-300">Избранные клипы</p>
+          <p className="mt-1 text-xs text-zinc-400 md:text-sm">Короткие моменты, чтобы быстро понять вайб канала.</p>
+        </div>
+      </div>
 
       <div className="relative mx-auto min-h-0 w-full max-w-[1320px] overflow-visible">
         <button

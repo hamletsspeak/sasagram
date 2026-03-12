@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -23,6 +24,28 @@ export default function Navbar() {
   const [railVisible, setRailVisible] = useState(false);
   const [hoveredHref, setHoveredHref] = useState<string | null>(null);
   const pathname = usePathname();
+
+  const restartFromBeginning = () => {
+    if (typeof window === "undefined") return;
+
+    if (pathname === "/") {
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+      window.location.reload();
+      return;
+    }
+
+    window.location.assign("/");
+  };
+
+  const handleNavClick = (event: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    if (href === "/") {
+      event.preventDefault();
+      restartFromBeginning();
+      return;
+    }
+
+    setMenuOpen(false);
+  };
 
   const isLinkActive = (href: string) => {
     if (hoveredHref) {
@@ -89,6 +112,24 @@ export default function Navbar() {
           railVisible ? "translate-x-0 opacity-100" : "-translate-x-full opacity-0"
         }`}
       >
+        <div className="absolute left-1/2 top-4 -translate-x-1/2 md:top-5">
+          <button
+            type="button"
+            onClick={restartFromBeginning}
+            className="group flex h-9 w-9 items-center justify-center rounded-full border border-white/12 bg-white/5 transition hover:border-white/30 hover:bg-white/10 md:h-11 md:w-11"
+            aria-label="Перезапустить сайт с самого начала"
+          >
+            <Image
+              src={encodeURI("/assets/logo/лого_сайт.png")}
+              alt="SASAVOT"
+              width={44}
+              height={44}
+              className="h-6 w-6 rounded-full object-cover md:h-7 md:w-7"
+              priority
+            />
+          </button>
+        </div>
+
         <div className="pointer-events-none absolute bottom-5 left-1/2 -translate-x-1/2 md:bottom-6">
           <video
             className="h-8 w-8 object-contain opacity-95 [filter:grayscale(1)_brightness(0)_invert(1)_contrast(1.2)] md:h-9 md:w-9"
@@ -135,13 +176,13 @@ export default function Navbar() {
               {navLinks.map((link, index) => (
                 <li key={link.href} className="flex-1 border-b border-white/10 first:border-t">
                   <Link
-                    href={link.href}
-                    prefetch={link.prefetch}
-                    onMouseEnter={() => setHoveredHref(link.href)}
-                    onMouseLeave={() => setHoveredHref(null)}
-                    onFocus={() => setHoveredHref(link.href)}
-                    onBlur={() => setHoveredHref(null)}
-                    onClick={() => setMenuOpen(false)}
+                  href={link.href}
+                  prefetch={link.prefetch}
+                  onMouseEnter={() => setHoveredHref(link.href)}
+                  onMouseLeave={() => setHoveredHref(null)}
+                  onFocus={() => setHoveredHref(link.href)}
+                  onBlur={() => setHoveredHref(null)}
+                    onClick={(event) => handleNavClick(event, link.href)}
                     className="group flex h-full items-center px-6 md:px-10"
                   >
                     <span className="mr-3 text-xs font-medium align-middle text-white/45 md:text-sm">

@@ -66,9 +66,16 @@ export function RatingCard({ stream, pending, locked, errorMessage, onRate }: Ra
             <h2 className="max-w-3xl text-xl font-semibold leading-tight text-white md:text-2xl">
               {title}
             </h2>
+            <p className="max-w-3xl text-sm leading-6 text-zinc-300">
+              Оцени общее впечатление от эфира: подачу, темп, интересные моменты и желание досмотреть запись до конца.
+            </p>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-[20px] border border-white/10 bg-black/30 px-4 py-3 text-center">
+              <p className="text-[10px] uppercase tracking-[0.24em] text-zinc-500">Старт</p>
+              <p className="mt-2 text-base font-semibold text-zinc-100">{formatStreamDate(stream.started_at)}</p>
+            </div>
             <div className="rounded-[20px] border border-white/10 bg-black/30 px-4 py-3 text-center">
               <p className="text-[10px] uppercase tracking-[0.24em] text-zinc-500">Средняя оценка</p>
               <p className="mt-2 text-2xl font-semibold text-zinc-100">{formatAverage(stream.ratingAvg)}</p>
@@ -97,6 +104,9 @@ export function RatingCard({ stream, pending, locked, errorMessage, onRate }: Ra
             <p className="text-[10px] uppercase tracking-[0.24em] text-zinc-500">Статус</p>
             <p className={`mt-2 text-base font-medium ${locked ? "text-emerald-100" : "text-zinc-200"}`}>
               {locked ? "Оценено" : voteLabel}
+            </p>
+            <p className="mt-2 text-sm leading-6 text-zinc-400">
+              Оцените от 1 до 5.
             </p>
           </div>
 
