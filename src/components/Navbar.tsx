@@ -4,11 +4,16 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { fetchJsonWithCache } from "@/lib/client-api-cache";
 
 type NavLink = {
   label: string;
   href: string;
   prefetch?: boolean;
+};
+
+type TwitchLiveStatus = {
+  isLive: boolean;
 };
 
 const navLinks: NavLink[] = [
@@ -23,13 +28,13 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [railVisible, setRailVisible] = useState(false);
   const [hoveredHref, setHoveredHref] = useState<string | null>(null);
+  const [isLive, setIsLive] = useState(false);
   const pathname = usePathname();
 
   const restartFromBeginning = () => {
     if (typeof window === "undefined") return;
 
     if (pathname === "/") {
-      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
       window.location.reload();
       return;
     }
@@ -105,6 +110,30 @@ export default function Navbar() {
     };
   }, []);
 
+  useEffect(() => {
+    let isActive = true;
+
+    const loadLiveStatus = () => {
+      fetchJsonWithCache<TwitchLiveStatus>("api:twitch-live-navbar", "/api/twitch", { ttlMs: 45_000 })
+        .then((data) => {
+          if (!isActive) return;
+          setIsLive(Boolean(data.isLive));
+        })
+        .catch(() => {
+          if (!isActive) return;
+          setIsLive(false);
+        });
+    };
+
+    loadLiveStatus();
+    const intervalId = window.setInterval(loadLiveStatus, 60_000);
+
+    return () => {
+      isActive = false;
+      window.clearInterval(intervalId);
+    };
+  }, []);
+
   return (
     <>
       <aside
@@ -130,19 +159,30 @@ export default function Navbar() {
           </button>
         </div>
 
-        <div className="pointer-events-none absolute bottom-5 left-1/2 -translate-x-1/2 md:bottom-6">
-          <video
-            className="h-8 w-8 object-contain opacity-95 [filter:grayscale(1)_brightness(0)_invert(1)_contrast(1.2)] md:h-9 md:w-9"
-            autoPlay
-            loop
-            muted
-            playsInline
-            preload="metadata"
-            aria-hidden="true"
+        {isLive ? (
+          <button
+            type="button"
+            onClick={() => window.location.assign("/watch")}
+            className="absolute bottom-5 left-1/2 z-20 inline-flex h-9 w-9 -translate-x-1/2 items-center justify-center rounded-full border border-red-300/70 bg-red-600 text-[9px] font-bold uppercase tracking-[0.2em] text-white shadow-[0_0_18px_rgba(239,68,68,0.55)] transition hover:scale-105 hover:bg-red-500 md:bottom-6 md:h-11 md:w-11 md:text-[10px]"
+            aria-label="Открыть страницу стрима"
           >
-            <source src={encodeURI("/assets/icons/Mouse scroll animation.webm")} type="video/webm" />
-          </video>
-        </div>
+            <span className="animate-pulse">LIVE</span>
+          </button>
+        ) : (
+          <div className="pointer-events-none absolute bottom-5 left-1/2 -translate-x-1/2 md:bottom-6">
+            <video
+              className="h-8 w-8 object-contain opacity-95 [filter:grayscale(1)_brightness(0)_invert(1)_contrast(1.2)] md:h-9 md:w-9"
+              autoPlay
+              loop
+              muted
+              playsInline
+              preload="metadata"
+              aria-hidden="true"
+            >
+              <source src={encodeURI("/assets/icons/Mouse scroll animation.webm")} type="video/webm" />
+            </video>
+          </div>
+        )}
       </aside>
 
       <button

@@ -62,7 +62,7 @@ export function ScheduleDesktop({
   onJumpToday,
 }: ScheduleDesktopProps) {
   return (
-    <div className="hidden rounded-2xl border border-red-950/45 bg-[#09090b] overflow-hidden md:block">
+    <div className="hidden h-full min-h-0 border-y border-red-950/45 overflow-hidden md:flex md:flex-1 md:flex-col">
       <div className="flex flex-wrap items-center justify-between border-b border-red-950/45 px-4 py-3 bg-zinc-950/80 gap-2">
         <div className="flex items-center gap-2">
           <button
@@ -118,7 +118,7 @@ export function ScheduleDesktop({
         </div>
       </div>
 
-      <div className="grid grid-cols-[74px_1fr] border-b border-red-950/45 bg-zinc-950/50">
+      <div className="grid grid-cols-[74px_1fr] border-b border-red-950/45">
         <div className="text-xs text-red-300 px-3 py-2 border-r border-red-950/40">GMT+3</div>
         <div className="grid" style={{ gridTemplateColumns: `repeat(${Math.max(axisTicks.length - 1, 1)}, minmax(0, 1fr))` }}>
           {axisTicks.slice(0, -1).map((label) => (
@@ -132,19 +132,19 @@ export function ScheduleDesktop({
         </div>
       </div>
 
-      <div>
+      <div className="min-h-0 flex flex-1 flex-col overflow-y-auto">
         {(selectedWeek?.cards ?? []).map((item) => {
           const style = streamBlockStyle(item, VIEW_START_MINUTES, viewEndMinutes);
           const laneClass = item.isToday ? "bg-zinc-900/45" : "bg-[#09090b]";
 
           return (
-            <div key={item.key} className={`grid grid-cols-[74px_1fr] min-h-[74px] border-b border-red-950/35 transition-colors hover:bg-zinc-900/70 ${laneClass}`}>
-              <div className="px-3 py-2 border-r border-red-950/40 text-center">
+            <div key={item.key} className={`grid grid-cols-[74px_1fr] min-h-[74px] border-b border-red-800/60 transition-colors hover:bg-zinc-900/70 md:min-h-0 md:flex-1 ${laneClass}`}>
+              <div className="flex h-full flex-col items-center justify-center border-r border-red-800/55 px-3 py-2 text-center">
                 <p className="text-xs uppercase text-gray-300">{item.dayLabel}</p>
-                <p className="text-base leading-tight mt-2 text-white">{item.dateLabel}</p>
+                <p className="mt-2 text-base leading-tight text-white">{item.dateLabel}</p>
               </div>
 
-              <div className="relative px-2 py-2">
+              <div className="relative px-2">
                 <div
                   className="absolute inset-0 pointer-events-none"
                   style={{
@@ -154,7 +154,7 @@ export function ScheduleDesktop({
                 />
                 {!style ? (
                   <div
-                    className={`h-[58px] rounded-xl border border-dashed px-3 ${
+                    className={`absolute left-2 right-2 top-1/2 h-[58px] -translate-y-1/2 rounded-xl border border-dashed px-3 ${
                       item.isFuture
                         ? "border-zinc-800/60"
                         : "flex items-center justify-between border-zinc-700/70"
@@ -172,8 +172,8 @@ export function ScheduleDesktop({
                     href={item.streamUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={`absolute top-2 h-[58px] rounded-xl border px-3 py-2 overflow-hidden transition-colors ${item.isLive ? "border-rose-400/55 bg-rose-900/30" : "border-zinc-500/60 bg-zinc-800/70"}`}
-                    style={style}
+                    className={`absolute top-1/2 h-[58px] -translate-y-1/2 rounded-xl border px-3 py-2 overflow-hidden transition-colors ${item.isLive ? "border-rose-400/55 bg-rose-900/30" : "border-zinc-500/60 bg-zinc-800/70"}`}
+                    style={{ ...style, top: "50%" }}
                     title={item.title}
                   >
                     {item.isLive ? (
@@ -217,8 +217,8 @@ export function ScheduleDesktop({
                   </a>
                 ) : (
                   <div
-                    className={`absolute top-2 h-[58px] rounded-xl border px-3 py-2 overflow-hidden ${item.isLive ? "border-rose-400/55 bg-rose-900/30" : "border-zinc-600/70 bg-zinc-800/70"}`}
-                    style={style}
+                    className={`absolute top-1/2 h-[58px] -translate-y-1/2 rounded-xl border px-3 py-2 overflow-hidden ${item.isLive ? "border-rose-400/55 bg-rose-900/30" : "border-zinc-600/70 bg-zinc-800/70"}`}
+                    style={{ ...style, top: "50%" }}
                   >
                     <div className="relative flex h-full items-center justify-between gap-2">
                       <div className="min-w-0">

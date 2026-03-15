@@ -76,20 +76,6 @@ const contactLinks = [
     ),
   },
   {
-    label: "Twitch Лиза",
-    value: "@iceicell",
-    href: "https://www.twitch.tv/iceicell",
-    avatarUrl: "/api/twitch/avatar/iceicell",
-    avatar: "LI",
-    color: "from-violet-700/30 via-fuchsia-800/25 to-zinc-900/35",
-    border: "border-violet-400/35",
-    icon: (
-      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z" />
-      </svg>
-    ),
-  },
-  {
     label: "Почта для жалоб или серьезных вопросов",
     value: "VOTVOPROS.13@yandex.ru",
     href: "mailto:VOTVOPROS.13@yandex.ru",
@@ -163,6 +149,14 @@ const watchAlsoLinks = [
     avatarUrl: "/api/twitch/avatar/yurapivo",
   },
   {
+    key: "iceicell",
+    label: "iceicell",
+    realName: "Лиза",
+    href: "https://www.twitch.tv/iceicell",
+    platform: "Twitch",
+    avatarUrl: "/api/twitch/avatar/iceicell",
+  },
+  {
     key: "helin139ban",
     label: "helin139ban",
     realName: "Кирилл (Альфредо)",
@@ -184,11 +178,22 @@ interface WatchAlsoResponse {
 }
 
 export default function Contact() {
+  const [topBarVisible, setTopBarVisible] = useState(false);
   const [creatorStates, setCreatorStates] = useState<Record<string, CreatorLiveState>>({});
   const [watchAlsoLoading, setWatchAlsoLoading] = useState(true);
   const shouldBypassNextImage = (url: string) =>
     url.startsWith("http://") || url.startsWith("https://") || url.startsWith("/api/");
   const canHover = () => (typeof window !== "undefined" ? window.matchMedia("(hover: hover)").matches : false);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setTopBarVisible(true);
+    }, 780);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, []);
 
   useEffect(() => {
     let isActive = true;
@@ -218,146 +223,200 @@ export default function Contact() {
   }, []);
 
   return (
-    <section id="contact" className="flex h-[calc(100vh-66px)] items-center overflow-hidden bg-transparent py-2 md:h-[calc(100vh-78px)] md:py-3">
-      <div className="mx-auto w-full max-w-6xl px-4 md:px-6">
-        <div className="rounded-3xl border border-zinc-700/80 bg-zinc-950/84 px-4 py-4 backdrop-blur-sm md:px-6 md:py-5">
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-5">
-          {contactLinks.map((item) => (
-            <a
-              key={item.label}
-              href={item.href}
-              target={item.href.startsWith("mailto:") ? undefined : "_blank"}
-              rel={item.href.startsWith("mailto:") ? undefined : "noopener noreferrer"}
-              className="group flex flex-col items-center rounded-2xl border border-zinc-700/80 bg-zinc-900/70 px-2 py-2 text-center transition hover:border-zinc-400 hover:bg-zinc-900/90"
-              onMouseEnter={(event) => {
-                if (!item.avatarVideoUrl) return;
-                if (!canHover()) return;
-                const video = event.currentTarget.querySelector("video");
-                if (!video) return;
-                video.currentTime = 0;
-                video.play().catch(() => {});
-              }}
-              onMouseLeave={(event) => {
-                if (!item.avatarVideoUrl) return;
-                if (!canHover()) return;
-                const video = event.currentTarget.querySelector("video");
-                if (!video) return;
-                video.pause();
-                video.currentTime = 0;
-              }}
-            >
-              <div
-                className={`relative mx-auto flex h-16 w-16 items-center justify-center rounded-full border bg-gradient-to-br ${item.color} ${item.border} shadow-xl transition-all duration-200 group-hover:-translate-y-1 group-hover:shadow-2xl sm:h-20 sm:w-20 md:h-24 md:w-24`}
-              >
-                {item.avatarVideoUrl ? (
-                  <video
-                    src={item.avatarVideoUrl}
-                    className="h-full w-full rounded-full object-cover"
-                    autoPlay
-                    muted
-                    loop
-                    playsInline
-                    preload="metadata"
-                    aria-label={item.label}
-                  />
-                ) : item.avatarUrl ? (
-                  <Image
-                    src={item.avatarUrl}
-                    alt={item.label}
-                    width={128}
-                    height={128}
-                    className="h-full w-full rounded-full object-cover"
-                    unoptimized={shouldBypassNextImage(item.avatarUrl)}
-                  />
-                ) : (
-                  <span className="text-base font-black tracking-wide text-white sm:text-lg md:text-xl">{item.avatar}</span>
-                )}
-                <span className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full border border-zinc-700 bg-zinc-900 text-zinc-100 md:h-8 md:w-8">
-                  {item.icon}
-                </span>
-              </div>
+    <section id="contact" className="relative flex h-full flex-col overflow-hidden bg-transparent">
+      <div
+        className={`relative z-10 w-full border-y border-white/12 bg-black/82 px-[12px] py-3 shadow-[0_12px_30px_rgba(0,0,0,0.32)] transition-all duration-[900ms] ease-out will-change-transform ${
+          topBarVisible ? "translate-y-0 opacity-100" : "-translate-y-full opacity-0"
+        }`}
+      >
+        <div className="flex w-full items-center justify-between gap-3">
+          <h2 className="font-fontick text-2xl font-bold text-white md:text-3xl">Контакты</h2>
+          <a
+            href="https://t.me/sasavot"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center rounded-full border border-red-500/80 bg-black/85 px-4 py-2 text-sm font-bold text-red-200 shadow-[0_8px_24px_rgba(0,0,0,0.45)] transition hover:border-red-400 hover:bg-red-700/85 hover:text-white"
+          >
+            Открыть Telegram
+          </a>
+        </div>
+      </div>
 
-              <p className="mt-2 text-[11px] font-semibold text-zinc-100 sm:text-xs md:text-sm">{item.label}</p>
-              {item.value ? (
-                <p className="mt-0.5 text-[10px] font-medium text-zinc-300 sm:text-[11px] md:text-xs">{item.value}</p>
-              ) : null}
-            </a>
-          ))}
+      <div className="relative z-10 flex min-h-0 flex-1 w-full flex-col overflow-y-auto px-[12px] py-3 md:py-4">
+        <div className="rounded-3xl border border-zinc-700/80 bg-zinc-950/84 px-4 py-4 md:px-6 md:py-5">
+          <div className="space-y-2.5">
+            {contactLinks.map((item) => (
+              <a
+                key={item.label}
+                href={item.href}
+                target={item.href.startsWith("mailto:") ? undefined : "_blank"}
+                rel={item.href.startsWith("mailto:") ? undefined : "noopener noreferrer"}
+                className="group relative flex items-center gap-3 overflow-hidden rounded-2xl border border-zinc-700/85 bg-zinc-900/70 px-3 py-3 transition hover:border-zinc-400 hover:bg-zinc-900/90"
+                onMouseEnter={(event) => {
+                  if (!item.avatarVideoUrl) return;
+                  if (!canHover()) return;
+                  const video = event.currentTarget.querySelector("video");
+                  if (!video) return;
+                  video.currentTime = 0;
+                  video.play().catch(() => {});
+                }}
+                onMouseLeave={(event) => {
+                  if (!item.avatarVideoUrl) return;
+                  if (!canHover()) return;
+                  const video = event.currentTarget.querySelector("video");
+                  if (!video) return;
+                  video.pause();
+                  video.currentTime = 0;
+                }}
+              >
+                <div className={`pointer-events-none absolute inset-0 bg-gradient-to-r ${item.color} opacity-35 transition-opacity duration-300 group-hover:opacity-55`} />
+                <div className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-zinc-600/75 bg-zinc-900 shadow-lg sm:h-16 sm:w-16">
+                  {item.avatarVideoUrl ? (
+                    <video
+                      src={item.avatarVideoUrl}
+                      className="h-full w-full rounded-full object-cover"
+                      autoPlay
+                      muted
+                      loop
+                      playsInline
+                      preload="metadata"
+                      aria-label={item.label}
+                    />
+                  ) : item.avatarUrl ? (
+                    <Image
+                      src={item.avatarUrl}
+                      alt={item.label}
+                      width={96}
+                      height={96}
+                      className="h-full w-full rounded-full object-cover"
+                      unoptimized={shouldBypassNextImage(item.avatarUrl)}
+                    />
+                  ) : (
+                    <span className="text-base font-black tracking-wide text-white">{item.avatar}</span>
+                  )}
+                  <span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full border border-zinc-700 bg-zinc-900 text-zinc-100">
+                    {item.icon}
+                  </span>
+                </div>
+
+                <div className="relative min-w-0 flex-1">
+                  <p className="line-clamp-1 text-[13px] font-semibold text-zinc-100 sm:text-sm">{item.label}</p>
+                  {item.value ? (
+                    <p className="line-clamp-1 text-[11px] font-medium text-zinc-300 sm:text-xs">{item.value}</p>
+                  ) : null}
+                </div>
+
+                <div className="relative flex shrink-0 items-center gap-2 text-zinc-300 transition-colors group-hover:text-white">
+                  <span className="hidden text-[10px] font-semibold uppercase tracking-[0.2em] sm:inline">Перейти</span>
+                  <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                    <path d="M7 4.5 12.5 10 7 15.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </div>
+              </a>
+            ))}
           </div>
 
           <div className="mt-5 border-t border-zinc-700/80 pt-4 md:mt-6">
             <p className="mb-2 text-center text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-300 md:text-xs">
-            Смотреть также
+              Смотреть также
             </p>
             {watchAlsoLoading ? (
-              <div className="grid grid-cols-4 gap-2.5 pt-1">
+              <div className="space-y-2.5 pt-1">
                 {watchAlsoLinks.map((item) => (
                   <div
                     key={item.key}
-                    className="flex min-w-0 flex-col items-center rounded-xl border border-zinc-700/80 bg-zinc-900/70 px-1.5 py-2 text-center"
+                    className="flex min-w-0 items-center gap-3 rounded-2xl border border-zinc-700/80 bg-zinc-900/70 px-3 py-2.5"
                   >
-                    <div className="relative h-10 w-10 animate-pulse rounded-full border border-zinc-700/80 bg-zinc-800 md:h-12 md:w-12" />
-                    <div className="mt-2 h-3 w-16 animate-pulse rounded-full bg-zinc-800" />
-                    <div className="mt-1 h-2.5 w-12 animate-pulse rounded-full bg-zinc-800/80" />
+                    <div className="h-10 w-10 shrink-0 animate-pulse rounded-full border border-zinc-700/80 bg-zinc-800 md:h-12 md:w-12" />
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <div className="h-3 w-28 animate-pulse rounded-full bg-zinc-800" />
+                      <div className="h-2.5 w-20 animate-pulse rounded-full bg-zinc-800/80" />
+                    </div>
+                    <div className="h-5 w-16 shrink-0 animate-pulse rounded-full bg-zinc-800/80" />
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="grid grid-cols-4 gap-2.5 pt-1">
-              {watchAlsoLinks.map((item) => (
-                <a
-                  key={item.key}
-                  href={item.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group flex w-full min-w-0 flex-col items-center rounded-xl border border-zinc-700/80 bg-zinc-900/70 px-1.5 py-2 text-center transition hover:border-zinc-400 hover:bg-zinc-900/90"
-                >
-                  <div className="relative">
-                    <Image
-                      src={creatorStates[item.key]?.avatarUrl ?? item.avatarUrl}
-                      alt={item.label}
-                      width={80}
-                      height={80}
-                      className="h-10 w-10 rounded-full border border-gray-700/80 object-cover shadow-lg transition-transform duration-200 group-hover:scale-105 md:h-12 md:w-12"
-                      unoptimized={shouldBypassNextImage(creatorStates[item.key]?.avatarUrl ?? item.avatarUrl)}
-                    />
-                    <span className="absolute bottom-0 right-0 drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)]">
-                      {item.platform === "Kick" ? (
-                        <span className="flex h-6 w-6 items-center justify-center rounded-full border border-emerald-200/80 bg-black/90 p-0.5">
-                          <Image
-                            src="/assets/logo/kick-streaming-platform-logo-icon.svg"
-                            alt="Kick"
-                            width={18}
-                            height={18}
-                            className="h-4 w-4 object-contain"
-                          />
-                        </span>
-                      ) : (
-                        <span className="flex h-6 w-6 items-center justify-center rounded-full border border-zinc-500 bg-zinc-800/90">
-                          <svg className="h-4 w-4 text-white" viewBox="0 0 24 24" fill="currentColor" aria-label="Twitch">
-                            <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z" />
-                          </svg>
-                        </span>
-                      )}
-                    </span>
-                    <span
-                      className={`absolute -top-1 -left-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
-                        creatorStates[item.key]?.isLive
-                          ? "bg-red-500 text-white"
-                          : "bg-zinc-800/90 text-zinc-200"
-                      }`}
+              <div className="space-y-2.5 pt-1">
+                {watchAlsoLinks.map((item) => {
+                  const isLive = Boolean(creatorStates[item.key]?.isLive);
+                  const avatarSrc = creatorStates[item.key]?.avatarUrl ?? item.avatarUrl;
+
+                  return (
+                    <a
+                      key={item.key}
+                      href={item.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group relative flex min-w-0 items-center gap-3 overflow-hidden rounded-2xl border border-zinc-700/80 bg-zinc-900/70 px-3 py-2.5 transition hover:border-zinc-400 hover:bg-zinc-900/90"
                     >
-                      {creatorStates[item.key]?.isLive ? "LIVE" : "OFF"}
-                    </span>
-                  </div>
-                  <span className="mt-1 text-[10px] font-semibold text-zinc-100 transition-colors group-hover:text-white md:text-xs">
-                    @{item.label}
-                  </span>
-                  <span className="mt-0.5 text-[10px] text-zinc-400 md:text-xs">
-                    {item.realName}
-                  </span>
-                </a>
-              ))}
+                      <div
+                        className={`pointer-events-none absolute inset-0 opacity-30 transition-opacity duration-300 group-hover:opacity-50 ${
+                          item.platform === "Kick"
+                            ? "bg-gradient-to-r from-emerald-700/25 via-emerald-900/10 to-zinc-900/0"
+                            : "bg-gradient-to-r from-violet-700/20 via-zinc-900/0 to-zinc-900/0"
+                        }`}
+                      />
+
+                      <div className="relative shrink-0">
+                        <Image
+                          src={avatarSrc}
+                          alt={item.label}
+                          width={80}
+                          height={80}
+                          className="h-10 w-10 rounded-full border border-gray-700/80 object-cover shadow-lg transition-transform duration-200 group-hover:scale-105 md:h-12 md:w-12"
+                          unoptimized={shouldBypassNextImage(avatarSrc)}
+                        />
+                        <span className="absolute -bottom-1 -right-1 drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)]">
+                          {item.platform === "Kick" ? (
+                            <span className="flex h-5 w-5 items-center justify-center rounded-full border border-emerald-200/80 bg-black/90 p-0.5">
+                              <Image
+                                src="/assets/logo/kick-streaming-platform-logo-icon.svg"
+                                alt="Kick"
+                                width={14}
+                                height={14}
+                                className="h-3.5 w-3.5 object-contain"
+                              />
+                            </span>
+                          ) : (
+                            <span className="flex h-5 w-5 items-center justify-center rounded-full border border-zinc-500 bg-zinc-800/90">
+                              <svg className="h-3.5 w-3.5 text-white" viewBox="0 0 24 24" fill="currentColor" aria-label="Twitch">
+                                <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z" />
+                              </svg>
+                            </span>
+                          )}
+                        </span>
+                      </div>
+
+                      <div className="relative min-w-0 flex-1">
+                        <p className="line-clamp-1 text-[13px] font-semibold text-zinc-100 sm:text-sm">@{item.label}</p>
+                        <p className="line-clamp-1 text-[11px] text-zinc-400 sm:text-xs">{item.realName}</p>
+                      </div>
+
+                      <div className="relative flex shrink-0 items-center gap-2">
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] ${
+                            isLive ? "bg-red-500/95 text-white" : "bg-zinc-800/90 text-zinc-200"
+                          }`}
+                        >
+                          {isLive ? "Live" : "Off"}
+                        </span>
+                        <span
+                          className={`hidden rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] sm:inline ${
+                            item.platform === "Kick"
+                              ? "bg-emerald-500/20 text-emerald-300"
+                              : "bg-violet-500/20 text-violet-300"
+                          }`}
+                        >
+                          {item.platform}
+                        </span>
+                        <svg className="h-4 w-4 text-zinc-300 transition-colors group-hover:text-white" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                          <path d="M7 4.5 12.5 10 7 15.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </div>
+                    </a>
+                  );
+                })}
               </div>
             )}
           </div>

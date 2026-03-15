@@ -52,112 +52,119 @@ export function ClipsShelf({ items }: ClipsShelfProps) {
 
   return (
     <div className="flex min-h-0 flex-col">
-      <div className="mb-3 flex items-end justify-between gap-3">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-rose-300">Избранные клипы</p>
-          <p className="mt-1 text-xs text-zinc-400 md:text-sm">Короткие моменты, чтобы быстро понять вайб канала.</p>
-        </div>
-      </div>
-
       <div className="relative mx-auto min-h-0 w-full max-w-[1320px] overflow-visible">
-        <button
-          type="button"
-          onClick={handlePrev}
-          aria-disabled={!canPrev}
-          className={`${overlayPrevButtonClass} transition-opacity duration-300 ${canPrev ? "opacity-100" : "pointer-events-none opacity-0"}`}
-          aria-label="Предыдущая страница клипов"
-        >
-          <svg className="h-6 w-6" viewBox="0 0 20 20" fill="none">
-            <path d="M11.5 4.5 6 10l5.5 5.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
-        <button type="button" onClick={handleNext} disabled={!canNext} className={overlayNextButtonClass} aria-label="Следующая страница клипов">
-          <svg className="h-6 w-6" viewBox="0 0 20 20" fill="none">
-            <path d="M8.5 4.5 14 10l-5.5 5.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
+        <div className="mb-3 px-1 lg:hidden">
+          <p className="font-fontick text-5xl font-black uppercase leading-[0.86] tracking-[-0.04em] text-white">Clips</p>
+        </div>
 
-        {items.length === 0 ? (
-          <div className="flex h-full min-h-[195px] items-center justify-center rounded-2xl border border-dashed border-rose-500/25 text-gray-400">
-            Клипы пока не найдены
-          </div>
-        ) : (
-          <Swiper
-            modules={[Keyboard, A11y, EffectCoverflow]}
-            speed={650}
-            effect="coverflow"
-            centeredSlides
-            slidesPerView="auto"
-            loop={false}
-            initialSlide={0}
-            grabCursor
-            spaceBetween={80}
-            slidesPerGroup={1}
-            keyboard={{ enabled: true }}
-            watchSlidesProgress
-            coverflowEffect={{
-              rotate: 0,
-              stretch: 0,
-              depth: 180,
-              modifier: 1,
-              slideShadows: false,
-            }}
-            breakpoints={{
-              0: { spaceBetween: 10 },
-              768: { spaceBetween: 12 },
-              1200: { spaceBetween: 14 },
-              1536: { spaceBetween: 16 },
-            }}
-            onSwiper={(swiper) => {
-              swiperRef.current = swiper;
-              swiper.slideTo(0, 0, false);
-              syncNavState(swiper);
-              updateShades(swiper);
-            }}
-            onSlideChange={(swiper) => {
-              syncNavState(swiper);
-              updateShades(swiper);
-            }}
-            onProgress={updateShades}
-            onSetTransition={(swiper, speed) => {
-              swiper.slides.forEach((slideEl) => {
-                const shade = slideEl.querySelector<HTMLElement>(".clip-shade");
-                if (shade) shade.style.transitionDuration = `${speed}ms`;
-              });
-            }}
-            className="h-[248px] sm:h-[264px] xl:h-[280px]"
+        <div className="pointer-events-none absolute left-0 top-0 z-10 hidden h-[280px] w-[29%] min-w-[300px] lg:flex lg:items-center lg:justify-center">
+          <p className="font-fontick text-[clamp(3.8rem,6.8vw,5.6rem)] font-black uppercase leading-[0.84] tracking-[-0.05em] text-white">
+            Clips
+          </p>
+        </div>
+
+        <div className="relative z-20 min-h-0 w-full overflow-visible lg:flex lg:items-center">
+          <button
+            type="button"
+            onClick={handlePrev}
+            aria-disabled={!canPrev}
+            className={`${overlayPrevButtonClass} transition-opacity duration-300 ${canPrev ? "opacity-100" : "pointer-events-none opacity-0"}`}
+            aria-label="Предыдущая страница клипов"
           >
-            {items.map((clip, index) => (
-              <SwiperSlide key={`${clip.id}-${index}`} className="!h-auto !w-[88%] sm:!w-[48%] xl:!w-[500px]">
-                <a href={clip.url} target="_blank" rel="noopener noreferrer" className="group relative block h-full w-full overflow-hidden rounded-2xl border border-rose-400/25 bg-black/30">
-                  <Image src={clip.thumbnail_url} alt={clip.title} fill className="object-cover transition-transform duration-500 group-hover:scale-105" sizes="(max-width: 768px) 100vw, 25vw" unoptimized />
-                  <div className="clip-shade pointer-events-none absolute inset-0 bg-black/65 opacity-[0.55] transition-opacity duration-150" />
-                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/35 to-transparent" />
-                  <div className="absolute right-3 top-3 rounded-lg bg-black/80 px-2 py-1 text-xs font-mono text-white">{formatClipDuration(clip.duration)}</div>
-                  <div className="absolute inset-x-0 bottom-0 p-4">
-                    <h3 className="font-fontick line-clamp-2 text-base font-bold text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.75)] md:text-lg">{clip.title}</h3>
-                    <div className="mt-2 flex items-center gap-3 text-xs text-rose-100/85">
-                      <span>👁 {formatViewCount(clip.view_count)}</span>
-                      <span>{formatDate(clip.created_at)}</span>
-                    </div>
-                  </div>
-                </a>
-              </SwiperSlide>
-            ))}
-            <SwiperSlide key="all-clips-banner" className="!h-auto !w-[88%] sm:!w-[48%] xl:!w-[500px]">
-              <a
-                href="https://www.twitch.tv/sasavot/videos?featured=true&filter=clips&range=all"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group flex h-full min-h-[248px] items-center justify-center rounded-2xl border border-rose-300/45 bg-[radial-gradient(circle_at_top,rgba(244,63,94,0.2),transparent_60%),linear-gradient(180deg,rgba(18,18,24,0.95),rgba(8,8,12,0.98))] px-6 text-center"
+            <svg className="h-6 w-6" viewBox="0 0 20 20" fill="none">
+              <path d="M11.5 4.5 6 10l5.5 5.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+          <button type="button" onClick={handleNext} disabled={!canNext} className={overlayNextButtonClass} aria-label="Следующая страница клипов">
+            <svg className="h-6 w-6" viewBox="0 0 20 20" fill="none">
+              <path d="M8.5 4.5 14 10l-5.5 5.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+
+          {items.length === 0 ? (
+            <div className="flex h-full min-h-[195px] items-center justify-center rounded-2xl border border-dashed border-rose-500/25 text-gray-400">
+              Клипы пока не найдены
+            </div>
+          ) : (
+            <div className="overflow-hidden">
+              <Swiper
+                modules={[Keyboard, A11y, EffectCoverflow]}
+                speed={650}
+                effect="coverflow"
+                centeredSlides
+                slidesPerView="auto"
+                loop={false}
+                initialSlide={0}
+                grabCursor
+                spaceBetween={80}
+                slidesPerGroup={1}
+                keyboard={{ enabled: true }}
+                watchSlidesProgress
+                coverflowEffect={{
+                  rotate: 0,
+                  stretch: 0,
+                  depth: 180,
+                  modifier: 1,
+                  slideShadows: false,
+                }}
+                breakpoints={{
+                  0: { spaceBetween: 10 },
+                  768: { spaceBetween: 12 },
+                  1200: { spaceBetween: 14 },
+                  1536: { spaceBetween: 16 },
+                }}
+                onSwiper={(swiper) => {
+                  swiperRef.current = swiper;
+                  swiper.slideTo(0, 0, false);
+                  syncNavState(swiper);
+                  updateShades(swiper);
+                }}
+                onSlideChange={(swiper) => {
+                  syncNavState(swiper);
+                  updateShades(swiper);
+                }}
+                onProgress={updateShades}
+                onSetTransition={(swiper, speed) => {
+                  swiper.slides.forEach((slideEl) => {
+                    const shade = slideEl.querySelector<HTMLElement>(".clip-shade");
+                    if (shade) shade.style.transitionDuration = `${speed}ms`;
+                  });
+                }}
+                className="h-[248px] sm:h-[264px] xl:h-[280px]"
               >
-                <span className="font-fontick text-3xl font-black uppercase tracking-[0.08em] text-rose-100 transition-transform duration-300 group-hover:scale-[1.03]">
-                  Все клипы
-                </span>
-              </a>
-            </SwiperSlide>
-          </Swiper>
-        )}
+                {items.map((clip, index) => (
+                  <SwiperSlide key={`${clip.id}-${index}`} className="!h-auto !w-[88%] sm:!w-[48%] xl:!w-[500px]">
+                    <a href={clip.url} target="_blank" rel="noopener noreferrer" className="group relative block h-full w-full overflow-hidden rounded-2xl border border-rose-400/25 bg-black/30">
+                      <Image src={clip.thumbnail_url} alt={clip.title} fill className="object-cover transition-transform duration-500 group-hover:scale-105" sizes="(max-width: 768px) 100vw, 25vw" unoptimized />
+                      <div className="clip-shade pointer-events-none absolute inset-0 bg-black/65 opacity-[0.55] transition-opacity duration-150" />
+                      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/35 to-transparent" />
+                      <div className="absolute right-3 top-3 rounded-lg bg-black/80 px-2 py-1 text-xs font-mono text-white">{formatClipDuration(clip.duration)}</div>
+                      <div className="absolute inset-x-0 bottom-0 p-4">
+                        <h3 className="font-fontick line-clamp-2 text-base font-bold text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.75)] md:text-lg">{clip.title}</h3>
+                        <div className="mt-2 flex items-center gap-3 text-xs text-rose-100/85">
+                          <span>👁 {formatViewCount(clip.view_count)}</span>
+                          <span>{formatDate(clip.created_at)}</span>
+                        </div>
+                      </div>
+                    </a>
+                  </SwiperSlide>
+                ))}
+                <SwiperSlide key="all-clips-banner" className="!h-auto !w-[88%] sm:!w-[48%] xl:!w-[500px]">
+                  <a
+                    href="https://www.twitch.tv/sasavot/videos?featured=true&filter=clips&range=all"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group flex h-full min-h-[248px] items-center justify-center rounded-2xl border border-rose-300/45 bg-[radial-gradient(circle_at_top,rgba(244,63,94,0.2),transparent_60%),linear-gradient(180deg,rgba(18,18,24,0.95),rgba(8,8,12,0.98))] px-6 text-center"
+                  >
+                    <span className="font-fontick text-3xl font-black uppercase tracking-[0.08em] text-rose-100 transition-transform duration-300 group-hover:scale-[1.03]">
+                      Все клипы
+                    </span>
+                  </a>
+                </SwiperSlide>
+              </Swiper>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

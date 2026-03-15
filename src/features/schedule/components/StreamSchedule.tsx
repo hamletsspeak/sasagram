@@ -21,6 +21,7 @@ export default function StreamSchedule() {
   const [selectedWeekKey, setSelectedWeekKey] = useState<string | null>(null);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [hoveredWeekKey, setHoveredWeekKey] = useState<string | null>(null);
+  const [topBarVisible, setTopBarVisible] = useState(false);
   const [calendarMonthStart, setCalendarMonthStart] = useState<Date>(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
@@ -77,6 +78,16 @@ export default function StreamSchedule() {
     return () => window.removeEventListener("mousedown", onPointerDown);
   }, [calendarOpen]);
 
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setTopBarVisible(true);
+    }, 780);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, []);
+
   const axisTicks = useMemo(() => {
     const ticks: string[] = [];
     for (let m = VIEW_START_MINUTES; m <= viewEndMinutes; m += SLOT_MINUTES) ticks.push(formatAxis(m));
@@ -99,10 +110,14 @@ export default function StreamSchedule() {
   };
 
   return (
-    <section id="schedule" className="h-[calc(100vh-66px)] overflow-hidden bg-transparent py-2 md:h-[calc(100vh-78px)] md:py-3">
-      <div className="mx-auto flex h-full min-h-0 max-w-6xl flex-col px-4 md:px-6">
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="font-fontick text-2xl md:text-3xl font-bold text-white">Расписание стримов</h2>
+    <section id="schedule" className="relative flex h-full flex-col overflow-hidden bg-transparent">
+      <div
+        className={`relative z-10 w-full border-y border-white/12 bg-black/82 px-[12px] py-3 shadow-[0_12px_30px_rgba(0,0,0,0.32)] transition-all duration-[900ms] ease-out will-change-transform ${
+          topBarVisible ? "translate-y-0 opacity-100" : "-translate-y-full opacity-0"
+        }`}
+      >
+        <div className="flex w-full items-center justify-between gap-3">
+          <h2 className="font-fontick text-2xl font-bold text-white md:text-3xl">Расписание стримов</h2>
           <Link
             href="/rating"
             className="inline-flex items-center rounded-full border border-red-500/80 bg-black/85 px-4 py-2 text-sm font-bold text-red-200 shadow-[0_8px_24px_rgba(0,0,0,0.45)] transition hover:border-red-400 hover:bg-red-700/85 hover:text-white"
@@ -110,16 +125,18 @@ export default function StreamSchedule() {
             Оценить стримы
           </Link>
         </div>
+      </div>
 
+      <div className="relative z-10 flex min-h-0 flex-1 w-full flex-col">
         {loading ? (
-          <div className="h-full space-y-3 rounded-2xl border border-white/10 bg-zinc-900/60 p-4">
-            <div className="h-10 w-56 animate-pulse rounded-xl bg-zinc-700/70" />
-            <div className="h-[calc(100%-3.25rem)] animate-pulse rounded-xl bg-zinc-800/80" />
+          <div className="h-full space-y-3 border-y border-white/10 p-4">
+            <div className="h-10 w-56 animate-pulse bg-zinc-700/70" />
+            <div className="h-[calc(100%-3.25rem)] animate-pulse bg-zinc-800/80" />
           </div>
         ) : error ? (
           <div className="flex h-full items-center justify-center text-center text-sm text-gray-400">Не удалось загрузить расписание</div>
         ) : (
-          <div className="min-h-0 flex-1 overflow-hidden">
+          <div className="flex min-h-0 flex-1 overflow-hidden">
             <ScheduleMobile
               selectedWeek={selectedWeek}
               selectedWeekRangeLabel={selectedWeekRangeLabel}

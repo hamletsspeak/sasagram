@@ -1,7 +1,7 @@
 import pg from "pg";
 
 const { Client } = pg;
-const MATCH_WINDOW_MINUTES = 5;
+const MATCH_WINDOW_MINUTES = 20;
 const FORCE_MERGE_WINDOW_MINUTES = 2;
 
 const connectionString =

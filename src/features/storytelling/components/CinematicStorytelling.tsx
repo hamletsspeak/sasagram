@@ -15,7 +15,7 @@ import styles from "./CinematicStorytelling.module.css";
 gsap.registerPlugin(ScrollTrigger);
 
 const SCENE_SCROLL_LENGTH_MULTIPLIER = 2;
-const SCENE_SCROLL_WEIGHTS = [4.7, 2.2, 4.6, 1];
+const SCENE_SCROLL_WEIGHTS = [4.7, 2.2, 2.2, 1];
 const SCENE_TEXT_TRAVEL_DURATION = 1;
 const SCENE_TEXT_EDGE_PADDING = 36;
 const SCENE_TEXT_UNDER_MEDIA_SHIFT_Y = 150;
@@ -119,6 +119,10 @@ type Hotspot = {
 
 type TwitchFollowersPayload = {
   followersCount?: number;
+};
+
+type SceneTwoPendingAnimation = {
+  finalLines: string[];
 };
 
 function getMinimalConnectorRotationY(position: [number, number, number]): number {
@@ -273,8 +277,6 @@ function BrainHologramModel({
   );
 }
 
-useGLTF.preload("/assets/3d/brain_hologram.glb");
-
 const SceneFourFollowersCounter = memo(function SceneFourFollowersCounter({
   value,
 }: {
@@ -369,6 +371,7 @@ export default function CinematicStorytelling() {
   const sceneVideoRefs = useRef<Array<HTMLVideoElement | null>>([]);
   const cupSwapVideoRefs = useRef<Array<HTMLVideoElement | null>>([]);
   const cupSwapDimRefs = useRef<Array<HTMLDivElement | null>>([]);
+  const sceneTwoTerminalLogRef = useRef<HTMLDivElement | null>(null);
 
   const [progress, setProgress] = useState(0);
   const [activeScene, setActiveScene] = useState(0);
@@ -377,6 +380,7 @@ export default function CinematicStorytelling() {
   const [sceneTwoVisibleCount, setSceneTwoVisibleCount] = useState(0);
   const [sceneTwoSelectedHotspot, setSceneTwoSelectedHotspot] = useState<string | null>(null);
   const [sceneTwoPanelOpened, setSceneTwoPanelOpened] = useState(false);
+  const [sceneTwoEndConfirmed, setSceneTwoEndConfirmed] = useState(false);
   const [sceneTwoExecutedCommands, setSceneTwoExecutedCommands] = useState<string[]>([]);
   const [sceneTwoTerminalLines, setSceneTwoTerminalLines] = useState<string[]>([]);
   const [sceneThreeVisibleLineCount, setSceneThreeVisibleLineCount] = useState(0);
@@ -386,6 +390,7 @@ export default function CinematicStorytelling() {
   const activeSceneRef = useRef(activeScene);
   const sceneTwoTerminalLinesRef = useRef<string[]>([]);
   const sceneTwoLoggedCommandsRef = useRef<Set<string>>(new Set());
+  const sceneTwoPendingAnimationRef = useRef<SceneTwoPendingAnimation | null>(null);
   const terminalTimersRef = useRef<number[]>([]);
   const sceneThreeVisibleLineCountRef = useRef(sceneThreeVisibleLineCount);
   const sceneThreeRestartUnlockedRef = useRef(sceneThreeRestartUnlocked);
@@ -462,6 +467,7 @@ export default function CinematicStorytelling() {
     activeScene >= 1 &&
     activeScene <= 2 &&
     progress >= Math.min(sceneOneButtonUnlockThreshold + 0.02, 1) &&
+    sceneTwoEndConfirmed &&
     ((activeScene === 1 && sceneTwoAllCommandsDone) ||
       (activeScene === 2 && sceneTwoAllCommandsDone && sceneThreeFinalLineVisible));
   const canGoToPreviousScene = storyButtonNavigationVisible && activeScene >= 1;
@@ -482,6 +488,18 @@ export default function CinematicStorytelling() {
   useEffect(() => {
     sceneTwoTerminalLinesRef.current = sceneTwoTerminalLines;
   }, [sceneTwoTerminalLines]);
+
+  useEffect(() => {
+    if (!sceneTwoPanelOpened || activeScene !== 1) return;
+    const terminalLog = sceneTwoTerminalLogRef.current;
+    if (!terminalLog) return;
+    const rafId = window.requestAnimationFrame(() => {
+      terminalLog.scrollTop = terminalLog.scrollHeight;
+    });
+    return () => {
+      window.cancelAnimationFrame(rafId);
+    };
+  }, [activeScene, sceneTwoPanelOpened, sceneTwoTerminalLines]);
 
   useEffect(() => {
     sceneThreeVisibleLineCountRef.current = sceneThreeVisibleLineCount;
@@ -626,6 +644,14 @@ export default function CinematicStorytelling() {
     terminalTimersRef.current = [];
   };
 
+  const finalizeSceneTwoTypingAnimation = () => {
+    const pendingAnimation = sceneTwoPendingAnimationRef.current;
+    if (!pendingAnimation) return;
+    clearSceneTwoTerminalTimers();
+    updateSceneTwoTerminal(pendingAnimation.finalLines);
+    sceneTwoPendingAnimationRef.current = null;
+  };
+
   const closeSceneTwoPanel = () => {
     setSceneTwoPanelOpened(false);
     setSceneTwoSelectedHotspot(null);
@@ -641,9 +667,11 @@ export default function CinematicStorytelling() {
       return;
     }
 
+    finalizeSceneTwoTypingAnimation();
     clearSceneTwoTerminalTimers();
     sceneTwoLoggedCommandsRef.current.add(hotspot.id);
     const commandLineIndex = ensureSceneTwoPromptLine();
+    const baseLines = [...sceneTwoTerminalLinesRef.current];
 
     hotspot.execCommand.split("").forEach((char, index) => {
       const timer = window.setTimeout(() => {
@@ -656,6 +684,11 @@ export default function CinematicStorytelling() {
 
     const outputStartDelay = 100 + hotspot.execCommand.length * 22 + 180;
     const outputLines = [`[scan] ${hotspot.command}`, ...hotspot.output];
+    const finalLines = [...baseLines];
+    finalLines[commandLineIndex] = `C:\\brain>${hotspot.execCommand}`;
+    finalLines.push(...outputLines, `> info ${hotspot.details}`, "C:\\brain>");
+    sceneTwoPendingAnimationRef.current = { finalLines };
+
     outputLines.forEach((line, index) => {
       const timer = window.setTimeout(() => {
         const nextLines = [...sceneTwoTerminalLinesRef.current, line];
@@ -688,22 +721,35 @@ export default function CinematicStorytelling() {
       appendSceneTwoNextPromptLine();
     }, finalDelay);
     terminalTimersRef.current.push(nextPromptTimer);
+
+    const completeTimer = window.setTimeout(() => {
+      sceneTwoPendingAnimationRef.current = null;
+    }, finalDelay + 40);
+    terminalTimersRef.current.push(completeTimer);
   };
 
   const runSceneTwoPanelCommand = (command: "start" | "end") => {
     if (command === "start") {
       setSceneTwoPanelOpened(true);
+      setSceneTwoEndConfirmed(false);
     } else {
       closeSceneTwoPanel();
+      setSceneTwoEndConfirmed(sceneTwoAllCommandsDone);
     }
 
     if (sceneTwoLoggedCommandsRef.current.has(command)) {
       return;
     }
 
+    finalizeSceneTwoTypingAnimation();
     clearSceneTwoTerminalTimers();
     sceneTwoLoggedCommandsRef.current.add(command);
     const commandLineIndex = ensureSceneTwoPromptLine();
+    const baseLines = [...sceneTwoTerminalLinesRef.current];
+    const finalLines = [...baseLines];
+    finalLines[commandLineIndex] = `C:\\brain>${command}`;
+    finalLines.push("C:\\brain>");
+    sceneTwoPendingAnimationRef.current = { finalLines };
 
     command.split("").forEach((char, index) => {
       const timer = window.setTimeout(() => {
@@ -721,39 +767,34 @@ export default function CinematicStorytelling() {
       90 + command.length * 22,
     );
     terminalTimersRef.current.push(toggleTimer);
-  };
 
-  useEffect(() => {
-    if (activeScene !== 1 || !sceneTwoAllCommandsDone) return;
-    // Immediately release terminal typing queue once all scene-2 commands are completed
-    // so scroll to Scene 3 is not delayed by pending text timers.
-    terminalTimersRef.current.forEach((timer) => window.clearTimeout(timer));
-    terminalTimersRef.current = [];
-    const lines = [...sceneTwoTerminalLinesRef.current];
-    const lastLine = lines[lines.length - 1] ?? "";
-    if (lastLine !== "C:\\brain>") {
-      lines.push("C:\\brain>");
-      updateSceneTwoTerminal(lines);
-    }
-  }, [activeScene, sceneTwoAllCommandsDone]);
+    const completeTimer = window.setTimeout(() => {
+      sceneTwoPendingAnimationRef.current = null;
+    }, 90 + command.length * 22 + 40);
+    terminalTimersRef.current.push(completeTimer);
+  };
 
   useEffect(() => {
     if (activeScene !== 1) {
       clearSceneTwoTerminalTimers();
+      sceneTwoPendingAnimationRef.current = null;
       startTransition(() => {
         setSceneTwoVisibleCount(0);
         setSceneTwoSelectedHotspot(null);
         setSceneTwoPanelOpened(false);
+        setSceneTwoEndConfirmed(false);
       });
       updateSceneTwoTerminal([]);
       sceneTwoTerminalLinesRef.current = [];
       sceneTwoLoggedCommandsRef.current = new Set();
+      sceneTwoPendingAnimationRef.current = null;
       return;
     }
 
     startTransition(() => {
       setSceneTwoVisibleCount(0);
       setSceneTwoSelectedHotspot(null);
+      setSceneTwoEndConfirmed(false);
     });
     sceneTwoLoggedCommandsRef.current = new Set();
     const timers: number[] = [];
@@ -1162,16 +1203,16 @@ export default function CinematicStorytelling() {
 
           if (bg) {
             const bgDuration = i === 0 ? (sceneWeights[i] ?? 1) : (sceneWeights[i] ?? 1) + 0.2;
-            const isSceneThree = i === 2;
+            const isStaticParallaxScene = i === 2 || i === 3;
             timeline.fromTo(
               bg,
               {
-                scale: isSceneThree ? 1 : SCENE_PARALLAX_START_SCALE,
-                yPercent: isSceneThree ? 0 : SCENE_PARALLAX_START_Y,
+                scale: isStaticParallaxScene ? 1 : SCENE_PARALLAX_START_SCALE,
+                yPercent: isStaticParallaxScene ? 0 : SCENE_PARALLAX_START_Y,
               },
               {
-                scale: isSceneThree ? 1 : SCENE_PARALLAX_END_SCALE,
-                yPercent: isSceneThree ? 0 : SCENE_PARALLAX_END_Y,
+                scale: isStaticParallaxScene ? 1 : SCENE_PARALLAX_END_SCALE,
+                yPercent: isStaticParallaxScene ? 0 : SCENE_PARALLAX_END_Y,
                 duration: bgDuration,
                 immediateRender: false,
                 force3D: true,
@@ -1578,11 +1619,10 @@ export default function CinematicStorytelling() {
                   <div className={styles.sceneModelGridBackdrop} aria-hidden="true" />
                   <div className={styles.sceneTwoSidebar}>
                     <div className={styles.sceneTwoIntroCard}>
-                      <p className={styles.sceneTwoIntroEyebrow}>{STORY_SCENES[1]?.eyebrow}</p>
                       <h2 className={styles.sceneTwoIntroTitle}>{STORY_SCENES[1]?.title}</h2>
                       <p className={styles.sceneTwoIntroText}>
-                        Сначала нажми <span>start</span>, чтобы открыть консоль. Затем выбирай команды слева:
-                        модель будет мягко подсвечивать нужную область, а справа появится расшифровка.
+                        Сначала нажми <span>start</span>, чтобы начать. Затем выбирай пункты слева:
+                        ты увидишь подсветку нужной области, а справа появится понятное объяснение.
                       </p>
                     </div>
                     <div className={styles.sceneTwoCommands}>
@@ -1597,20 +1637,25 @@ export default function CinematicStorytelling() {
                         <span className={styles.sceneTwoItemPrompt}>&gt;</span>
                         <span className={styles.sceneTwoItemLabel}>start</span>
                       </button>
-                      {BRAIN_HOTSPOTS.map((hotspot, hotspotIndex) => (
-                        <button
-                          key={hotspot.id}
-                          type="button"
-                          className={`${styles.sceneTwoItem} ${
-                            hotspotIndex + 1 < sceneTwoVisibleCount ? styles.sceneTwoItemVisible : ""
-                          } ${sceneTwoSelectedHotspot === hotspot.id ? styles.sceneTwoItemActive : ""}`}
-                          onClick={() => runSceneTwoCommand(hotspot)}
-                          aria-label={`Выполнить команду ${hotspot.command}`}
-                        >
-                          <span className={styles.sceneTwoItemPrompt}>&gt;</span>
-                          <span className={styles.sceneTwoItemLabel}>{hotspot.command}</span>
-                        </button>
-                      ))}
+                      {BRAIN_HOTSPOTS.map((hotspot, hotspotIndex) => {
+                        const isDone = sceneTwoExecutedCommands.includes(hotspot.id);
+                        return (
+                          <button
+                            key={hotspot.id}
+                            type="button"
+                            className={`${styles.sceneTwoItem} ${
+                              hotspotIndex + 1 < sceneTwoVisibleCount ? styles.sceneTwoItemVisible : ""
+                            } ${sceneTwoSelectedHotspot === hotspot.id ? styles.sceneTwoItemActive : ""} ${
+                              isDone ? styles.sceneTwoItemDone : ""
+                            }`}
+                            onClick={() => runSceneTwoCommand(hotspot)}
+                            aria-label={`Выполнить команду ${hotspot.command}`}
+                          >
+                            <span className={styles.sceneTwoItemPrompt}>&gt;</span>
+                            <span className={styles.sceneTwoItemLabel}>{hotspot.command}</span>
+                          </button>
+                        );
+                      })}
                       <button
                         type="button"
                         className={`${styles.sceneTwoItem} ${
@@ -1643,7 +1688,9 @@ export default function CinematicStorytelling() {
                       activeScene === 1 && sceneTwoPanelOpened ? styles.sceneTwoTerminalPanelVisible : ""
                     }`}
                   >
-                    <div className={styles.sceneTwoFixedPanel}>
+                    <div
+                      className={styles.sceneTwoFixedPanel}
+                    >
                       <div className={styles.sceneTwoWindowBar}>
                         <p className={styles.sceneTwoWindowTitle}>SASAVOT141 Console [Version 1.0.141]</p>
                         <button
@@ -1655,17 +1702,34 @@ export default function CinematicStorytelling() {
                           ×
                         </button>
                       </div>
-                      {sceneTwoTerminalLines.length === 0 ? (
-                        <p className={styles.sceneTwoFixedCommand}>C:\\brain&gt; <span className={styles.sceneTwoCursor}>_</span></p>
-                      ) : null}
-                      {sceneTwoTerminalLines.map((line, lineIndex) => (
-                        <p key={`${line}-${lineIndex}`} className={styles.sceneTwoFixedLineText}>
-                          {line}
-                          {lineIndex === sceneTwoTerminalLines.length - 1 ? (
-                            <span className={styles.sceneTwoCursor}>_</span>
-                          ) : null}
-                        </p>
-                      ))}
+                      <div ref={sceneTwoTerminalLogRef} className={styles.sceneTwoFixedLog}>
+                        {sceneTwoTerminalLines.length === 0 ? (
+                          <p className={styles.sceneTwoFixedCommand}>C:\\brain&gt; <span className={styles.sceneTwoCursor}>_</span></p>
+                        ) : null}
+                        {sceneTwoTerminalLines.map((line, lineIndex) => (
+                          <p
+                            key={`${line}-${lineIndex}`}
+                            className={`${styles.sceneTwoFixedLineText} ${
+                              line.trimStart().startsWith("C:\\brain>") || line.trimStart().startsWith(">")
+                                ? styles.sceneTwoFixedLineTextCommand
+                                : ""
+                            } ${
+                              line.trimStart().startsWith("C:\\brain>")
+                                ? styles.sceneTwoFixedPromptLine
+                                : ""
+                            } ${
+                              line.toLowerCase().includes("все исправно")
+                                ? styles.sceneTwoFixedLineTextOk
+                                : ""
+                            }`}
+                          >
+                            {line}
+                            {lineIndex === sceneTwoTerminalLines.length - 1 ? (
+                              <span className={styles.sceneTwoCursor}>_</span>
+                            ) : null}
+                          </p>
+                        ))}
+                      </div>
                     </div>
                   </div>
                   <Canvas

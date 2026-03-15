@@ -55,6 +55,7 @@ export const STORY_SCENES: StoryScene[] = [
     description:
       "Сообщество растет с каждым эфиром. Новые зрители становятся частью общей истории. Live продолжается здесь и сейчас.",
     keyword: "PULSE",
-    gradient: "linear-gradient(180deg, #000000 0%, #000000 100%)",
+    gradient:
+      "linear-gradient(180deg, rgba(0, 0, 0, 0.66) 0%, rgba(0, 0, 0, 0.82) 100%), url('/assets/bg/images.steamusercontent.jpg') center / cover no-repeat",
   },
 ];

@@ -25,7 +25,7 @@ export function ScheduleMobile({
   onJumpToday,
 }: ScheduleMobileProps) {
   return (
-    <div className="md:hidden rounded-2xl bg-[#09090b] overflow-hidden">
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden md:hidden">
       <div className="flex items-center justify-between px-3 py-3 bg-zinc-950/80">
         <button
           type="button"
@@ -66,7 +66,7 @@ export function ScheduleMobile({
         </button>
       </div>
 
-      <div className="space-y-1.5 p-2.5">
+      <div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto p-2.5">
         {(selectedWeek?.cards ?? []).map((item) => {
           const cardClass = item.isLive
             ? "border-rose-400/55 bg-rose-900/30"

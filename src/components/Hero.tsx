@@ -234,16 +234,6 @@ export default function Hero() {
         <div className="absolute inset-0 bg-[radial-gradient(110%_85%_at_14%_18%,rgba(151,17,34,0.24),transparent_58%),radial-gradient(95%_82%_at_84%_18%,rgba(99,8,22,0.2),transparent_56%)]" />
       </div>
 
-      <div
-        className={`absolute right-6 top-[calc(66px+0.5rem)] z-20 flex items-center gap-3 transition-all duration-700 md:right-10 md:top-[calc(78px+0.5rem)] ${
-          pageVisible ? "translate-y-0 opacity-100" : "-translate-y-4 opacity-0"
-        }`}
-      >
-        <p className="rounded-full border border-white/10 bg-black/35 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.28em] text-white/55 md:px-5">
-          Scroll to continue
-        </p>
-      </div>
-
       <div className="relative z-10 flex h-full w-full max-w-[1440px] items-start pt-[3vh] md:pt-[1vh]">
         <div
           className={`pointer-events-none absolute left-1/2 top-[6vh] z-20 -translate-x-1/2 text-center transition-all duration-[900ms] ${

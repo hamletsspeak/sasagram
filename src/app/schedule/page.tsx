@@ -3,23 +3,10 @@ import StreamSchedule from "@/features/schedule/components/StreamSchedule";
 
 export default function SchedulePage() {
   return (
-    <main className="site-dark-glow h-screen overflow-hidden bg-transparent text-zinc-100">
+    <main className="h-dvh min-h-dvh overflow-hidden bg-black text-zinc-100">
       <Navbar />
-      <div className="relative h-full overflow-hidden">
-        <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
-          <video
-            className="h-full w-full object-cover"
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="metadata"
-            aria-hidden="true"
-          >
-            <source src={encodeURI("/assets/logo/фон_остальные_разделы.webm")} type="video/webm" />
-          </video>
-        </div>
-        <div className="relative z-10 h-full pt-[66px] md:pt-[78px]">
+      <div className="relative flex h-full min-h-0 flex-col overflow-hidden">
+        <div className="relative z-10 flex min-h-0 flex-1 flex-col">
           <StreamSchedule />
         </div>
       </div>

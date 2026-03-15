@@ -19,7 +19,7 @@ export default function VodsPage() {
             <source src={encodeURI("/assets/logo/фон_остальные_разделы.webm")} type="video/webm" />
           </video>
         </div>
-        <div className="relative z-10 h-full pt-[66px] md:pt-[78px]">
+        <div className="relative z-10 h-full">
           <TwitchVods />
         </div>
       </div>

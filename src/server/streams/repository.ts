@@ -1,6 +1,8 @@
 import { Pool, PoolClient, QueryResultRow } from "pg";
 
-const NEAR_DUPLICATE_WINDOW_MINUTES = 5;
+// Live stream start time and finalized VOD start time can drift by several minutes.
+// Keep this window wide enough so they collapse into one stream row.
+const NEAR_DUPLICATE_WINDOW_MINUTES = 20;
 const FORCE_MERGE_WINDOW_MINUTES = 2;
 
 const UPSERT_STREAM_SQL = `
