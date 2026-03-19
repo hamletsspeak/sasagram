@@ -4,7 +4,6 @@ import About from "@/components/About";
 import Footer from "@/components/Footer";
 import DisclaimerOverlay from "@/components/DisclaimerOverlay";
 import HomePageScrollReset from "@/components/HomePageScrollReset";
-import IntroReplaySection from "@/components/IntroReplaySection";
 
 export default function Home() {
   return (
@@ -14,7 +13,6 @@ export default function Home() {
       <Navbar />
       <Hero />
       <About />
-      <IntroReplaySection />
       <Footer />
     </main>
   );

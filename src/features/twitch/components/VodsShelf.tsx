@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import type { Swiper as SwiperInstance } from "swiper/types";
 import { A11y, EffectCoverflow, Keyboard } from "swiper/modules";
@@ -15,7 +15,7 @@ const overlayNavButtonBaseClass =
 const overlayPrevButtonClass = `${overlayNavButtonBaseClass} -left-7`;
 const overlayNextButtonClass = `${overlayNavButtonBaseClass} -right-7`;
 
-export function VodsShelf({ items }: VodsShelfProps) {
+export const VodsShelf = memo(function VodsShelf({ items }: VodsShelfProps) {
   const swiperRef = useRef<SwiperInstance | null>(null);
   const totalSlides = items.length + 1;
   const [canPrev, setCanPrev] = useState(false);
@@ -47,8 +47,8 @@ export function VodsShelf({ items }: VodsShelfProps) {
     updateShades(swiper);
   }, [items.length, totalSlides]);
 
-  const handlePrev = () => swiperRef.current?.slidePrev();
-  const handleNext = () => swiperRef.current?.slideNext();
+  const handlePrev = useCallback(() => swiperRef.current?.slidePrev(), []);
+  const handleNext = useCallback(() => swiperRef.current?.slideNext(), []);
 
   return (
     <div className="flex min-h-0 flex-col">
@@ -130,7 +130,7 @@ export function VodsShelf({ items }: VodsShelfProps) {
               {items.map((vod, index) => (
                 <SwiperSlide key={`${vod.id}-${index}`} className="!h-auto !w-[88%] sm:!w-[48%] xl:!w-[500px]">
                   <a href={vod.url} target="_blank" rel="noopener noreferrer" className="group relative block h-full w-full overflow-hidden rounded-2xl border border-red-400/25 bg-black/35">
-                    <Image src={getThumbnailUrl(vod.thumbnail_url, 960, 540)} alt={vod.title} fill className="object-cover transition-transform duration-500 group-hover:scale-105" sizes="(max-width: 768px) 100vw, 25vw" unoptimized />
+                    <Image src={getThumbnailUrl(vod.thumbnail_url, 960, 540)} alt={vod.title} fill className="object-cover transition-transform duration-500 group-hover:scale-105" sizes="(max-width: 768px) 100vw, 25vw" />
                     <div className="vod-shade pointer-events-none absolute inset-0 bg-black/65 opacity-[0.55] transition-opacity duration-150" />
                     <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/35 to-transparent" />
                     <div className="absolute right-3 top-3 rounded-lg bg-black/80 px-2 py-1 text-xs font-mono text-white">{formatDuration(vod.duration)}</div>
@@ -162,4 +162,4 @@ export function VodsShelf({ items }: VodsShelfProps) {
       </div>
     </div>
   );
-}
+});

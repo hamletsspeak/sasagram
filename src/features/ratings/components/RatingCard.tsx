@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import Image from "next/image";
 import { RatedStream } from "@/features/ratings/types";
 import { RatingControl } from "@/features/ratings/components/RatingControl";
@@ -42,7 +42,7 @@ function getTwitchEmbedSrc(hostname: string | null): string {
   return `https://player.twitch.tv/?${params.toString()}`;
 }
 
-export function RatingCard({ stream, isLive = false, pending, locked, errorMessage, onRate }: RatingCardProps) {
+export const RatingCard = memo(function RatingCard({ stream, isLive = false, pending, locked, errorMessage, onRate }: RatingCardProps) {
   const [embedHost, setEmbedHost] = useState<string | null>(null);
   const duration = typeof stream.duration_hours === "number" ? stream.duration_hours : Number(stream.duration_hours);
   const previewUrl = stream.thumbnailUrl ? getThumbnailUrl(stream.thumbnailUrl, 640, 360) : null;
@@ -76,7 +76,6 @@ export function RatingCard({ stream, isLive = false, pending, locked, errorMessa
                 src={previewUrl}
                 alt={title}
                 fill
-                unoptimized
                 className="object-cover transition duration-500 group-hover:scale-[1.03]"
                 sizes="(max-width: 1279px) 100vw, 500px"
               />
@@ -183,4 +182,4 @@ export function RatingCard({ stream, isLive = false, pending, locked, errorMessa
       </div>
     </article>
   );
-}
+});

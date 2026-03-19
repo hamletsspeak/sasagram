@@ -1,4 +1,4 @@
-import type { RefObject } from "react";
+import { memo, type RefObject } from "react";
 import { CalendarWeek, WeekGroup } from "@/features/schedule/types";
 import { monthLabelRu } from "@/features/schedule/lib/date";
 
@@ -23,7 +23,7 @@ type WeekPickerProps = {
 
 const WEEKDAY_LABELS = ["пн", "вт", "ср", "чт", "пт", "сб", "вс"];
 
-export function WeekPicker({
+export const WeekPicker = memo(function WeekPicker({
   calendarRef,
   calendarOpen,
   calendarMonthStart,
@@ -149,4 +149,4 @@ export function WeekPicker({
       ) : null}
     </div>
   );
-}
+});

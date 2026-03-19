@@ -1,5 +1,7 @@
 "use client";
 
+import { memo } from "react";
+
 type RatingControlProps = {
   value: number | null;
   disabled?: boolean;
@@ -10,7 +12,7 @@ type RatingControlProps = {
 
 const OPTIONS = [1, 2, 3, 4, 5] as const;
 
-export function RatingControl({ value, disabled = false, pending = false, locked = false, onSelect }: RatingControlProps) {
+export const RatingControl = memo(function RatingControl({ value, disabled = false, pending = false, locked = false, onSelect }: RatingControlProps) {
   return (
     <div className="grid grid-cols-5 gap-2" aria-label="Оценка стрима">
       {OPTIONS.map((option) => {
@@ -45,4 +47,4 @@ export function RatingControl({ value, disabled = false, pending = false, locked
       })}
     </div>
   );
-}
+});

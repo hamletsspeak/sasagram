@@ -2,7 +2,7 @@
 
 @font-face {
   font-family: "Audex";
-  src: url("/assets/font/Audex/Audex-Regular.ttf") format("truetype");
+  src: url("/assets/font/Audex/Audex-Regular.woff2") format("woff2");
   font-weight: 400;
   font-style: normal;
   font-display: swap;
@@ -10,7 +10,7 @@
 
 @font-face {
   font-family: "Them People";
-  src: url("/assets/font/Them%20People/Them-People.ttf") format("truetype");
+  src: url("/assets/font/Them%20People/Them-People.woff2") format("woff2");
   font-weight: 400;
   font-style: normal;
   font-display: swap;
@@ -18,7 +18,7 @@
 
 @font-face {
   font-family: "Type Light Sans";
-  src: url("/assets/font/Type%20Light%20Sans/TypeLightSans.otf") format("opentype");
+  src: url("/assets/font/Type%20Light%20Sans/TypeLightSans.woff2") format("woff2");
   font-weight: 400;
   font-style: normal;
   font-display: swap;
@@ -26,7 +26,7 @@
 
 @font-face {
   font-family: "Gropled Bold";
-  src: url("/assets/font/Gropled/Gropled-Bold.ttf") format("truetype");
+  src: url("/assets/font/Gropled/Gropled-Bold.woff2") format("woff2");
   font-weight: 700;
   font-style: normal;
   font-display: swap;
@@ -34,15 +34,7 @@
 
 @font-face {
   font-family: "Gropled Hollow";
-  src: url("/assets/font/Gropled/Gropled%20Hollow.otf") format("opentype");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Sigma Five Cyrillic 2";
-  src: url("/assets/font/%D0%9A%D0%B8%D1%80%D0%B8%D0%BB%D0%BB%D0%B8%D1%87%D0%B5%D1%81%D0%BA%D0%B8%D0%B5/sigmafivecyrilic2.ttf") format("truetype");
+  src: url("/assets/font/Gropled/Gropled%20Hollow.woff2") format("woff2");
   font-weight: 400;
   font-style: normal;
   font-display: swap;
@@ -50,7 +42,7 @@
 
 @font-face {
   font-family: "Hassian Uncial";
-  src: url("/assets/font/%D0%90%D0%BD%D0%B3%D0%BB%D0%B8%D0%B9%D1%81%D0%BA%D0%B8%D0%B5/Hassianuncial.ttf") format("truetype");
+  src: url("/assets/font/%D0%90%D0%BD%D0%B3%D0%BB%D0%B8%D0%B9%D1%81%D0%BA%D0%B8%D0%B5/Hassianuncial.woff2") format("woff2");
   font-weight: 400;
   font-style: normal;
   font-display: swap;
@@ -58,8 +50,8 @@
 
 @font-face {
   font-family: "Preciosa";
-  src: url("/assets/font/%D0%9A%D0%B8%D1%80%D0%B8%D0%BB%D0%BB%D0%B8%D1%87%D0%B5%D1%81%D0%BA%D0%B8%D0%B5/Preciosa/Preciosa.ttf")
-    format("truetype");
+  src: url("/assets/font/%D0%9A%D0%B8%D1%80%D0%B8%D0%BB%D0%BB%D0%B8%D1%87%D0%B5%D1%81%D0%BA%D0%B8%D0%B5/Preciosa/Preciosa.woff2")
+    format("woff2");
   font-weight: 400;
   font-style: normal;
   font-display: swap;

@@ -1,4 +1,4 @@
-import type { RefObject } from "react";
+import { memo, type RefObject } from "react";
 import Image from "next/image";
 import { CalendarWeek, WeekGroup } from "@/features/schedule/types";
 import { WeekPicker } from "@/features/schedule/components/WeekPicker";
@@ -36,7 +36,7 @@ function formatRatingValue(ratingAvg: number | null, ratingCount: number) {
   return ratingAvg.toFixed(2);
 }
 
-export function ScheduleDesktop({
+export const ScheduleDesktop = memo(function ScheduleDesktop({
   axisTicks,
   calendarOpen,
   calendarMonthStart,
@@ -254,4 +254,4 @@ export function ScheduleDesktop({
       </div>
     </div>
   );
-}
+});

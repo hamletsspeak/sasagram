@@ -8,6 +8,17 @@ The template is now a fully functional personal business card website for the st
 
 ## Recently Completed
 
+- [x] 2026-03-20: **Performance optimization pass** — 10 optimizations applied:
+  - Converted all 7 custom fonts from TTF/OTF to WOFF2 (1286KB → 244KB, ~80% saving); removed dead `Sigma Five Cyrillic 2` @font-face (file missing); added `<link rel="preload">` for Audex and Gropled Bold in `layout.tsx`
+  - Added `next/dynamic` lazy loading for all feature pages: TwitchVods, StreamSchedule, StreamRatingsPage, RatingHelpPopup, WatchLivePage, Contact
+  - Removed `unoptimized` from `next/image` in VodsShelf, ClipsShelf, RatingCard; added `static-cdn.jtvnw.net` and `clips-media-assets2.twitch.tv` to `remotePatterns` in `next.config.ts`
+  - Extended `optimizePackageImports` to include `gsap`, `swiper`, `three`, `lenis`
+  - Created `LazyVideo` component (`src/components/LazyVideo.tsx`) with IntersectionObserver-based lazy loading; applied to background videos on vods, watch, contacts pages
+  - Converted `Footer.tsx` to server component; extracted `FooterReplayButton.tsx` as small client component
+  - Added `memo` to: RatingCard, RatingControl, WeekPicker, ScheduleDesktop, ScheduleMobile, VodsShelf, ClipsShelf
+  - Added `useCallback` for all inline callbacks in StreamSchedule and handler functions in VodsShelf/ClipsShelf
+  - Deleted dead `IntroReplaySection.tsx` (returned null) and removed its import from `page.tsx`
+  - Added cache eviction (MAX_ENTRIES=50 + expired entry cleanup) to `client-api-cache.ts`
 - [x] 2026-03-16: Updated footer email presentation in `src/components/Footer.tsx`: removed clickable `mailto` link and replaced it with plain visible email text (`VOTVOPROS.13@yandex.ru`) plus small mail icon.
 - [x] 2026-03-16: Consolidated footer into a single-row layout with split zones: moved `Смотреть интро заново` CTA (with arrow) to the left side of `src/components/Footer.tsx`, kept contact/platform links on the right side, and made `src/components/IntroReplaySection.tsx` return `null` to avoid duplicate section.
 - [x] 2026-03-16: Disabled background parallax on Scene 4 in `src/features/storytelling/components/CinematicStorytelling.tsx` by treating the last scene as static in the background tween (`scale=1`, `yPercent=0`).

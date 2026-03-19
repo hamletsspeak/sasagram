@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ScheduleDesktop } from "@/features/schedule/components/ScheduleDesktop";
 import { ScheduleMobile } from "@/features/schedule/components/ScheduleMobile";
@@ -94,20 +94,51 @@ export default function StreamSchedule() {
     return ticks;
   }, [viewEndMinutes]);
 
-  const syncCalendarMonthToSelectedWeek = () => {
+  const syncCalendarMonthToSelectedWeek = useCallback(() => {
     if (!selectedWeek?.key) {
       return;
     }
 
     const selectedWeekStart = new Date(`${selectedWeek.key}T00:00:00`);
     setCalendarMonthStart(new Date(selectedWeekStart.getFullYear(), selectedWeekStart.getMonth(), 1));
-  };
+  }, [selectedWeek?.key]);
 
-  const selectWeek = (weekKey: string) => {
+  const selectWeek = useCallback((weekKey: string) => {
     setSelectedWeekKey(weekKey);
     setCalendarOpen(false);
     setHoveredWeekKey(null);
-  };
+  }, []);
+
+  const handlePrevWeek = useCallback(() => {
+    if (safeWeekIndex <= 0) return;
+    setSelectedWeekKey(weeks[safeWeekIndex - 1].key);
+  }, [safeWeekIndex, weeks]);
+
+  const handleNextWeek = useCallback(() => {
+    if (safeWeekIndex >= weeks.length - 1) return;
+    setSelectedWeekKey(weeks[safeWeekIndex + 1].key);
+  }, [safeWeekIndex, weeks]);
+
+  const handleJumpToday = useCallback(() => {
+    setSelectedWeekKey(weeks.length > 0 ? weeks[weeks.length - 1].key : null);
+  }, [weeks]);
+
+  const handleToggleCalendar = useCallback(() => {
+    setCalendarOpen((prev) => {
+      if (!prev) {
+        syncCalendarMonthToSelectedWeek();
+      }
+      return !prev;
+    });
+  }, [syncCalendarMonthToSelectedWeek]);
+
+  const handlePrevMonth = useCallback(() => {
+    setCalendarMonthStart((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+  }, []);
+
+  const handleNextMonth = useCallback(() => {
+    setCalendarMonthStart((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
+  }, []);
 
   return (
     <section id="schedule" className="relative flex h-full flex-col overflow-hidden bg-transparent">
@@ -142,15 +173,9 @@ export default function StreamSchedule() {
               selectedWeekRangeLabel={selectedWeekRangeLabel}
               safeWeekIndex={safeWeekIndex}
               weeks={weeks}
-              onPrevWeek={() => {
-                if (safeWeekIndex <= 0) return;
-                setSelectedWeekKey(weeks[safeWeekIndex - 1].key);
-              }}
-              onNextWeek={() => {
-                if (safeWeekIndex >= weeks.length - 1) return;
-                setSelectedWeekKey(weeks[safeWeekIndex + 1].key);
-              }}
-              onJumpToday={() => setSelectedWeekKey(weeks.length > 0 ? weeks[weeks.length - 1].key : null)}
+              onPrevWeek={handlePrevWeek}
+              onNextWeek={handleNextWeek}
+              onJumpToday={handleJumpToday}
             />
 
             <ScheduleDesktop
@@ -169,27 +194,14 @@ export default function StreamSchedule() {
               safeWeekIndex={safeWeekIndex}
               viewEndMinutes={viewEndMinutes}
               weeks={weeks}
-              onPrevWeek={() => {
-                if (safeWeekIndex <= 0) return;
-                setSelectedWeekKey(weeks[safeWeekIndex - 1].key);
-              }}
-              onNextWeek={() => {
-                if (safeWeekIndex >= weeks.length - 1) return;
-                setSelectedWeekKey(weeks[safeWeekIndex + 1].key);
-              }}
-              onToggleCalendar={() =>
-                setCalendarOpen((prev) => {
-                  if (!prev) {
-                    syncCalendarMonthToSelectedWeek();
-                  }
-                  return !prev;
-                })
-              }
-              onPrevMonth={() => setCalendarMonthStart((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))}
-              onNextMonth={() => setCalendarMonthStart((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))}
+              onPrevWeek={handlePrevWeek}
+              onNextWeek={handleNextWeek}
+              onToggleCalendar={handleToggleCalendar}
+              onPrevMonth={handlePrevMonth}
+              onNextMonth={handleNextMonth}
               onHoverWeek={setHoveredWeekKey}
               onSelectWeek={selectWeek}
-              onJumpToday={() => setSelectedWeekKey(weeks.length > 0 ? weeks[weeks.length - 1].key : null)}
+              onJumpToday={handleJumpToday}
             />
           </div>
         )}

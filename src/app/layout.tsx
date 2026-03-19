@@ -43,6 +43,8 @@ export default function RootLayout({
   return (
     <html lang="ru" className="scroll-smooth">
       <head>
+        <link rel="preload" href="/assets/font/Audex/Audex-Regular.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
+        <link rel="preload" href="/assets/font/Gropled/Gropled-Bold.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
         <link rel="icon" type="image/png" href="/icon.png?v=2" />
         <link rel="shortcut icon" type="image/png" href="/icon.png?v=2" />
         <link rel="apple-touch-icon" href="/apple-icon.png?v=2" />

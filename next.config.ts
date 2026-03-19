@@ -9,7 +9,7 @@ const nextConfig: NextConfig = {
     root: configDir,
   },
   experimental: {
-    optimizePackageImports: ["@react-three/drei"],
+    optimizePackageImports: ["@react-three/drei", "gsap", "swiper", "three", "lenis"],
   },
   images: {
     remotePatterns: [
@@ -36,6 +36,16 @@ const nextConfig: NextConfig = {
       {
         protocol: "https",
         hostname: "api.dicebear.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "static-cdn.jtvnw.net",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "clips-media-assets2.twitch.tv",
         pathname: "/**",
       },
     ],

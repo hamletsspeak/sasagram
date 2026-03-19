@@ -1,5 +1,7 @@
 "use client";
 
+const MAX_CACHE_ENTRIES = 50;
+
 type CacheEntry = {
   expiresAt: number;
   data: unknown;
@@ -15,6 +17,19 @@ declare global {
   interface Window {
     __sasagramApiCache?: Map<string, CacheEntry>;
     __sasagramApiPending?: Map<string, Promise<unknown>>;
+  }
+}
+
+function evictExpiredEntries(map: Map<string, CacheEntry>) {
+  const now = Date.now();
+  for (const [key, entry] of map) {
+    if (entry.expiresAt <= now) map.delete(key);
+  }
+
+  if (map.size > MAX_CACHE_ENTRIES) {
+    const oldest = [...map.entries()].sort((a, b) => a[1].expiresAt - b[1].expiresAt);
+    const toRemove = oldest.length - MAX_CACHE_ENTRIES;
+    for (let i = 0; i < toRemove; i++) map.delete(oldest[i][0]);
   }
 }
 
@@ -61,7 +76,9 @@ export async function fetchJsonWithCache<T>(
       }
 
       const json = (await response.json()) as T;
-      cacheMap().set(cacheKey, { data: json, expiresAt: Date.now() + options.ttlMs });
+      const map = cacheMap();
+      map.set(cacheKey, { data: json, expiresAt: Date.now() + options.ttlMs });
+      evictExpiredEntries(map);
       return json;
     })
     .finally(() => {

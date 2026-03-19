@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { WeekGroup } from "@/features/schedule/types";
 
 type ScheduleMobileProps = {
@@ -15,7 +16,7 @@ function formatRatingLabel(ratingAvg: number | null, ratingCount: number) {
   return `Рейтинг: ★ ${ratingAvg.toFixed(2)} (${ratingCount})`;
 }
 
-export function ScheduleMobile({
+export const ScheduleMobile = memo(function ScheduleMobile({
   selectedWeek,
   selectedWeekRangeLabel,
   safeWeekIndex,
@@ -144,4 +145,4 @@ export function ScheduleMobile({
       </div>
     </div>
   );
-}
+});
